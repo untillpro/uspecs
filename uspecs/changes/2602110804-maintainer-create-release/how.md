@@ -7,6 +7,7 @@
   - Validate version format (semantic versioning)
   - Create annotated git tag with version
   - Push tag to origin
+  - Create a branch named
   - Bump minor version, reset patch to 0, and add pre-release identifier `a.1` for next development cycle
     - Example: 1.0.12-* -> 1.1.0-a.1
   - Make a commit with the new version
