@@ -16,3 +16,5 @@ Maintainer can create a release:
 
 - Tag current version in main branch
 - Publish release with tagged version
+
+Create a devops domain architecture artifact that describes the release components briefly.
