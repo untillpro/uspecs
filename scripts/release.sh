@@ -44,12 +44,12 @@ get_next_dev_version() {
     local version="$1"
     local release_version
     release_version=$(get_release_version "$version")
-    
+
     local major minor patch
     IFS='.' read -r major minor patch <<< "$release_version"
-    
+
     minor=$((minor + 1))
-    echo "${major}.${minor}.0-a.1"
+    echo "${major}.${minor}.0-a.0"
 }
 
 check_gh_cli() {
@@ -103,7 +103,7 @@ echo "Tag pushed successfully"
 echo ""
 
 # Create version branch
-BRANCH_NAME="$RELEASE_VERSION"
+BRANCH_NAME="version $RELEASE_VERSION"
 echo "Creating branch $BRANCH_NAME..."
 git checkout -b "$BRANCH_NAME"
 echo ""

@@ -10,11 +10,11 @@
     - Example: 1.0.12-a.4 -> 1.0.12
   - Create annotated git tag with version
   - Push tag to origin
-  - Create a version branch named {new-version}
+  - Create a version branch named "version {new-version}"
   - On the new branch, bump minor version, reset patch to 0, and add pre-release identifier `a.0` for next development cycle
     - Example: 1.0.12-a.4 -> 1.1.0-a.0
   - Make a commit with the new version
-    - Commit message: "Bump version to X.Y.Z-a.1 for next development cycle"
+    - Commit message: "Bump version to X.Y.Z-a.0 for next development cycle"
   - Create a pull request from the new branch to main with the same commit message
     - Use GitHub CLI (`gh pr create`) for PR creation
     - Require GitHub CLI to be installed and authenticated
