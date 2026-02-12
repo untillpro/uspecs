@@ -30,6 +30,6 @@
 
 References:
 
-- [u/scripts/uspecs.sh](../../u/scripts/uspecs.sh)
-- [u/scripts/update-from-home.sh](../../u/scripts/update-from-home.sh)
-- [u/scripts/update-from-home-pr.sh](../../u/scripts/update-from-home-pr.sh)
+- [u/scripts/uspecs.sh](../../../../u/scripts/uspecs.sh)
+- [u/scripts/update-from-home.sh](../../../../u/scripts/update-from-home.sh)
+- [u/scripts/update-from-home-pr.sh](../../../../u/scripts/update-from-home-pr.sh)

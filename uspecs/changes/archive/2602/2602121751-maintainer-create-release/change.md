@@ -2,6 +2,7 @@
 registered_at: 2026-02-11T08:05:13Z
 change_id: 2602110804-maintainer-create-release
 baseline: 9ae432bae072fc1cf1e83d90159d90a876ca47a6
+archived_at: 2026-02-12T17:51:11Z
 ---
 
 # Change request: Maintainer creates release
