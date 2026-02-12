@@ -49,7 +49,7 @@ get_next_dev_version() {
     IFS='.' read -r major minor patch <<< "$release_version"
 
     minor=$((minor + 1))
-    echo "${major}.${minor}.0-a.0"
+    echo "${major}.${minor}.0-a0"
 }
 
 check_gh_cli() {
@@ -96,9 +96,10 @@ echo "Next dev version: $NEXT_DEV_VERSION"
 echo ""
 
 # Create and push tag
-echo "Creating tag $RELEASE_VERSION..."
-git tag -a "$RELEASE_VERSION" -m "Release $RELEASE_VERSION"
-git push origin "$RELEASE_VERSION"
+TAG_NAME="v$RELEASE_VERSION"
+echo "Creating tag $TAG_NAME..."
+git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+git push origin "$TAG_NAME"
 echo "Tag pushed successfully"
 echo ""
 

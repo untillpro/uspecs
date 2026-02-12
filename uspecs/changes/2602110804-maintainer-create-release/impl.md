@@ -2,7 +2,7 @@
 
 ## Functional design
 
-- [x] create: [dev/version-mgmt/release-mgmt.feature](../../specs/devops/dev/version-mgmt/release-mgmt.feature)
+- [x] create: [dev/version-mgmt/release.feature](../../specs/devops/dev/version-mgmt/release.feature)
   - add: Maintainer creates release scenario
 
 ## Technical design
@@ -13,7 +13,7 @@
 ## Construction
 
 - [x] create: [version.txt](../../../version.txt)
-  - add: Initial version number (1.0.0-a.1)
+  - add: Initial version number (1.0.0-a0)
 
 - [x] create: [scripts/release.sh](../../../scripts/release.sh)
   - add: Release creation script with version management workflow

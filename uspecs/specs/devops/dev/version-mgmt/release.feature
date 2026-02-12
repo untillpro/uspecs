@@ -7,11 +7,11 @@ Feature: Release management
     And GitHub CLI is installed and authenticated
     When Maintainer runs release script
     Then release version "1.0.12" is created by removing pre-release identifier
-    And git tag "1.0.12" is created with annotation "Release 1.0.12"
-    And tag "1.0.12" is pushed to origin
+    And git tag "v1.0.12" is created with annotation "Release v1.0.12"
+    And tag "v1.0.12" is pushed to origin
     And version branch "version 1.0.12" is created
-    And version.txt is updated to "1.1.0-a.0" on the version branch
-    And changes are committed with message "Bump version to 1.1.0-a.0 for next development cycle"
+    And version.txt is updated to "1.1.0-a0" on the version branch
+    And changes are committed with message "Bump version to 1.1.0-a0 for next development cycle"
     And pull request is created from "version 1.0.12" branch to main
     And Maintainer receives PR URL
     And script switches back to main branch
