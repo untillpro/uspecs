@@ -15,7 +15,15 @@ Enable maintainers to create releases by tagging the current version in the main
 
 Maintainer can create a release:
 
-- Tag current version in main branch
-- Publish release with tagged version
+- Read version from version.txt (format: X.Y.Z-aN)
+- Create git tag vX.Y.Z (remove pre-release identifier)
+- Create version branch "version X.Y.Z"
+- Bump to next dev version X.Y+1.0-a0
+- Create PR for version bump
 
-Create a devops domain architecture artifact that describes the release components briefly.
+Artifacts:
+
+- scripts/release.sh - release automation script
+- version.txt - version tracking file
+- uspecs/specs/devops/dev/version-mgmt/release.feature - functional spec
+- uspecs/specs/devops/devops--arch.md - architecture doc

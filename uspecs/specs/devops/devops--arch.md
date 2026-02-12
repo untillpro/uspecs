@@ -14,15 +14,15 @@
 
 ### Version format
 
-- Semantic versioning: X.Y.Z-a.N
+- Semantic versioning: X.Y.Z-aN
   - X: major version
   - Y: minor version
   - Z: patch version
-  - a.N: pre-release identifier (optional, alpha build number)
+  - aN: pre-release identifier (optional, alpha build number)
 - Examples: 1.0.0-a0 (development), 1.0.12 (release)
 
 ### Release workflow states
 
-- Development: X.Y.Z-a.N (pre-release identifier present)
+- Development: X.Y.Z-aN (pre-release identifier present)
 - Release: X.Y.Z (pre-release identifier removed)
 - Next development cycle: X.Y+1.0-a0 (minor bumped, patch reset, pre-release added)

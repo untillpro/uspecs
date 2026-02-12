@@ -2,7 +2,7 @@ Feature: Release management
   Maintainer creates releases by tagging versions and preparing next development cycle
 
   Scenario: Maintainer creates release
-    Given current version is "1.0.12-a.4" in version.txt
+    Given current version is "1.0.12-a4" in version.txt
     And working directory has no uncommitted changes
     And GitHub CLI is installed and authenticated
     When Maintainer runs release script
@@ -19,7 +19,7 @@ Feature: Release management
   Rule: Edge cases
 
     Scenario: Release script fails when working directory is dirty
-      Given current version is "1.0.5-a.2" in version.txt
+      Given current version is "1.0.5-a2" in version.txt
       And working directory has uncommitted changes
       When Maintainer runs release script
       Then script exits with error "Working directory has uncommitted changes. Commit or stash them first"
@@ -36,7 +36,7 @@ Feature: Release management
     Scenario: Release script fails when version format is invalid
       Given current version is "invalid-version" in version.txt
       When Maintainer runs release script
-      Then script exits with error "Invalid version format: invalid-version (expected X.Y.Z or X.Y.Z-a.N)"
+      Then script exits with error "Invalid version format: invalid-version (expected X.Y.Z or X.Y.Z-aN)"
       And no tag is created
       And no branch is created
 

@@ -30,14 +30,14 @@ error() {
 
 validate_version() {
     local version="$1"
-    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-a\.[0-9]+)?$ ]]; then
-        error "Invalid version format: $version (expected X.Y.Z or X.Y.Z-a.N)"
+    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-a[0-9]+)?$ ]]; then
+        error "Invalid version format: $version (expected X.Y.Z or X.Y.Z-aN)"
     fi
 }
 
 get_release_version() {
     local version="$1"
-    echo "$version" | sed 's/-a\.[0-9]*$//'
+    echo "$version" | sed 's/-a[0-9]*$//'
 }
 
 get_next_dev_version() {
