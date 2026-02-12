@@ -2,6 +2,10 @@
 
 ## Approach
 
+https://github.com/organizations/untillpro/settings/apps/untill-devops-bot
+
+## Approach2
+
 - Create bash script `scripts/release.sh` to handle release creation
   - Read current version from `version.txt` file
     - If file doesn't exist, initialize with `1.0.0-a0`
