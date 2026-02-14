@@ -6,6 +6,7 @@ Feature: Install uspecs
     When Engineer runs the <type> install command
     Then uspecs is installed with <type> invocation type
     And config file is created with version and timestamps
+    And <file> is created if it does not exist
     And instructions are injected into <file>
 
     Examples:
