@@ -57,20 +57,20 @@ Installation fails when:
 
 #### Implementation details
 
-- Information is written into a config file in the project directory (`uspecs/u/uspecs.yml`)
+- Information is written into an installation metadata file in the project directory (`uspecs/u/uspecs.yml`)
 - manage.sh `install` flow
   - validate: git repository exists, uspecs is not already installed
   - identify the `ref` for download (main branch for --alpha or latest tag for stable)
   - download the whole repo archive for the `ref` into a temp directory, unzip
   - copy uspecs/u folder from the unzipped repo to project root
-  - write config file (`uspecs/u/uspecs.yml`) with version, timestamps (and commit info for alpha)
-  - if `--nlia` or `--nlic` is specified, update config file with invocation types and inject instructions into AGENTS.md or CLAUDE.md
+  - write installation metadata file (`uspecs/u/uspecs.yml`) with version, timestamps (and commit info for alpha)
+  - if `--nlia` or `--nlic` is specified, update installation metadata file with invocation types and inject instructions into AGENTS.md or CLAUDE.md
     - ref. update-from-home.sh for how to inject instructions into AGENTS.md or CLAUDE.md (this script will be eliminated later)
   - clean up temp directory
 
-### Config file
+### Installation metadata file
 
-YAML configuration file located at `uspecs/u/uspecs.yml` containing version information, installation and modification timestamps, commit metadata (for alpha versions only), and configured invocation types
+YAML file located at `uspecs/u/uspecs.yml` containing version information, installation and modification timestamps, commit metadata (for alpha versions only), and configured invocation types
 
 Example for stable version:
 
@@ -109,7 +109,7 @@ Behavior:
 
 - for alpha: updates to the latest commit from main branch
 - for stable: updates to the latest minor version (e.g., 1.2.3 -> 1.2.4, not 1.3.0)
-- updates configuration file with new version, timestamps (and commit info for alpha)
+- updates installation metadata file with new version, timestamps (and commit info for alpha)
 - preserves configured invocation types
 
 Flow when --project-dir is not specified:
@@ -134,7 +134,7 @@ Flow when --project-dir is specified (called by the downloaded manage.sh):
 
 - remove uspecs/u from project-dir
 - copy uspecs/u from the downloaded repo to project-dir/uspecs/u
-- update config file in project-dir with new version, timestamps (and commit info for alpha)
+- update installation metadata file in project-dir with new version, timestamps (and commit info for alpha)
 
 ### Upgrade to the latest major version
 
@@ -168,6 +168,6 @@ Behavior:
 
 - `--add <type>`: injects instructions into the corresponding file (AGENTS.md, CLAUDE.md, etc.) if not already present
 - `--remove <type>`: removes instructions from the corresponding file
-- updates the `invocation_types` list in configuration file
+- updates the `invocation_types` list in installation metadata file
 - preserves the current uspecs version
 - multiple invocation types can be configured simultaneously

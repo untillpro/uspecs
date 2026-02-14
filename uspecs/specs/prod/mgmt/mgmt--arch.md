@@ -8,7 +8,7 @@ uspecs components:
   - Manages uspecs lifecycle (install, update, upgrade, invocation type configuration)
   - Orchestrates version detection, download, and local installation
 
-- uspecs.yml: YAML config file, uspecs/u/uspecs.yml
+- uspecs.yml: installation metadata file, uspecs/u/uspecs.yml
   - Stores installation metadata (version, timestamps, invocation types, commit info for alpha)
   - Single source of truth for installed uspecs state
 
@@ -57,6 +57,8 @@ manage.sh (after download)
   |     +-- git repository exists
   |     +-- uspecs not already installed (install only)
   |
+  +-- remove uspecs.yml from archive (prevent overwriting local metadata)
+  |
   +-- copy uspecs/u folder from archive to project root
   |
   +-- write/update uspecs.yml
@@ -75,7 +77,7 @@ manage.sh (after download)
 
 ## Key data models
 
-### Config file structure
+### Installation metadata file structure
 
 Stable version:
 

@@ -29,6 +29,56 @@
 ## Technical design
 
 - [x] create: [prod/mgmt/mgmt--arch.md](../../specs/prod/mgmt/mgmt--arch.md)
-  - add: Key components (manage.sh script, uspecs.yml config file, GitHub repository, agent config files)
-  - add: Key flows in ASCII text format (version detection and download, local installation, config file management)
-  - add: Key data models (config file structure for stable and alpha versions)
+  - add: Key components (manage.sh script, uspecs.yml installation metadata file, GitHub repository, agent config files)
+  - add: Key flows in ASCII text format (version detection and download, local installation, installation metadata file management)
+  - add: Key data models (installation metadata file structure for stable and alpha versions)
+
+## Construction
+
+- [x] create: [uspecs/u/scripts/manage.sh](../../uspecs/u/scripts/manage.sh)
+  - add: install command with --nlia, --nlic, --alpha flags
+  - add: update command with version detection and download logic
+  - add: upgrade command (stable versions only)
+  - add: it command with --add and --remove flags for invocation type management
+  - add: validation logic (git repository check, existing installation check)
+  - add: GitHub API integration for version/tag/commit detection
+  - add: archive download and extraction logic
+  - add: installation metadata file read/write operations
+  - add: instruction injection/removal for AGENTS.md and CLAUDE.md
+
+- [x] update: [README.md](../../../README.md)
+  - add: Installation section with Natural Language Invocation subsection
+  - add: install command examples for nlia and nlic types
+  - add: --alpha flag documentation
+
+## Quick start
+
+Install uspecs with AGENTS.md support:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlia
+```
+
+Install uspecs with CLAUDE.md support:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlic
+```
+
+Update to latest version:
+
+```bash
+uspecs/u/scripts/manage.sh update
+```
+
+Upgrade to latest major version:
+
+```bash
+uspecs/u/scripts/manage.sh upgrade
+```
+
+Add invocation type:
+
+```bash
+uspecs/u/scripts/manage.sh it --add nlia
+```
