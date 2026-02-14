@@ -15,13 +15,14 @@ set -Eeuo pipefail
 #   - version.txt file at repository root
 #
 # Workflow:
-#   1. Read current version from version.txt
-#   2. Validate version format
-#   3. Create release version (remove pre-release identifier)
-#   4. Create and push git tag
-#   5. Create version branch
-#   6. Bump to next development version
-#   7. Commit and create PR
+#   Phase 1: Create release tag
+#     1. Read current version from version.txt (X.Y.Z-aN)
+#     2. Create temporary branch with version.txt set to X.Y.Z
+#     3. Create and push tag vX.Y.Z
+#     4. Delete temporary branch
+#   Phase 2: Create version bump PR
+#     5. Create branch with version.txt set to X.Y+1.0-a0
+#     6. Create PR to main
 
 error() {
     echo "Error: $1" >&2
@@ -37,7 +38,7 @@ validate_version() {
 
 get_release_version() {
     local version="$1"
-    echo "$version" | sed 's/-a[0-9]*$//'
+    echo "${version%-a*}"
 }
 
 get_next_dev_version() {
@@ -45,8 +46,8 @@ get_next_dev_version() {
     local release_version
     release_version=$(get_release_version "$version")
 
-    local major minor patch
-    IFS='.' read -r major minor patch <<< "$release_version"
+    local major minor _patch
+    IFS='.' read -r major minor _patch <<< "$release_version"
 
     minor=$((minor + 1))
     echo "${major}.${minor}.0-a0"
@@ -95,35 +96,57 @@ echo "Release version: $RELEASE_VERSION"
 echo "Next dev version: $NEXT_DEV_VERSION"
 echo ""
 
+# Phase 1: Create release tag
+echo "=== Phase 1: Creating release tag ==="
+echo ""
+
+# Create temporary branch for release
+RELEASE_BRANCH="$RELEASE_VERSION"
+echo "Creating temporary branch $RELEASE_BRANCH..."
+git checkout -b "$RELEASE_BRANCH"
+
+# Update version.txt to release version
+echo "Setting version.txt to $RELEASE_VERSION..."
+echo -n "$RELEASE_VERSION" > "$VERSION_FILE"
+git add "$VERSION_FILE"
+git commit -m "$RELEASE_VERSION"
+
 # Create and push tag
 TAG_NAME="v$RELEASE_VERSION"
 echo "Creating tag $TAG_NAME..."
 git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+echo "Pushing tag $TAG_NAME..."
 git push origin "$TAG_NAME"
 echo "Tag pushed successfully"
 echo ""
 
-# Create version branch
-BRANCH_NAME="version $RELEASE_VERSION"
-echo "Creating branch $BRANCH_NAME..."
-git checkout -b "$BRANCH_NAME"
+# Delete temporary branch
+echo "Deleting temporary branch $RELEASE_BRANCH..."
+git checkout main
+git branch -D "$RELEASE_BRANCH"
 echo ""
 
-# Update version file
-echo "Updating version to $NEXT_DEV_VERSION..."
-echo -n "$NEXT_DEV_VERSION" > "$VERSION_FILE"
+# Phase 2: Create version bump PR
+echo "=== Phase 2: Creating version bump PR ==="
+echo ""
 
-# Commit changes
-COMMIT_MSG="Bump version to $NEXT_DEV_VERSION for next development cycle"
+# Create branch for version bump
+VERSION_BUMP_BRANCH="$NEXT_DEV_VERSION"
+echo "Creating branch $VERSION_BUMP_BRANCH..."
+git checkout -b "$VERSION_BUMP_BRANCH"
+
+# Update version.txt to next dev version
+echo "Setting version.txt to $NEXT_DEV_VERSION..."
+echo -n "$NEXT_DEV_VERSION" > "$VERSION_FILE"
 git add "$VERSION_FILE"
-git commit -m "$COMMIT_MSG"
-git push origin "$BRANCH_NAME"
+git commit -m "$NEXT_DEV_VERSION"
+git push origin "$VERSION_BUMP_BRANCH"
 echo "Changes committed and pushed"
 echo ""
 
 # Create PR
 echo "Creating pull request..."
-PR_URL=$(gh pr create --base main --head "$BRANCH_NAME" --title "$COMMIT_MSG" --body "Automated version bump after release $RELEASE_VERSION")
+PR_URL=$(gh pr create --base main --head "$VERSION_BUMP_BRANCH" --title "$NEXT_DEV_VERSION" --body "Automated version bump after release $RELEASE_VERSION")
 echo "Pull request created: $PR_URL"
 echo ""
 
@@ -131,5 +154,6 @@ echo ""
 git checkout main
 
 echo "Release $RELEASE_VERSION completed successfully!"
+echo "Tag: $TAG_NAME"
 echo "PR: $PR_URL"
 
