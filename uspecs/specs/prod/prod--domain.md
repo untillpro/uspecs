@@ -33,6 +33,15 @@ Systems:
 
 - Change Request: a formal proposal to modify System
 - Active Change Request: a Change Request that is being actively worked on
+- Invocation Method: how Engineer interacts with uspecs
+  - NLI (Natural Language Invocation): instructions injected into agent config files
+  - CB (Command-Based): direct command execution (to be defined)
+- Invocation Type: specific invocation target
+  - NLI Types: nlia (AGENTS.md), nlic (CLAUDE.md)
+  - CB Types: multiple agent-specific types (to be defined)
+- Version Type: classification of installed uspecs version
+  - Stable: released versions identified by semantic version tags (e.g., 1.2.3)
+  - Alpha: development versions from the main branch
 - Functional Design
   - A functional specification focuses on what various outside agents (people using the program, computer peripherals, or other computers, for example) might "observe" when interacting with the system ([stanford](https://web.archive.org/web/20171212191241/https://uit.stanford.edu/pmo/functional-design))
 - Technical Design
