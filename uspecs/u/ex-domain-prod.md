@@ -44,14 +44,14 @@ Systems:
 
 ## Contexts
 
-### conf
+### mgmt
 
-Install and maintain the System.
+Manage the System lifecycle - install, update, upgrade and maintain uspecs per project.
 
 Relationships with external actors:
 
-- 🎯conf ->|installation| 👤Engineer
-- 🎯conf -> |configuration| ⚙️AI Agent
+- 🎯mgmt ->|manage| 👤Engineer
+- 🎯mgmt -> |configuration| ⚙️AI Agent
   - AI Agent parameters configuration
 
 ### softeng
@@ -68,4 +68,4 @@ Relationships with external actors:
 
 ## Context map
 
-- conf -> |parameters| softeng
+- mgmt -> |parameters| softeng
