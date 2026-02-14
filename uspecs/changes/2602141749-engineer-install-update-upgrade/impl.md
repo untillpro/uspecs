@@ -3,24 +3,25 @@
 ## Functional design
 
 - [x] update: [prod/prod--domain.md](../../specs/prod/prod--domain.md)
-  - add: new concepts to mgmt context or domain-level Concepts section: Invocation Method (NLI, CB), NLI Types (nlia, nlic), CB Types, Version Types (Stable, Alpha)
+  - add: Invocation Method, Invocation Type, and Version Type concepts to domain-level Concepts section
+  - update: mgmt context description to "Manage the System lifecycle - install, update, upgrade and maintain uspecs per project"
+  - update: context map from "conf -> |parameters| softeng" to "mgmt -> |working uspecs| softeng"
 
 - [x] create: [prod/mgmt/install.feature](../../specs/prod/mgmt/install.feature)
-  - add: Scenario for installing uspecs with --nlia or --nlic
-  - add: Scenario for installing with --alpha flag
-  - add: Scenario for installation failure (no git repo, already installed)
+  - add: Scenario Outline "Install stable version" with README.md precondition and file creation
+  - add: Scenario "Install alpha version" with flag inheritance from stable install
+  - add: Rule "Edge cases" with Scenario Outline "Installation failure"
 
 - [x] create: [prod/mgmt/update.feature](../../specs/prod/mgmt/update.feature)
-  - add: Scenario for updating alpha version (latest commit from main branch)
-  - add: Scenario for updating stable version (latest minor version)
-  - add: Scenario for no new version available (alpha and stable)
-  - add: Scenario for update with --project-dir (second phase)
+  - add: Scenario Outline "Update when new version is available" for alpha and stable
+  - add: Scenario Outline "No new version available" with upgrade hint for stable major version
 
 - [x] create: [prod/mgmt/upgrade.feature](../../specs/prod/mgmt/upgrade.feature)
-  - add: Scenario for upgrading to latest major version (stable only)
-  - add: Scenario for upgrade failure on alpha version
+  - add: Scenario "Upgrade stable version"
+  - add: Rule "Edge cases" with Scenario "Upgrade fails on alpha" with exact error message
 
 - [x] create: [prod/mgmt/invocation-type-mgmt.feature](../../specs/prod/mgmt/invocation-type-mgmt.feature)
-  - add: Scenario for adding invocation type (--add nlia, --add nlic)
-  - add: Scenario for removing invocation type (--remove)
-  - add: Scenario for configuring multiple invocation types simultaneously
+  - add: Scenario Outline "Manage invocation type" with file creation and add/remove operations
+
+- [x] update: [u/ex-domain-prod.md](../../u/ex-domain-prod.md)
+  - update: conf context renamed to mgmt with updated description and relationships
