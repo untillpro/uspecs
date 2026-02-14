@@ -8,11 +8,11 @@ baseline: 9ae432bae072fc1cf1e83d90159d90a876ca47a6
 
 ## Why
 
-Enable maintainers to create releases by tagging the current version in the main branch, establishing a formal release process for version management.
+Enable maintainers to create releases by tagging the current version in the main branch and bumping to the next development version.
 
 ## What
 
-Maintainer can create a release:
+Action
 
 - Read version from version.txt (format: X.Y.Z-aN)
 - Create git tag vX.Y.Z (remove pre-release identifier)
@@ -24,5 +24,3 @@ Artifacts:
 
 - scripts/release.sh - release automation script
 - version.txt - version tracking file
-- uspecs/specs/devops/dev/version-mgmt/release.feature - functional spec
-- uspecs/specs/devops/devops--arch.md - architecture doc
