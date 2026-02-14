@@ -2,6 +2,7 @@
 registered_at: 2026-02-14T17:49:00Z
 change_id: 2602141749-engineer-install-update-upgrade
 baseline: 967257e2d86e4520b48e69d6300c603db359689b
+archived_at: 2026-02-14T23:39:53Z
 ---
 
 # Change request: Engineer manages uspecs per project
