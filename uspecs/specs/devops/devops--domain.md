@@ -9,9 +9,7 @@ Tools, scripts and configuration files to assist with development, testing, depl
 Roles:
 
 - 👤Developer
-  - Can modify codebase
-- 👤Maintainer
-  - Can make releases
+  - Can modify codebase. Corresponds to the "Writer" role in GitHub.
 
 Systems:  
 
