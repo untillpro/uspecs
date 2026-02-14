@@ -18,11 +18,14 @@ Engineers need a way to manage uspecs per project:
 
 ## What
 
-### Update prod domain with new terminology
+### Update prod domain with new concepts
 
 - Invocation Method: NLI (Natural Language Invocation), CB (Command-Based)
-- NLI Types: nlia (AGENTS.md), nlic (CLAUDE.md)
-- CB Types: multiple agent-specific types (to be defined)
+- NLI Type: nlia (AGENTS.md), nlic (CLAUDE.md)
+- CB Type: multiple agent-specific types (to be defined)
+- Version Type:
+  - Stable: released versions identified by semantic version tags (e.g., 1.2.3)
+  - Alpha: development versions from the main branch
 
 ### Install for NLI
 
@@ -45,7 +48,7 @@ Where:
 
 Optional flags:
 
-- `--alpha`: installs the latest alpha version from the alpha branch
+- `--alpha`: installs the latest alpha version from the main branch
 
 Installation fails when:
 
@@ -57,7 +60,7 @@ Installation fails when:
 - Information is written into a config file in the project directory (`uspecs/u/uspecs.yml`)
 - manage.sh `install` flow
   - make validation
-  - identify the `ref` for download (alpha branch for --alpha or latest tag for stable)
+  - identify the `ref` for download (main branch for --alpha or latest tag for stable)
   - download the whole repo for the `ref`, unzip
   - update config file with version, commit info, and timestamps
   - copy uspecs/u folder to project
@@ -66,18 +69,30 @@ Installation fails when:
 
 ### Config file
 
-YAML configuration file located at `uspecs/u/uspecs.yml` containing version information, installation and modification timestamps, commit metadata, and configured invocation types
+YAML configuration file located at `uspecs/u/uspecs.yml` containing version information, installation and modification timestamps, commit metadata (for alpha versions only), and configured invocation types
+
+Example for stable version:
 
 ```yaml
 # uspecs installation metadata
 # DO NOT EDIT - managed by uspecs
-version: 1.2.3
-invocation_types: [nlia, nlic]  
 
+version: 1.2.3
+invocation_types: [nlia, nlic]
 installed_at: 2026-02-14T17:49:00Z
 modified_at: 2026-02-14T18:30:00Z
+```
 
-# For alpha version only
+Example for alpha version:
+
+```yaml
+# uspecs installation metadata
+# DO NOT EDIT - managed by uspecs
+version: alpha
+invocation_types: [nlia, nlic]
+installed_at: 2026-02-14T17:49:00Z
+modified_at: 2026-02-14T18:30:00Z
+# Commit info for alpha versions
 commit: 967257e2d86e4520b48e69d6300c603db359689b
 commit_timestamp: 2026-02-14T16:00:00Z
 ```
@@ -92,30 +107,31 @@ uspecs/u/scripts/manage.sh update
 
 Behavior:
 
-- updates to the latest alpha version if currently on alpha (latest commit in main)
+- updates to the latest alpha version if currently on alpha (latest commit from main branch)
 - updates to the latest minor version if currently on stable (e.g., 1.2.3 -> 1.2.4, not 1.3.0)
 - updates configuration file with new version, commit, and timestamps
 - preserves configured invocation types
 
-Flow if --project-dir is not specified:
+Flow when --project-dir is not specified:
 
-- Detect the next version (list tags for stable versions or get the latest commit from main for alpha versions)
-- If no new version is found
-  - For alpha: print "Already on the latest alpha version"
-  - For stable
-    - Check if upgrade available
-    - print "Already on the latest stable version" or "Upgrade available to version X.Y.Z"
-- If new version is available
-  - Print version details and ask for confirmation to proceed with the update
-- Identify `project-dir` = `script-dir`/../..
-- Download the next version of manage.sh from the repo for the identified version
-- Run the latest version with `update --project-dir <project-dir>` to perform the update
+- detect the next version (list tags for stable versions or get the latest commit from main branch for alpha versions)
+- if no new minor version is found
+  - for alpha: print "Already on the latest alpha version {commit, timestamp}"
+  - for stable
+    - print "Already on the latest stable minor version"
+    - check if upgrade available
+      - print "Upgrade available to version X.Y.Z, use `manage.sh update` command to upgrade"
+- if new minor version is available
+  - print version details and ask for confirmation to proceed with the update
+- identify `project-dir` = `script-dir`/../..
+- download the next version of manage.sh from the repo for the identified version
+- run the latest version with `update --project-dir <project-dir>` to perform the update
 
-Flow if --project-dir is specified:
+Flow when --project-dir is specified:
 
-- Remove uspecs/u from project-dir
-- Copy uspecs/u from `script-dir`/.. to project-dir/uspecs/u
-- Update config file in project-dir with new version, commit, and timestamps
+- remove uspecs/u from project-dir
+- copy uspecs/u from `script-dir`/.. to project-dir/uspecs/u
+- update config file in project-dir with new version, commit, and timestamps
 
 ### Upgrade to the latest major version
 
@@ -125,7 +141,9 @@ Engineer runs:
 uspecs/u/scripts/manage.sh upgrade
 ```
 
-Same as update but checks latest major version (e.g., 1.2.3 -> 2.0.0).
+Behavior:
+
+- follows the same flow as update command but checks for latest major version instead of minor version
 
 ### Configure invocation types
 
@@ -137,6 +155,10 @@ uspecs/u/scripts/manage.sh it --add nlia
 
 ```sh
 uspecs/u/scripts/manage.sh it --remove nlic
+```
+
+```sh
+uspecs/u/scripts/manage.sh it --add nlia --add nlic
 ```
 
 Behavior:
