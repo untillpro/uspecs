@@ -25,3 +25,10 @@
 
 - [x] update: [u/ex-domain-prod.md](../../u/ex-domain-prod.md)
   - update: conf context renamed to mgmt with updated description and relationships
+
+## Technical design
+
+- [x] create: [prod/mgmt/mgmt--arch.md](../../specs/prod/mgmt/mgmt--arch.md)
+  - add: Key components (manage.sh script, uspecs.yml config file, GitHub repository, agent config files)
+  - add: Key flows in ASCII text format (version detection and download, local installation, config file management)
+  - add: Key data models (config file structure for stable and alpha versions)
