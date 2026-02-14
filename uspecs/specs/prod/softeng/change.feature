@@ -19,3 +19,15 @@ Feature: Create change request
       | ability                        | references                    | issue-file-created-and-contains |
       | has ability to fetch content   | references Issue File         | contains fetched issue content  |
       | does not have ability to fetch | does not reference Issue File | is not created                  |
+
+  Scenario Outline: Create change request with --branch option
+    When Engineer asks AI Agent to create change request with --branch option
+    Then Active Change Folder is created with Change File
+    And Change File follows Change File Template 1
+    And Git branch is created with name following branch naming rules
+    And Branch creation <result> <reason>
+    Examples:
+      | result   | reason                                    |
+      | succeeds | when git repository exists                |
+      | fails    | when git repository does not exist        |
+      | fails    | when branch with same name already exists |
