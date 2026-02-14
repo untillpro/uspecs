@@ -2,7 +2,7 @@
 
 ## Functional design
 
-- [x] update: [devops/dev/change.feature](../../specs/prod/softeng/change.feature)
+- [x] update: [specs/prod/softeng/change.feature](../../specs/prod/softeng/change.feature)
   - add: Scenario for creating change request with --branch option
   - add: Branch naming convention validation
 
