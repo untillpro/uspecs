@@ -42,13 +42,13 @@ Systems:
 
 ## Contexts
 
-### conf
+### mgmt
 
-Provision and maintain the System.
+Manage the System lifecycle - install, update, upgrade and maintain uspecs per project.
 
 Relationships with external actors:
 
-- 🎯conf ->|provision| 👤Engineer
+- 🎯mgmt ->|manage| 👤Engineer
 
 ### softeng
 
@@ -64,4 +64,4 @@ Relationships with external actors:
 
 ## Context map
 
-- conf -> |working uspecs| softeng
+- mgmt -> |working uspecs| softeng
