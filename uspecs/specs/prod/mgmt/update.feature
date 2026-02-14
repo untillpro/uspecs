@@ -4,7 +4,7 @@ Feature: Update uspecs
   Scenario Outline: Update when new version is available
     Given uspecs is installed with <version_type> version
     And a new version is available
-    When Engineer runs update and confirms
+    When Engineer runs "manage.sh update" and confirms
     Then uspecs is updated to <target>
     And config file is updated with new version and timestamps
 
@@ -16,7 +16,7 @@ Feature: Update uspecs
   Scenario Outline: No new version available
     Given uspecs is installed with <version_type> version
     And <availability_condition>
-    When Engineer runs update
+    When Engineer runs "manage.sh update"
     Then "<message>" is printed
     And <upgrade_hint>
 

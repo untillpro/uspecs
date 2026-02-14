@@ -8,8 +8,10 @@ Feature: Upgrade uspecs
     Then uspecs is upgraded to the latest major version
     And config file is updated with new version and timestamps
 
-  Scenario: Upgrade fails on alpha
-    Given uspecs is installed with alpha version
-    When Engineer runs upgrade
-    Then upgrade fails with error suggesting to use update instead
+  Rule: Edge cases
+
+    Scenario: Upgrade fails on alpha
+      Given uspecs is installed with alpha version
+      When Engineer runs upgrade
+      Then upgrade fails with "Only applicable for stable versions. Alpha versions always track the latest commit from main branch, use update instead"
 
