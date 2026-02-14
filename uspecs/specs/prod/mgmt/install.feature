@@ -2,7 +2,7 @@ Feature: Install uspecs
   Engineer installs uspecs for a project
 
   Scenario Outline: Install stable version
-    Given README.md contains <type> install command
+    Given README.md contains <type> install command without --alpha flag
     When Engineer runs the <type> install command
     Then uspecs is installed with <type> invocation type
     And config file is created with version and timestamps
@@ -14,9 +14,10 @@ Feature: Install uspecs
       | nlic | CLAUDE.md |
 
   Scenario: Install alpha version
-    When Engineer runs install with --alpha
+    When Engineer runs install with --alpha and other flags
     Then uspecs is installed from the latest commit on main branch
     And config file version is "alpha" with commit info
+    And other flags are respected as in stable install
 
   Rule: Edge cases
 
