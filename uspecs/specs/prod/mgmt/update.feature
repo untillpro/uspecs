@@ -9,25 +9,20 @@ Feature: Update uspecs
     And config file is updated with new version and timestamps
 
     Examples:
-      | version_type | target                            |
-      | alpha        | latest commit from main branch    |
-      | stable       | latest minor version              |
+      | version_type | target                         |
+      | alpha        | latest commit from main branch |
+      | stable       | latest minor version           |
 
   Scenario Outline: No new version available
     Given uspecs is installed with <version_type> version
-    And no new version is available
+    And <availability_condition>
     When Engineer runs update
     Then "<message>" is printed
+    And <upgrade_hint>
 
     Examples:
-      | version_type | message                                       |
-      | alpha        | Already on the latest alpha version            |
-      | stable       | Already on the latest stable minor version     |
-
-  Scenario: Stable version with major upgrade available
-    Given uspecs is installed with stable version
-    And no new minor version is available
-    And a new major version is available
-    When Engineer runs update
-    Then upgrade availability is printed with manage.sh upgrade hint
+      | version_type | availability_condition              | message                                    | upgrade_hint                                                                     |
+      | alpha        | no new version is available         | Already on the latest alpha version        |                                                                                  |
+      | stable       | no new minor version is available   | Already on the latest stable minor version |                                                                                  |
+      | stable       | no new minor but major is available | Already on the latest stable minor version | "Upgrade available to version X.Y.Z, use `manage.sh upgrade` command" is printed |
 
