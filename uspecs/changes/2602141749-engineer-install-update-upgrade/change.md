@@ -59,13 +59,14 @@ Installation fails when:
 
 - Information is written into a config file in the project directory (`uspecs/u/uspecs.yml`)
 - manage.sh `install` flow
-  - make validation
+  - validate: git repository exists, uspecs is not already installed
   - identify the `ref` for download (main branch for --alpha or latest tag for stable)
-  - download the whole repo for the `ref`, unzip
-  - update config file with version, commit info, and timestamps
-  - copy uspecs/u folder to project
-  - if `--nlia` or `--nlic` is specified, update config file with invocation type and inject instructions into AGENTS.md or CLAUDE.md
+  - download the whole repo archive for the `ref` into a temp directory, unzip
+  - copy uspecs/u folder from the unzipped repo to project root
+  - write config file (`uspecs/u/uspecs.yml`) with version, timestamps (and commit info for alpha)
+  - if `--nlia` or `--nlic` is specified, update config file with invocation types and inject instructions into AGENTS.md or CLAUDE.md
     - ref. update-from-home.sh for how to inject instructions into AGENTS.md or CLAUDE.md (this script will be eliminated later)
+  - clean up temp directory
 
 ### Config file
 
@@ -76,7 +77,6 @@ Example for stable version:
 ```yaml
 # uspecs installation metadata
 # DO NOT EDIT - managed by uspecs
-
 version: 1.2.3
 invocation_types: [nlia, nlic]
 installed_at: 2026-02-14T17:49:00Z
@@ -97,7 +97,7 @@ commit: 967257e2d86e4520b48e69d6300c603db359689b
 commit_timestamp: 2026-02-14T16:00:00Z
 ```
 
-### Update to the latest minor version
+### Update
 
 Engineer runs:
 
@@ -107,31 +107,34 @@ uspecs/u/scripts/manage.sh update
 
 Behavior:
 
-- updates to the latest alpha version if currently on alpha (latest commit from main branch)
-- updates to the latest minor version if currently on stable (e.g., 1.2.3 -> 1.2.4, not 1.3.0)
-- updates configuration file with new version, commit, and timestamps
+- for alpha: updates to the latest commit from main branch
+- for stable: updates to the latest minor version (e.g., 1.2.3 -> 1.2.4, not 1.3.0)
+- updates configuration file with new version, timestamps (and commit info for alpha)
 - preserves configured invocation types
 
 Flow when --project-dir is not specified:
 
-- detect the next version (list tags for stable versions or get the latest commit from main branch for alpha versions)
-- if no new minor version is found
+- detect the next version
+  - for alpha: get the latest commit from main branch
+  - for stable: list tags and find the latest minor version
+- if no new version is found
   - for alpha: print "Already on the latest alpha version {commit, timestamp}"
   - for stable
     - print "Already on the latest stable minor version"
-    - check if upgrade available
-      - print "Upgrade available to version X.Y.Z, use `manage.sh upgrade` command to upgrade"
-- if new minor version is available
-  - print version details and ask for confirmation to proceed with the update
-- identify `project-dir` = `script-dir`/../..
-- download the next version of manage.sh from the repo for the identified version
-- run the latest version with `update --project-dir <project-dir>` to perform the update
+    - check if major upgrade available
+      - print "Upgrade available to version X.Y.Z, use `manage.sh upgrade` command"
+- if new version is available
+  - print version details and ask for confirmation to proceed
+- after confirmation
+  - identify `project-dir` as three levels up from the manage.sh script location
+  - download manage.sh for the target version from the repo into a temp directory
+  - run the downloaded manage.sh with `update --project-dir <project-dir>` to perform the update
 
-Flow when --project-dir is specified:
+Flow when --project-dir is specified (called by the downloaded manage.sh):
 
 - remove uspecs/u from project-dir
-- copy uspecs/u from `script-dir`/.. to project-dir/uspecs/u
-- update config file in project-dir with new version, commit, and timestamps
+- copy uspecs/u from the downloaded repo to project-dir/uspecs/u
+- update config file in project-dir with new version, timestamps (and commit info for alpha)
 
 ### Upgrade to the latest major version
 
@@ -141,9 +144,9 @@ Engineer runs:
 uspecs/u/scripts/manage.sh upgrade
 ```
 
-Same flow as update command, but detects the latest major version instead of latest minor version (e.g., 1.2.3 -> 2.0.0).
+Same flow as update, but detects the latest major version instead of latest minor version (e.g., 1.2.3 -> 2.0.0).
 
-Only applicable for stable versions (alpha versions always track main branch).
+Only applicable for stable versions. Fails with an error if run on alpha (alpha versions always track the latest commit from main branch, use update instead).
 
 ### Configure invocation types
 
