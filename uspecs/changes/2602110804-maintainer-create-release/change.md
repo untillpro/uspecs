@@ -12,7 +12,7 @@ Enable maintainers to create releases by tagging the current version in the main
 
 ## What
 
-Action
+Action `Release` that can be run manually. It runs a release.sh script:
 
 - Read version from version.txt (format: X.Y.Z-aN)
 - Create git tag vX.Y.Z (remove pre-release identifier)
@@ -22,5 +22,6 @@ Action
 
 Artifacts:
 
+- github action - Release - manual trigger for release process
 - scripts/release.sh - release automation script
 - version.txt - version tracking file
