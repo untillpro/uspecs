@@ -44,13 +44,11 @@ Systems:
 
 ### conf
 
-Install and maintain the System.
+Provision and maintain the System.
 
 Relationships with external actors:
 
-- 🎯conf ->|installation| 👤Engineer
-- 🎯conf -> |configuration| ⚙️AI Agent
-  - AI Agent parameters configuration
+- 🎯conf ->|provision| 👤Engineer
 
 ### softeng
 
@@ -66,4 +64,4 @@ Relationships with external actors:
 
 ## Context map
 
-- conf -> |paremeters| softeng
+- conf -> |working uspecs| softeng
