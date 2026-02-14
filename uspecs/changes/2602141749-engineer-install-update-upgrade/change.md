@@ -21,9 +21,9 @@ Engineers need a way to manage uspecs per project:
 ### Update prod domain with new concepts
 
 - Invocation Method: NLI (Natural Language Invocation), CB (Command-Based)
-- NLI Type: nlia (AGENTS.md), nlic (CLAUDE.md)
-- CB Type: multiple agent-specific types (to be defined)
-- Version Type:
+- NLI Types: nlia (AGENTS.md), nlic (CLAUDE.md)
+- CB Types: multiple agent-specific types (to be defined)
+- Version Types:
   - Stable: released versions identified by semantic version tags (e.g., 1.2.3)
   - Alpha: development versions from the main branch
 
@@ -53,7 +53,7 @@ Optional flags:
 Installation fails when:
 
 - no git repository is found in the current directory or any parent directory
-- uspecs is already installed for the project, suggesting running update
+- uspecs is already installed for the project (suggest running update instead)
 
 #### Implementation details
 
@@ -120,7 +120,7 @@ Flow when --project-dir is not specified:
   - for stable
     - print "Already on the latest stable minor version"
     - check if upgrade available
-      - print "Upgrade available to version X.Y.Z, use `manage.sh update` command to upgrade"
+      - print "Upgrade available to version X.Y.Z, use `manage.sh upgrade` command to upgrade"
 - if new minor version is available
   - print version details and ask for confirmation to proceed with the update
 - identify `project-dir` = `script-dir`/../..
@@ -141,9 +141,9 @@ Engineer runs:
 uspecs/u/scripts/manage.sh upgrade
 ```
 
-Behavior:
+Same flow as update command, but detects the latest major version instead of latest minor version (e.g., 1.2.3 -> 2.0.0).
 
-- follows the same flow as update command but checks for latest major version instead of minor version
+Only applicable for stable versions (alpha versions always track main branch).
 
 ### Configure invocation types
 
