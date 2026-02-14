@@ -38,4 +38,3 @@ Developer -> release.yml (workflow_dispatch)
 - Given version X.Y.Z-aN:
   - Tag: vX.Y.Z (strip pre-release identifier, version.txt set to X.Y.Z)
   - PR: X.Y+1.0-a0 (bump minor, reset patch, version.txt set to X.Y+1.0-a0)
-
