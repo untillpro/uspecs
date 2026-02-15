@@ -2,6 +2,7 @@
 registered_at: 2026-02-15T01:22:41Z
 change_id: 2602150122-pr-flag-update-upgrade
 baseline: ced8af554a32ffa6c12d65a894a2e20a2e37402a
+archived_at: 2026-02-15T01:46:23Z
 ---
 
 # Change request: Add --pr flag to update and upgrade commands

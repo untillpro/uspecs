@@ -2,17 +2,17 @@
 
 ## Functional design
 
-- [x] update: [prod/mgmt/update.feature](../../specs/prod/mgmt/update.feature)
+- [x] update: [prod/mgmt/update.feature](../../../../specs/prod/mgmt/update.feature)
   - update: Scenario Outline "Update when new version is available" to add pr_flag and pr_action parameters
   - add: Examples for --pr flag with alpha and stable versions
 
-- [x] update: [prod/mgmt/upgrade.feature](../../specs/prod/mgmt/upgrade.feature)
+- [x] update: [prod/mgmt/upgrade.feature](../../../../specs/prod/mgmt/upgrade.feature)
   - update: Scenario "Upgrade stable version" to Scenario Outline with pr_flag and pr_action parameters
   - add: Examples for --pr flag
 
 ## Construction
 
-- [x] update: [uspecs/u/scripts/manage.sh](../../../uspecs/u/scripts/manage.sh)
+- [x] update: [uspecs/u/scripts/manage.sh](../../../../../uspecs/u/scripts/manage.sh)
   - add: Helper function format_version_string to format version string for alpha and stable versions
   - add: Helper function validate_pr_prerequisites to check GitHub CLI, origin remote, and clean working directory
   - add: Helper function determine_pr_remote to select upstream or origin for PR target
