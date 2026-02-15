@@ -610,6 +610,7 @@ resolve_update_version() {
         target_version="alpha"
         target_ref="$commit"
         echo "New alpha version available:"
+        echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
         echo "  Current commit: $current_commit"
         echo "  Current timestamp: $current_commit_timestamp"
         echo "  Latest commit: $commit"
@@ -633,6 +634,7 @@ resolve_update_version() {
 
         target_ref="v$target_version"
         echo "New version available:"
+        echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
         echo "  Current: $current_version"
         echo "  Latest: $target_version"
     fi
@@ -656,6 +658,7 @@ resolve_upgrade_version() {
 
     target_ref="v$target_version"
     echo "New major version available:"
+    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
     echo "  Current: $current_version"
     echo "  Latest: $target_version"
     return 0
