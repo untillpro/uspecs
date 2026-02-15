@@ -561,6 +561,7 @@ cmd_install() {
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
         version="alpha"
+        echo "Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
         echo "Latest commit: $commit"
         echo "Commit timestamp: $commit_timestamp"
     else
