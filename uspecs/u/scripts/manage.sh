@@ -319,7 +319,7 @@ show_operation_plan() {
     echo "=========================================="
 
     # From (Source)
-    echo "From (Source):"
+    echo "From:"
     echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
 
     if [[ "$operation" != "install" ]]; then
@@ -340,8 +340,8 @@ show_operation_plan() {
     echo ""
 
     # To (Destination)
-    echo "To (Destination):"
-    echo "  Target folder: $project_dir/uspecs/u"
+    echo "To:"
+    echo "  uspecs folder: $project_dir/uspecs/u"
 
     if [[ -n "$invocation_types" ]]; then
         echo "  Natural language invocation:"
@@ -361,7 +361,7 @@ show_operation_plan() {
     echo "  - Download from GitHub"
 
     if [[ "$operation" == "install" ]]; then
-        echo "  - Create target directory"
+        echo "  - Create uspecs directory"
         echo "  - Install files"
         echo "  - Create metadata"
         if [[ -n "$invocation_types" ]]; then
