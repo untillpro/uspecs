@@ -337,6 +337,17 @@ show_operation_plan() {
 
     # To (Destination)
     echo "To:"
+
+    if [[ "$operation" != "install" ]]; then
+        if [[ "$target_version" == "alpha" ]]; then
+            echo "  Version: alpha-${timestamp_compact}-${commit_short}"
+            echo "  Commit: $commit"
+            echo "  Timestamp: $commit_timestamp"
+        else
+            echo "  Version: $target_version"
+        fi
+    fi
+
     echo "  Project folder: $project_dir"
     echo "  uspecs subfolder: uspecs/u"
 
