@@ -317,45 +317,61 @@ show_operation_plan() {
     echo "Operation: $operation"
     echo "=========================================="
 
+    # From (Source)
+    echo "From (Source):"
+    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
+
     if [[ "$operation" != "install" ]]; then
-        echo "Current version: $current_version"
+        echo "  Current version: $current_version"
     fi
 
     if [[ "$target_version" == "alpha" ]]; then
         local timestamp_compact
         timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
         local commit_short="${commit:0:8}"
-        echo "Target version: alpha-${timestamp_compact}-${commit_short}"
+        echo "  Version: alpha-${timestamp_compact}-${commit_short}"
         echo "  Commit: $commit"
         echo "  Timestamp: $commit_timestamp"
     else
-        echo "Target version: $target_version"
+        echo "  Version: $target_version"
     fi
 
     echo ""
-    echo "Changes that will be made:"
-    echo "  - Download uspecs from GitHub"
-    echo "    Repository: $REPO_OWNER/$REPO_NAME"
-    echo "    Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
+
+    # To (Destination)
+    local project_dir
+    project_dir=$(get_project_dir)
+    echo "To (Destination):"
+    echo "  Target folder: $project_dir/uspecs/u"
+
+    if [[ -n "$invocation_types" ]]; then
+        echo "  Natural language invocation:"
+        IFS=',' read -ra types_array <<< "$invocation_types"
+        for type in "${types_array[@]}"; do
+            type=$(echo "$type" | xargs)
+            local file
+            file=$(get_nli_file "$type") 2>/dev/null || continue
+            echo "    - $file"
+        done
+    fi
+
+    echo ""
+
+    # Steps
+    echo "Steps:"
+    echo "  - Download from GitHub"
 
     if [[ "$operation" == "install" ]]; then
-        echo "  - Create uspecs/u directory"
-        echo "  - Install uspecs/u files"
-        echo "  - Create installation metadata file"
+        echo "  - Create target directory"
+        echo "  - Install files"
+        echo "  - Create metadata"
         if [[ -n "$invocation_types" ]]; then
-            echo "  - Inject instructions into:"
-            IFS=',' read -ra types_array <<< "$invocation_types"
-            for type in "${types_array[@]}"; do
-                type=$(echo "$type" | xargs)
-                local file
-                file=$(get_nli_file "$type") 2>/dev/null || continue
-                echo "    - $file"
-            done
+            echo "  - Inject instructions"
         fi
     else
-        echo "  - Remove old uspecs/u files"
-        echo "  - Install new uspecs/u files"
-        echo "  - Update installation metadata"
+        echo "  - Remove old files"
+        echo "  - Install new files"
+        echo "  - Update metadata"
     fi
 
     if [[ "$pr_flag" == "true" ]]; then
