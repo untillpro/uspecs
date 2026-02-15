@@ -7,14 +7,19 @@ set -Eeuo pipefail
 #   Manages uspecs lifecycle: install, update, upgrade, and invocation type configuration
 #
 # Usage:
-#   manage.sh install --nlia
+#   manage.sh install --nlia [--alpha] [--pr]
 #   manage.sh update [--pr]
 #   manage.sh upgrade [--pr]
 #   manage.sh it --add nlia
 #   manage.sh it --remove nlic
+#
+# Internal commands (not for direct use):
+#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> --ref <ref> [flags...]
+
 
 REPO_OWNER="untillpro"
 REPO_NAME="uspecs"
+MAIN_BRANCH="${USPECS_MAIN_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
@@ -103,7 +108,7 @@ get_latest_minor_tag() {
     local current_version="$1"
     local major minor
     IFS='.' read -r major minor _ <<< "$current_version"
-    
+
     curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
         grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
@@ -115,19 +120,14 @@ get_latest_major_tag() {
     get_latest_tag
 }
 
-get_latest_commit() {
-    curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/main" | \
-        grep '"sha":' | \
-        head -n 1 | \
-        sed 's/.*"sha": *"\([^"]*\)".*/\1/'
-}
-
-get_commit_timestamp() {
-    local commit="$1"
-    curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$commit" | \
-        grep '"date":' | \
-        head -n 1 | \
-        sed 's/.*"date": *"\([^"]*\)".*/\1/'
+get_latest_commit_info() {
+    local response
+    response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH")
+    local sha
+    sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    local commit_date
+    commit_date=$(echo "$response" | grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
+    echo "$sha $commit_date"
 }
 
 download_archive() {
@@ -205,40 +205,52 @@ setup_pr_branch() {
     local pr_remote
     pr_remote=$(determine_pr_remote)
 
-    # Switch to main branch
-    echo "Switching to main branch..."
-    git checkout main
+    echo "Switching to $MAIN_BRANCH branch..."
+    git checkout "$MAIN_BRANCH"
 
-    # Update main from PR remote with rebase
-    echo "Updating main from $pr_remote..."
+    echo "Updating $MAIN_BRANCH from $pr_remote..."
     git fetch "$pr_remote"
-    git rebase "$pr_remote/main"
+    git rebase "$pr_remote/$MAIN_BRANCH"
 
-    # Push updated main to origin
-    echo "Pushing updated main to origin..."
-    git push origin main
+    echo "Pushing updated $MAIN_BRANCH to origin..."
+    git push origin "$MAIN_BRANCH"
 }
 
-create_pr_workflow() {
+pr_branch_name() {
+    local command_name="$1"
+    local version_string="$2"
+    echo "${command_name}-uspecs-${version_string}"
+}
+
+create_pr_branch() {
     local command_name="$1"
     local version_string="$2"
 
-    local pr_remote
-    pr_remote=$(determine_pr_remote)
-
-    local branch_name="${command_name}-uspecs-${version_string}"
+    local branch_name
+    branch_name=$(pr_branch_name "$command_name" "$version_string")
 
     echo "Creating branch: $branch_name"
     git checkout -b "$branch_name"
+}
+
+finalize_pr() {
+    local command_name="$1"
+    local version_string="$2"
+
+    local branch_name
+    branch_name=$(pr_branch_name "$command_name" "$version_string")
 
     # Check if there are any changes to commit
     if [[ -z $(git status --porcelain) ]]; then
         echo "No changes to commit. Cleaning up..."
-        git checkout -
+        git checkout "$MAIN_BRANCH"
         git branch -d "$branch_name"
         echo "No updates were needed."
         return 0
     fi
+
+    local pr_remote
+    pr_remote=$(determine_pr_remote)
 
     # Commit changes
     echo "Committing changes..."
@@ -254,7 +266,7 @@ create_pr_workflow() {
     local pr_repo
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
     local pr_body="${command_name^} uspecs to version ${version_string}"
-    local pr_args=('--repo' "$pr_repo" '--base' 'main' '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
+    local pr_args=('--repo' "$pr_repo" '--base' "$MAIN_BRANCH" '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
 
     if [[ "$pr_remote" == "upstream" ]]; then
         # PR from fork to upstream
@@ -269,16 +281,18 @@ create_pr_workflow() {
 
     # Clean up local branch (remote branch remains for PR)
     echo "Cleaning up local branch..."
-    git checkout main
+    git checkout "$MAIN_BRANCH"
     git branch -d "$branch_name"
 }
 
 _TEMP_DIRS=()
 
 cleanup_temp_dirs() {
-    for dir in "${_TEMP_DIRS[@]}"; do
-        rm -rf "$dir"
-    done
+    if [[ ${#_TEMP_DIRS[@]} -gt 0 ]]; then
+        for dir in "${_TEMP_DIRS[@]}"; do
+            rm -rf "$dir"
+        done
+    fi
 }
 trap cleanup_temp_dirs EXIT
 
@@ -323,19 +337,19 @@ download_target_manage_sh() {
 inject_instructions() {
     local source_file="$1"
     local target_file="$2"
-    
+
     local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
     local end_marker="<!-- uspecs:triggering_instructions:end -->"
-    
+
     if [[ ! -f "$source_file" ]]; then
         echo "Warning: Source file not found: $source_file" >&2
         return 1
     fi
-    
+
     local temp_extract
     temp_extract=$(mktemp)
     sed -n "/$begin_marker/,/$end_marker/p" "$source_file" > "$temp_extract"
-    
+
     if [[ ! -s "$temp_extract" ]]; then
         echo "Warning: No triggering instructions found in $source_file" >&2
         rm -f "$temp_extract"
@@ -396,24 +410,22 @@ write_metadata() {
     local invocation_types="$3"
     local commit="${4:-}"
     local commit_timestamp="${5:-}"
-    local is_new="${6:-false}"
+    local installed_at="${6:-}"
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
     local timestamp
     timestamp=$(get_timestamp)
+
+    if [[ -z "$installed_at" ]]; then
+        installed_at="$timestamp"
+    fi
 
     {
         echo "# uspecs installation metadata"
         echo "# DO NOT EDIT - managed by uspecs"
         echo "version: $version"
         echo "invocation_types: [$invocation_types]"
-        if [[ "$is_new" == "true" ]]; then
-            echo "installed_at: $timestamp"
-        else
-            local installed_at
-            installed_at=$(get_config_value "installed_at")
-            echo "installed_at: $installed_at"
-        fi
+        echo "installed_at: $installed_at"
         echo "modified_at: $timestamp"
         if [[ -n "$commit" ]]; then
             echo "# Commit info for alpha versions"
@@ -423,13 +435,106 @@ write_metadata() {
     } > "$metadata_file"
 }
 
+# Re-invoked by install/update/upgrade commands via target version's manage.sh
+cmd_apply() {
+    if [[ $# -lt 1 ]]; then
+        error "Usage: manage.sh apply <install|update|upgrade> [flags...]"
+    fi
+
+    local command_name="$1"
+    shift
+
+    local project_dir="" version="" ref="" commit="" commit_timestamp="" pr_flag=false
+    local invocation_types=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --project-dir) project_dir="$2"; shift 2 ;;
+            --version) version="$2"; shift 2 ;;
+            --ref) ref="$2"; shift 2 ;;
+            --commit) commit="$2"; shift 2 ;;
+            --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
+            --pr) pr_flag=true; shift ;;
+            --nlia) invocation_types+=("nlia"); shift ;;
+            --nlic) invocation_types+=("nlic"); shift ;;
+            *) error "Unknown flag: $1" ;;
+        esac
+    done
+
+    [[ -z "$project_dir" ]] && error "--project-dir is required"
+    [[ -z "$version" ]] && error "--version is required"
+    [[ -z "$ref" ]] && error "--ref is required"
+    [[ ! -d "$project_dir" ]] && error "Project directory not found: $project_dir"
+
+    local version_string
+    version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
+
+    # PR: create branch before making changes
+    if [[ "$pr_flag" == "true" ]]; then
+        create_pr_branch "$command_name" "$version_string"
+    fi
+
+    # Save existing metadata for update/upgrade
+    local invocation_types_str="" installed_at=""
+    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+
+    if [[ "$command_name" != "install" ]]; then
+        [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
+        invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
+        installed_at=$(grep "^installed_at:" "$metadata_file" | sed 's/^installed_at: *//')
+    else
+        invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+    fi
+
+    # Download and install files
+    local temp_dir
+    temp_dir=$(create_temp_dir)
+
+    echo "Downloading uspecs..."
+    download_archive "$ref" "$temp_dir"
+
+    if [[ "$command_name" == "install" ]]; then
+        rm -f "$temp_dir/uspecs/u/uspecs.yml"
+        echo "Installing uspecs/u..."
+        mkdir -p "$project_dir/uspecs"
+        cp -r "$temp_dir/uspecs/u" "$project_dir/uspecs/"
+    else
+        replace_uspecs_u "$temp_dir" "$project_dir"
+    fi
+
+    # Write metadata
+    echo "Writing installation metadata..."
+    write_metadata "$project_dir" "$version" "$invocation_types_str" "$commit" "$commit_timestamp" "$installed_at"
+
+    # Inject NLI instructions (install only)
+    if [[ "$command_name" == "install" ]]; then
+        echo "Injecting instructions..."
+        for type in "${invocation_types[@]}"; do
+            local file
+            file=$(get_nli_file "$type") || continue
+            inject_instructions "$temp_dir/$file" "$project_dir/$file"
+            echo "  - $file"
+        done
+    fi
+
+    # PR: finalize
+    if [[ "$pr_flag" == "true" ]]; then
+        finalize_pr "$command_name" "$version_string"
+    fi
+
+    echo ""
+    echo "${command_name^} completed successfully!"
+}
+
 cmd_install() {
     local alpha=false
+    local pr_flag=false
     local invocation_types=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --alpha) alpha=true; shift ;;
+            --pr) pr_flag=true; shift ;;
             --nlia) invocation_types+=("nlia"); shift ;;
             --nlic) invocation_types+=("nlic"); shift ;;
             *) error "Unknown flag: $1" ;;
@@ -445,11 +550,15 @@ cmd_install() {
     check_git_repository
     check_not_installed "$project_dir"
 
+    if [[ "$pr_flag" == "true" ]]; then
+        validate_pr_prerequisites
+        setup_pr_branch
+    fi
+
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
         echo "Installing alpha version..."
-        commit=$(get_latest_commit)
-        commit_timestamp=$(get_commit_timestamp "$commit")
+        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
         version="alpha"
         echo "Latest commit: $commit"
@@ -464,88 +573,39 @@ cmd_install() {
     local temp_dir
     temp_dir=$(create_temp_dir)
 
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
+    download_target_manage_sh "$ref" "$temp_dir"
 
-    # Removing installation metadata file from archive...
-    rm -f "$temp_dir/uspecs/u/uspecs.yml"
-
-    echo "Installing $project_dir/uspecs/u..."
-    mkdir -p "$project_dir/uspecs"
-    cp -r "$temp_dir/uspecs/u" "$project_dir/uspecs/"
-
-    local invocation_types_str
-    invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
-
-    echo "Writing installation metadata..."
-    write_metadata "$project_dir" "$version" "$invocation_types_str" "$commit" "$commit_timestamp" "true"
-
-    echo "Injecting instructions..."
+    local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version" "--ref" "$ref")
     for type in "${invocation_types[@]}"; do
-        local file
-        file=$(get_nli_file "$type") || continue
-        inject_instructions "$temp_dir/$file" "$project_dir/$file"
-        echo "  - $file"
+        apply_args+=("--$type")
     done
+    if [[ -n "$commit" ]]; then
+        apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
+    fi
+    if [[ "$pr_flag" == "true" ]]; then
+        apply_args+=("--pr")
+    fi
 
-    echo ""
-    echo "uspecs installed successfully!"
+    echo "Running install..."
+    bash "$temp_dir/manage.sh" apply "${apply_args[@]}"
 }
 
-cmd_update() {
-    local project_dir=""
-    local pr_flag=false
+resolve_update_version() {
+    local current_version="$1"
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --project-dir)
-                project_dir="$2"
-                shift 2
-                ;;
-            --pr)
-                pr_flag=true
-                shift
-                ;;
-            *)
-                error "Unknown flag: $1"
-                ;;
-        esac
-    done
-
-    if [[ -n "$project_dir" ]]; then
-        perform_update "$project_dir"
-        return 0
-    fi
-
-    # If --pr flag is provided, validate prerequisites and setup PR workflow
-    if [[ "$pr_flag" == "true" ]]; then
-        validate_pr_prerequisites
-        setup_pr_branch
-    fi
-
-    check_installed
-
-    project_dir=$(get_project_dir)
-
-    local current_version
-    current_version=$(get_config_value "version")
-
-    local target_version target_ref commit commit_timestamp
     if [[ "$current_version" == "alpha" ]]; then
         echo "Checking for alpha updates..."
         local current_commit current_commit_timestamp
         current_commit=$(get_config_value "commit")
         current_commit_timestamp=$(get_config_value "commit_timestamp")
-        commit=$(get_latest_commit)
+        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
 
         if [[ "$current_commit" == "$commit" ]]; then
             echo "Already on the latest alpha version"
             echo "  Commit: $commit"
             echo "  Timestamp: $current_commit_timestamp"
-            return 0
+            return 1
         fi
-
-        commit_timestamp=$(get_commit_timestamp "$commit")
         target_version="alpha"
         target_ref="$commit"
         echo "New alpha version available:"
@@ -567,7 +627,7 @@ cmd_update() {
                 echo "Upgrade available to version $latest_major"
                 echo "Use 'manage.sh upgrade' command"
             fi
-            return 0
+            return 1
         fi
 
         target_ref="v$target_version"
@@ -575,86 +635,35 @@ cmd_update() {
         echo "  Current: $current_version"
         echo "  Latest: $target_version"
     fi
-
-    confirm_action "update" || return 0
-
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    download_target_manage_sh "$target_ref" "$temp_dir"
-
-    echo "Running update..."
-    bash "$temp_dir/manage.sh" update --project-dir "$project_dir"
-
-    # If --pr flag is provided, create PR workflow
-    if [[ "$pr_flag" == "true" ]]; then
-        local version_string
-        version_string=$(format_version_string "$target_version" "$commit" "$commit_timestamp")
-        create_pr_workflow "update" "$version_string"
-    fi
+    return 0
 }
 
-perform_update() {
-    local project_dir="$1"
+resolve_upgrade_version() {
+    local current_version="$1"
 
-    if [[ ! -d "$project_dir" ]]; then
-        error "Project directory not found: $project_dir"
+    if [[ "$current_version" == "alpha" ]]; then
+        error "Only applicable for stable versions. Alpha versions always track the latest commit from $MAIN_BRANCH branch, use update instead"
     fi
 
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
-    if [[ ! -f "$metadata_file" ]]; then
-        error "Installation metadata file not found: $metadata_file"
+    echo "Checking for major upgrades..."
+    target_version=$(get_latest_major_tag)
+
+    if [[ "$target_version" == "$current_version" ]]; then
+        echo "Already on the latest major version: $current_version"
+        return 1
     fi
 
-    echo "Saving metadata..."
-    local temp_metadata
-    temp_metadata=$(mktemp)
-    cp "$metadata_file" "$temp_metadata"
-
-    local version
-    version=$(grep "^version:" "$temp_metadata" | sed 's/^version: *//')
-
-    local commit="" commit_timestamp=""
-    if [[ "$version" == "alpha" ]]; then
-        commit=$(get_latest_commit)
-        commit_timestamp=$(get_commit_timestamp "$commit")
-    fi
-
-    local ref
-    ref=$(resolve_version_ref "$version" "$commit")
-
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
-
-    replace_uspecs_u "$temp_dir" "$project_dir"
-
-    echo "Restoring and updating metadata..."
-    cp "$temp_metadata" "$metadata_file"
-    rm -f "$temp_metadata"
-
-    local timestamp
-    timestamp=$(get_timestamp)
-
-    local temp_sed
-    temp_sed=$(mktemp)
-    sed "s/^modified_at: .*/modified_at: $timestamp/" "$metadata_file" > "$temp_sed"
-
-    if [[ "$version" == "alpha" ]]; then
-        sed "s/^commit: .*/commit: $commit/" "$temp_sed" | \
-            sed "s/^commit_timestamp: .*/commit_timestamp: $commit_timestamp/" > "$metadata_file"
-    else
-        mv "$temp_sed" "$metadata_file"
-    fi
-    rm -f "$temp_sed"
-
-    echo ""
-    echo "Update completed successfully!"
+    target_ref="v$target_version"
+    echo "New major version available:"
+    echo "  Current: $current_version"
+    echo "  Latest: $target_version"
+    return 0
 }
 
-cmd_upgrade() {
+cmd_update_or_upgrade() {
+    local command_name="$1"
+    shift
+
     local pr_flag=false
 
     while [[ $# -gt 0 ]]; do
@@ -683,50 +692,38 @@ cmd_upgrade() {
     local current_version
     current_version=$(get_config_value "version")
 
-    if [[ "$current_version" == "alpha" ]]; then
-        error "Only applicable for stable versions. Alpha versions always track the latest commit from main branch, use update instead"
+    local target_version target_ref commit commit_timestamp
+    if [[ "$command_name" == "update" ]]; then
+        resolve_update_version "$current_version" || return 0
+    else
+        resolve_upgrade_version "$current_version" || return 0
     fi
 
-    echo "Checking for major upgrades..."
-    local target_version
-    target_version=$(get_latest_major_tag)
-
-    if [[ "$target_version" == "$current_version" ]]; then
-        echo "Already on the latest major version: $current_version"
-        return 0
-    fi
-
-    local target_ref="v$target_version"
-    echo "New major version available:"
-    echo "  Current: $current_version"
-    echo "  Latest: $target_version"
-
-    confirm_action "upgrade" || return 0
-
-    local invocation_types
-    invocation_types=$(get_config_value "invocation_types")
+    confirm_action "$command_name" || return 0
 
     local temp_dir
     temp_dir=$(create_temp_dir)
 
-    echo "Downloading uspecs..."
-    download_archive "$target_ref" "$temp_dir"
+    download_target_manage_sh "$target_ref" "$temp_dir"
 
-    replace_uspecs_u "$temp_dir" "$project_dir"
-
-    echo "Updating installation metadata..."
-    write_metadata "$project_dir" "$target_version" "$invocation_types" "" "" "false"
-
-    echo ""
-    echo "Upgrade completed successfully!"
-
-    # If --pr flag is provided, create PR workflow
-    if [[ "$pr_flag" == "true" ]]; then
-        local version_string
-        version_string=$(format_version_string "$target_version")
-
-        create_pr_workflow "upgrade" "$version_string"
+    local apply_args=("$command_name" "--project-dir" "$project_dir" "--version" "$target_version" "--ref" "$target_ref")
+    if [[ -n "${commit:-}" ]]; then
+        apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
     fi
+    if [[ "$pr_flag" == "true" ]]; then
+        apply_args+=("--pr")
+    fi
+
+    echo "Running ${command_name}..."
+    bash "$temp_dir/manage.sh" apply "${apply_args[@]}"
+}
+
+cmd_update() {
+    cmd_update_or_upgrade "update" "$@"
+}
+
+cmd_upgrade() {
+    cmd_update_or_upgrade "upgrade" "$@"
 }
 
 cmd_it() {
@@ -815,8 +812,11 @@ cmd_it() {
             new_types_array+=("$type")
         fi
     done
-    # Add any new types that were added
+    # Add any new types that were successfully added (present in types_map)
     for type in "${add_types[@]}"; do
+        if [[ -z "${types_map[$type]:-}" ]]; then
+            continue
+        fi
         local found=0
         for existing in "${new_types_array[@]}"; do
             if [[ "$existing" == "$type" ]]; then
@@ -865,6 +865,9 @@ main() {
         upgrade)
             cmd_upgrade "$@"
             ;;
+        apply)
+            cmd_apply "$@"
+            ;;
         it)
             cmd_it "$@"
             ;;
@@ -875,4 +878,3 @@ main() {
 }
 
 main "$@"
-
