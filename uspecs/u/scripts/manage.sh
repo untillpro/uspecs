@@ -311,6 +311,7 @@ show_operation_plan() {
     local commit_timestamp="${5:-}"
     local invocation_types="${6:-}"
     local pr_flag="${7:-false}"
+    local project_dir="${8:-}"
 
     echo ""
     echo "=========================================="
@@ -339,8 +340,6 @@ show_operation_plan() {
     echo ""
 
     # To (Destination)
-    local project_dir
-    project_dir=$(get_project_dir)
     echo "To (Destination):"
     echo "  Target folder: $project_dir/uspecs/u"
 
@@ -668,7 +667,7 @@ cmd_install() {
     # Show operation plan
     local invocation_types_str
     invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
-    show_operation_plan "install" "" "$version" "$commit" "$commit_timestamp" "$invocation_types_str" "$pr_flag"
+    show_operation_plan "install" "" "$version" "$commit" "$commit_timestamp" "$invocation_types_str" "$pr_flag" "$project_dir"
 
     # Confirm action
     confirm_action "install" || return 0
@@ -792,7 +791,7 @@ cmd_update_or_upgrade() {
     fi
 
     # Show operation plan
-    show_operation_plan "$command_name" "$current_version" "$target_version" "$commit" "$commit_timestamp" "" "$pr_flag"
+    show_operation_plan "$command_name" "$current_version" "$target_version" "$commit" "$commit_timestamp" "" "$pr_flag" "$project_dir"
 
     confirm_action "$command_name" || return 0
 
