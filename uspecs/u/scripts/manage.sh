@@ -322,9 +322,10 @@ show_operation_plan() {
     echo "From:"
     echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
 
-    if [[ "$operation" != "install" ]]; then
-        echo "  Current version: $current_version"
-    fi
+    echo ""
+
+    # To (Destination)
+    echo "To:"
 
     if [[ "$target_version" == "alpha" ]]; then
         local timestamp_compact
@@ -337,10 +338,6 @@ show_operation_plan() {
         echo "  Version: $target_version"
     fi
 
-    echo ""
-
-    # To (Destination)
-    echo "To:"
     echo "  Project folder: $project_dir"
     echo "  uspecs subfolder: uspecs/u"
 
