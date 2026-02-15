@@ -374,8 +374,20 @@ show_operation_plan() {
 
 confirm_action() {
     local action="$1"
+
     echo ""
-    read -p "Proceed with $action? (y/n) " -n 1 -r < /dev/tty
+
+    # Try to read from /dev/tty (works even when stdin is piped)
+    if [ -e /dev/tty ]; then
+        read -p "Proceed with $action? (y/n) " -n 1 -r < /dev/tty
+    elif [[ -t 0 ]]; then
+        # Stdin is a terminal (not piped)
+        read -p "Proceed with $action? (y/n) " -n 1 -r
+    else
+        # Non-interactive (CI, containers), auto-accept
+        return 0
+    fi
+
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "${action^} cancelled"
