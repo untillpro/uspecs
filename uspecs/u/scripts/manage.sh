@@ -322,11 +322,6 @@ show_operation_plan() {
     echo "From:"
     echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
 
-    echo ""
-
-    # To (Destination)
-    echo "To:"
-
     if [[ "$target_version" == "alpha" ]]; then
         local timestamp_compact
         timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
@@ -338,6 +333,10 @@ show_operation_plan() {
         echo "  Version: $target_version"
     fi
 
+    echo ""
+
+    # To (Destination)
+    echo "To:"
     echo "  Project folder: $project_dir"
     echo "  uspecs subfolder: uspecs/u"
 
@@ -351,37 +350,6 @@ show_operation_plan() {
             echo "    - $file"
         done
     fi
-
-    echo ""
-
-    # Steps
-    echo "Steps:"
-    echo "  - Download from GitHub"
-
-    if [[ "$operation" == "install" ]]; then
-        echo "  - Create uspecs subfolder"
-        echo "  - Install files"
-        echo "  - Create metadata"
-        if [[ -n "$invocation_types" ]]; then
-            echo "  - Inject natural language invocation instructions"
-        fi
-    else
-        echo "  - Remove old files"
-        echo "  - Install new files"
-        echo "  - Update metadata"
-    fi
-
-    if [[ "$pr_flag" == "true" ]]; then
-        local version_string
-        version_string=$(format_version_string "$target_version" "$commit" "$commit_timestamp")
-        local branch_name
-        branch_name=$(pr_branch_name "$operation" "$version_string")
-        echo "  - Create PR branch: $branch_name"
-        echo "  - Commit changes"
-        echo "  - Push to origin"
-        echo "  - Create pull request"
-    fi
-
     echo "=========================================="
 }
 
