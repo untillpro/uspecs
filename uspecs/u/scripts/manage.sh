@@ -303,6 +303,75 @@ create_temp_dir() {
     echo "$temp_dir"
 }
 
+show_operation_plan() {
+    local operation="$1"
+    local current_version="${2:-}"
+    local target_version="$3"
+    local commit="${4:-}"
+    local commit_timestamp="${5:-}"
+    local invocation_types="${6:-}"
+    local pr_flag="${7:-false}"
+
+    echo ""
+    echo "=========================================="
+    echo "Operation: $operation"
+    echo "=========================================="
+
+    if [[ "$operation" != "install" ]]; then
+        echo "Current version: $current_version"
+    fi
+
+    if [[ "$target_version" == "alpha" ]]; then
+        local timestamp_compact
+        timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
+        local commit_short="${commit:0:8}"
+        echo "Target version: alpha-${timestamp_compact}-${commit_short}"
+        echo "  Commit: $commit"
+        echo "  Timestamp: $commit_timestamp"
+    else
+        echo "Target version: $target_version"
+    fi
+
+    echo ""
+    echo "Changes that will be made:"
+    echo "  - Download uspecs from GitHub"
+    echo "    Repository: $REPO_OWNER/$REPO_NAME"
+    echo "    Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
+
+    if [[ "$operation" == "install" ]]; then
+        echo "  - Create uspecs/u directory"
+        echo "  - Install uspecs/u files"
+        echo "  - Create installation metadata file"
+        if [[ -n "$invocation_types" ]]; then
+            echo "  - Inject instructions into:"
+            IFS=',' read -ra types_array <<< "$invocation_types"
+            for type in "${types_array[@]}"; do
+                type=$(echo "$type" | xargs)
+                local file
+                file=$(get_nli_file "$type") 2>/dev/null || continue
+                echo "    - $file"
+            done
+        fi
+    else
+        echo "  - Remove old uspecs/u files"
+        echo "  - Install new uspecs/u files"
+        echo "  - Update installation metadata"
+    fi
+
+    if [[ "$pr_flag" == "true" ]]; then
+        local version_string
+        version_string=$(format_version_string "$target_version" "$commit" "$commit_timestamp")
+        local branch_name
+        branch_name=$(pr_branch_name "$operation" "$version_string")
+        echo "  - Create PR branch: $branch_name"
+        echo "  - Commit changes"
+        echo "  - Push to origin"
+        echo "  - Create pull request"
+    fi
+
+    echo "=========================================="
+}
+
 confirm_action() {
     local action="$1"
     echo ""
@@ -557,19 +626,24 @@ cmd_install() {
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
-        echo "Installing alpha version..."
+        echo "Fetching latest alpha version..."
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
         version="alpha"
-        echo "Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
-        echo "Latest commit: $commit"
-        echo "Commit timestamp: $commit_timestamp"
     else
-        echo "Installing stable version..."
+        echo "Fetching latest stable version..."
         version=$(get_latest_tag)
         ref="v$version"
         echo "Latest version: $version"
     fi
+
+    # Show operation plan
+    local invocation_types_str
+    invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+    show_operation_plan "install" "" "$version" "$commit" "$commit_timestamp" "$invocation_types_str" "$pr_flag"
+
+    # Confirm action
+    confirm_action "install" || return 0
 
     local temp_dir
     temp_dir=$(create_temp_dir)
@@ -609,12 +683,6 @@ resolve_update_version() {
         fi
         target_version="alpha"
         target_ref="$commit"
-        echo "New alpha version available:"
-        echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
-        echo "  Current commit: $current_commit"
-        echo "  Current timestamp: $current_commit_timestamp"
-        echo "  Latest commit: $commit"
-        echo "  Latest timestamp: $commit_timestamp"
     else
         echo "Checking for stable updates..."
         target_version=$(get_latest_minor_tag "$current_version")
@@ -633,10 +701,6 @@ resolve_update_version() {
         fi
 
         target_ref="v$target_version"
-        echo "New version available:"
-        echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
-        echo "  Current: $current_version"
-        echo "  Latest: $target_version"
     fi
     return 0
 }
@@ -657,10 +721,6 @@ resolve_upgrade_version() {
     fi
 
     target_ref="v$target_version"
-    echo "New major version available:"
-    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
-    echo "  Current: $current_version"
-    echo "  Latest: $target_version"
     return 0
 }
 
@@ -702,6 +762,9 @@ cmd_update_or_upgrade() {
     else
         resolve_upgrade_version "$current_version" || return 0
     fi
+
+    # Show operation plan
+    show_operation_plan "$command_name" "$current_version" "$target_version" "$commit" "$commit_timestamp" "" "$pr_flag"
 
     confirm_action "$command_name" || return 0
 
