@@ -192,8 +192,9 @@ replace_uspecs_u() {
     local project_dir="$2"
     echo "Removing installation metadata file from archive..."
     rm -f "$source_dir/uspecs/u/uspecs.yml"
-    echo "Removing old uspecs/u..."
-    rm -rf "$project_dir/uspecs/u"
+    echo "Removing old uspecs/u files..."
+    find "$project_dir/uspecs/u" -type f -delete
+    find "$project_dir/uspecs/u" -depth -type d -empty -delete
     echo "Installing new uspecs/u..."
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
@@ -409,15 +410,15 @@ cmd_update() {
     local target_version target_ref commit commit_timestamp
     if [[ "$current_version" == "alpha" ]]; then
         echo "Checking for alpha updates..."
-        local current_commit
+        local current_commit current_commit_timestamp
         current_commit=$(get_config_value "commit")
+        current_commit_timestamp=$(get_config_value "commit_timestamp")
         commit=$(get_latest_commit)
 
         if [[ "$current_commit" == "$commit" ]]; then
-            commit_timestamp=$(get_config_value "commit_timestamp")
             echo "Already on the latest alpha version"
             echo "  Commit: $commit"
-            echo "  Timestamp: $commit_timestamp"
+            echo "  Timestamp: $current_commit_timestamp"
             return 0
         fi
 
@@ -426,8 +427,9 @@ cmd_update() {
         target_ref="$commit"
         echo "New alpha version available:"
         echo "  Current commit: $current_commit"
+        echo "  Current timestamp: $current_commit_timestamp"
         echo "  Latest commit: $commit"
-        echo "  Timestamp: $commit_timestamp"
+        echo "  Latest timestamp: $commit_timestamp"
     else
         echo "Checking for stable updates..."
         target_version=$(get_latest_minor_tag "$current_version")
@@ -474,9 +476,13 @@ perform_update() {
         error "Installation metadata file not found: $metadata_file"
     fi
 
-    local version invocation_types
-    version=$(grep "^version:" "$metadata_file" | sed 's/^version: *//')
-    invocation_types=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[\(.*\)\]/\1/')
+    echo "Saving metadata..."
+    local temp_metadata
+    temp_metadata=$(mktemp)
+    cp "$metadata_file" "$temp_metadata"
+
+    local version
+    version=$(grep "^version:" "$temp_metadata" | sed 's/^version: *//')
 
     local commit="" commit_timestamp=""
     if [[ "$version" == "alpha" ]]; then
@@ -495,8 +501,24 @@ perform_update() {
 
     replace_uspecs_u "$temp_dir" "$project_dir"
 
-    echo "Updating installation metadata..."
-    write_metadata "$project_dir" "$version" "$invocation_types" "$commit" "$commit_timestamp" "false"
+    echo "Restoring and updating metadata..."
+    cp "$temp_metadata" "$metadata_file"
+    rm -f "$temp_metadata"
+
+    local timestamp
+    timestamp=$(get_timestamp)
+
+    local temp_sed
+    temp_sed=$(mktemp)
+    sed "s/^modified_at: .*/modified_at: $timestamp/" "$metadata_file" > "$temp_sed"
+
+    if [[ "$version" == "alpha" ]]; then
+        sed "s/^commit: .*/commit: $commit/" "$temp_sed" | \
+            sed "s/^commit_timestamp: .*/commit_timestamp: $commit_timestamp/" > "$metadata_file"
+    else
+        mv "$temp_sed" "$metadata_file"
+    fi
+    rm -f "$temp_sed"
 
     echo ""
     echo "Update completed successfully!"
