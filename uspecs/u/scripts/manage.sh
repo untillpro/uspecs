@@ -580,15 +580,11 @@ cmd_it() {
         types_map["$type"]=1
     done
 
-    local version commit="" commit_timestamp=""
+    local version
     version=$(get_config_value "version")
-    if [[ "$version" == "alpha" ]]; then
-        commit=$(get_config_value "commit")
-        commit_timestamp=$(get_config_value "commit_timestamp")
-    fi
 
     local ref
-    ref=$(resolve_version_ref "$version" "$commit")
+    ref=$(resolve_version_ref "$version" "$(get_config_value "commit")")
 
     local temp_source=""
     if [[ ${#add_types[@]} -gt 0 ]]; then
@@ -631,11 +627,41 @@ cmd_it() {
         unset types_map["$type"]
     done
 
+    # Build new types string preserving order from original
+    local new_types_array=()
+    for type in "${types_array[@]}"; do
+        type=$(echo "$type" | xargs)
+        if [[ -n "${types_map[$type]:-}" ]]; then
+            new_types_array+=("$type")
+        fi
+    done
+    # Add any new types that were added
+    for type in "${add_types[@]}"; do
+        local found=0
+        for existing in "${new_types_array[@]}"; do
+            if [[ "$existing" == "$type" ]]; then
+                found=1
+                break
+            fi
+        done
+        if [[ $found -eq 0 ]]; then
+            new_types_array+=("$type")
+        fi
+    done
+
     local new_types_str
-    new_types_str=$(IFS=', '; echo "${!types_map[*]}")
+    new_types_str=$(IFS=', '; echo "${new_types_array[*]}")
 
     echo "Updating installation metadata..."
-    write_metadata "$project_dir" "$version" "$new_types_str" "$commit" "$commit_timestamp" "false"
+    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+    local timestamp
+    timestamp=$(get_timestamp)
+
+    local temp_metadata
+    temp_metadata=$(mktemp)
+    sed "s/^invocation_types: .*/invocation_types: [$new_types_str]/" "$metadata_file" | \
+        sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
+    mv "$temp_metadata" "$metadata_file"
 
     echo ""
     echo "Invocation types updated successfully!"
