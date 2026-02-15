@@ -366,7 +366,7 @@ show_operation_plan() {
         echo "  - Install files"
         echo "  - Create metadata"
         if [[ -n "$invocation_types" ]]; then
-            echo "  - Inject instructions"
+            echo "  - Inject natural language invocation instructions"
         fi
     else
         echo "  - Remove old files"
