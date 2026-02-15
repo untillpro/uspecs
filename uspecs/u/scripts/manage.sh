@@ -341,10 +341,11 @@ show_operation_plan() {
 
     # To (Destination)
     echo "To:"
-    echo "  uspecs folder: $project_dir/uspecs/u"
+    echo "  Project folder: $project_dir"
+    echo "  uspecs subfolder: uspecs/u"
 
     if [[ -n "$invocation_types" ]]; then
-        echo "  Natural language invocation:"
+        echo "  Natural language invocation files:"
         IFS=',' read -ra types_array <<< "$invocation_types"
         for type in "${types_array[@]}"; do
             type=$(echo "$type" | xargs)
@@ -361,7 +362,7 @@ show_operation_plan() {
     echo "  - Download from GitHub"
 
     if [[ "$operation" == "install" ]]; then
-        echo "  - Create uspecs directory"
+        echo "  - Create uspecs subfolder"
         echo "  - Install files"
         echo "  - Create metadata"
         if [[ -n "$invocation_types" ]]; then
