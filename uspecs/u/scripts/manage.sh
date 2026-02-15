@@ -194,7 +194,6 @@ replace_uspecs_u() {
     rm -f "$source_dir/uspecs/u/uspecs.yml"
     echo "Removing old uspecs/u files..."
     find "$project_dir/uspecs/u" -type f -delete
-    find "$project_dir/uspecs/u" -depth -type d -empty -delete
     echo "Installing new uspecs/u..."
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
