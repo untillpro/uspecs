@@ -1,5 +1,15 @@
 # Domain architecture: devops
 
+## Development conventions
+
+### Line endings
+
+All files in `uspecs/u/` directory use LF (Unix-style) line endings.
+
+Rationale: Files downloaded from GitHub use LF line endings, making updates easier and avoiding unnecessary line ending conversions.
+
+Implementation: Enforced via `.gitattributes` file in `uspecs/u/` directory.
+
 ## Key data models
 
 ### Version format
