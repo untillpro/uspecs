@@ -8,8 +8,8 @@ set -Eeuo pipefail
 #
 # Usage:
 #   manage.sh install --nlia
-#   manage.sh update
-#   manage.sh upgrade
+#   manage.sh update [--pr]
+#   manage.sh upgrade [--pr]
 #   manage.sh it --add nlia
 #   manage.sh it --remove nlic
 
@@ -158,6 +158,119 @@ resolve_version_ref() {
     else
         echo "v$version"
     fi
+}
+
+format_version_string() {
+    local version="$1"
+    local commit="${2:-}"
+    local commit_timestamp="${3:-}"
+
+    if [[ "$version" == "alpha" ]]; then
+        # Format: alpha-YYYYMMDDHHmm-{first-8-chars-of-commit}
+        local timestamp_compact
+        timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
+        local commit_short="${commit:0:8}"
+        echo "alpha-${timestamp_compact}-${commit_short}"
+    else
+        echo "$version"
+    fi
+}
+
+validate_pr_prerequisites() {
+    # Check GitHub CLI
+    if ! command -v gh &> /dev/null; then
+        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
+    fi
+
+    # Check origin remote
+    if ! git remote | grep -q '^origin$'; then
+        error "'origin' remote does not exist"
+    fi
+
+    # Check working directory is clean
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes before using --pr flag"
+    fi
+}
+
+determine_pr_remote() {
+    if git remote | grep -q '^upstream$'; then
+        echo "upstream"
+    else
+        echo "origin"
+    fi
+}
+
+setup_pr_branch() {
+    local pr_remote
+    pr_remote=$(determine_pr_remote)
+
+    # Switch to main branch
+    echo "Switching to main branch..."
+    git checkout main
+
+    # Update main from PR remote with rebase
+    echo "Updating main from $pr_remote..."
+    git fetch "$pr_remote"
+    git rebase "$pr_remote/main"
+
+    # Push updated main to origin
+    echo "Pushing updated main to origin..."
+    git push origin main
+}
+
+create_pr_workflow() {
+    local command_name="$1"
+    local version_string="$2"
+
+    local pr_remote
+    pr_remote=$(determine_pr_remote)
+
+    local branch_name="${command_name}-uspecs-${version_string}"
+
+    echo "Creating branch: $branch_name"
+    git checkout -b "$branch_name"
+
+    # Check if there are any changes to commit
+    if [[ -z $(git status --porcelain) ]]; then
+        echo "No changes to commit. Cleaning up..."
+        git checkout -
+        git branch -d "$branch_name"
+        echo "No updates were needed."
+        return 0
+    fi
+
+    # Commit changes
+    echo "Committing changes..."
+    git add -A
+    git commit -m "${command_name^} uspecs to ${version_string}"
+
+    # Push to origin
+    echo "Pushing branch to origin..."
+    git push -u origin "$branch_name"
+
+    # Create PR using GitHub CLI
+    echo "Creating pull request to $pr_remote..."
+    local pr_repo
+    pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
+    local pr_body="${command_name^} uspecs to version ${version_string}"
+    local pr_args=('--repo' "$pr_repo" '--base' 'main' '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
+
+    if [[ "$pr_remote" == "upstream" ]]; then
+        # PR from fork to upstream
+        local origin_owner
+        origin_owner="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
+        gh pr create "${pr_args[@]}" --head "${origin_owner}:${branch_name}"
+    else
+        # PR within same repo (origin)
+        gh pr create "${pr_args[@]}" --head "$branch_name"
+    fi
+    echo "Pull request created successfully!"
+
+    # Clean up local branch (remote branch remains for PR)
+    echo "Cleaning up local branch..."
+    git checkout main
+    git branch -d "$branch_name"
 }
 
 _TEMP_DIRS=()
@@ -381,12 +494,17 @@ cmd_install() {
 
 cmd_update() {
     local project_dir=""
+    local pr_flag=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --project-dir)
                 project_dir="$2"
                 shift 2
+                ;;
+            --pr)
+                pr_flag=true
+                shift
                 ;;
             *)
                 error "Unknown flag: $1"
@@ -397,6 +515,12 @@ cmd_update() {
     if [[ -n "$project_dir" ]]; then
         perform_update "$project_dir"
         return 0
+    fi
+
+    # If --pr flag is provided, validate prerequisites and setup PR workflow
+    if [[ "$pr_flag" == "true" ]]; then
+        validate_pr_prerequisites
+        setup_pr_branch
     fi
 
     check_installed
@@ -461,6 +585,13 @@ cmd_update() {
 
     echo "Running update..."
     bash "$temp_dir/manage.sh" update --project-dir "$project_dir"
+
+    # If --pr flag is provided, create PR workflow
+    if [[ "$pr_flag" == "true" ]]; then
+        local version_string
+        version_string=$(format_version_string "$target_version" "$commit" "$commit_timestamp")
+        create_pr_workflow "update" "$version_string"
+    fi
 }
 
 perform_update() {
@@ -524,6 +655,26 @@ perform_update() {
 }
 
 cmd_upgrade() {
+    local pr_flag=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --pr)
+                pr_flag=true
+                shift
+                ;;
+            *)
+                error "Unknown flag: $1"
+                ;;
+        esac
+    done
+
+    # If --pr flag is provided, validate prerequisites and setup PR workflow
+    if [[ "$pr_flag" == "true" ]]; then
+        validate_pr_prerequisites
+        setup_pr_branch
+    fi
+
     check_installed
 
     local project_dir
@@ -568,6 +719,14 @@ cmd_upgrade() {
 
     echo ""
     echo "Upgrade completed successfully!"
+
+    # If --pr flag is provided, create PR workflow
+    if [[ "$pr_flag" == "true" ]]; then
+        local version_string
+        version_string=$(format_version_string "$target_version")
+
+        create_pr_workflow "upgrade" "$version_string"
+    fi
 }
 
 cmd_it() {

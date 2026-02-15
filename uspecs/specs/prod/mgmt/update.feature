@@ -4,14 +4,17 @@ Feature: Update uspecs
   Scenario Outline: Update when new version is available
     Given uspecs is installed with <version_type> version
     And a new version is available
-    When Engineer runs "manage.sh update" and confirms
+    When Engineer runs "manage.sh update <pr_flag>" and confirms
     Then uspecs is updated to <target>
     And config file is updated with new version and timestamps
+    And <pr_action>
 
     Examples:
-      | version_type | target                         |
-      | alpha        | latest commit from main branch |
-      | stable       | latest minor version           |
+      | version_type | target                         | pr_flag | pr_action                                                          |
+      | alpha        | latest commit from main branch |         | no PR is created                                                   |
+      | stable       | latest minor version           |         | no PR is created                                                   |
+      | alpha        | latest commit from main branch | --pr    | PR is created with branch update-uspecs-alpha-{timestamp}-{commit} |
+      | stable       | latest minor version           | --pr    | PR is created with branch update-uspecs-{version}                  |
 
   Scenario Outline: No new version available
     Given uspecs is installed with <version_type> version
