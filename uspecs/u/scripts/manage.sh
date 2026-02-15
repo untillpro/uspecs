@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #   manage.sh it --remove nlic
 #
 # Internal commands (not for direct use):
-#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> --ref <ref> [flags...]
+#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> --ref <ref> [--current-version <ver>] [flags...]
 
 
 REPO_OWNER="untillpro"
@@ -539,6 +539,7 @@ cmd_apply() {
     shift
 
     local project_dir="" version="" ref="" commit="" commit_timestamp="" pr_flag=false
+    local current_version=""
     local invocation_types=()
 
     while [[ $# -gt 0 ]]; do
@@ -548,6 +549,7 @@ cmd_apply() {
             --ref) ref="$2"; shift 2 ;;
             --commit) commit="$2"; shift 2 ;;
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
+            --current-version) current_version="$2"; shift 2 ;;
             --pr) pr_flag=true; shift ;;
             --nlia) invocation_types+=("nlia"); shift ;;
             --nlic) invocation_types+=("nlic"); shift ;;
@@ -563,6 +565,20 @@ cmd_apply() {
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
+    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+
+    # Determine invocation types string for plan display
+    local plan_invocation_types_str=""
+    if [[ "$command_name" == "install" ]]; then
+        plan_invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+    elif [[ -f "$metadata_file" ]]; then
+        plan_invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
+    fi
+
+    # Show operation plan and confirm
+    show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_types_str" "$pr_flag" "$project_dir"
+    confirm_action "$command_name" || return 0
+
     # PR: create branch before making changes
     if [[ "$pr_flag" == "true" ]]; then
         create_pr_branch "$command_name" "$version_string"
@@ -570,7 +586,6 @@ cmd_apply() {
 
     # Save existing metadata for update/upgrade
     local invocation_types_str="" installed_at=""
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
     if [[ "$command_name" != "install" ]]; then
         [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
@@ -661,14 +676,6 @@ cmd_install() {
         ref="v$version"
         echo "Latest version: $version"
     fi
-
-    # Show operation plan
-    local invocation_types_str
-    invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
-    show_operation_plan "install" "" "$version" "$commit" "$commit_timestamp" "$invocation_types_str" "$pr_flag" "$project_dir"
-
-    # Confirm action
-    confirm_action "install" || return 0
 
     local temp_dir
     temp_dir=$(create_temp_dir)
@@ -788,17 +795,13 @@ cmd_update_or_upgrade() {
         resolve_upgrade_version "$current_version" || return 0
     fi
 
-    # Show operation plan
-    show_operation_plan "$command_name" "$current_version" "$target_version" "$commit" "$commit_timestamp" "" "$pr_flag" "$project_dir"
-
-    confirm_action "$command_name" || return 0
-
     local temp_dir
     temp_dir=$(create_temp_dir)
 
     download_target_manage_sh "$target_ref" "$temp_dir"
 
     local apply_args=("$command_name" "--project-dir" "$project_dir" "--version" "$target_version" "--ref" "$target_ref")
+    apply_args+=("--current-version" "$current_version")
     if [[ -n "${commit:-}" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
     fi
