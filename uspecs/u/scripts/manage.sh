@@ -375,7 +375,7 @@ show_operation_plan() {
 confirm_action() {
     local action="$1"
     echo ""
-    read -p "Proceed with $action? (y/n) " -n 1 -r
+    read -p "Proceed with $action? (y/n) " -n 1 -r < /dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "${action^} cancelled"
