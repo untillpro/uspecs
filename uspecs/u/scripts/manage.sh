@@ -590,23 +590,34 @@ cmd_it() {
     local ref
     ref=$(resolve_version_ref "$version" "$commit")
 
-    local temp_dir
-    temp_dir=$(create_temp_dir)
+    local temp_source=""
+    if [[ ${#add_types[@]} -gt 0 ]]; then
+        temp_source=$(mktemp)
 
-    echo "Downloading source files..."
-    download_archive "$ref" "$temp_dir"
+        echo "Downloading source file for triggering instructions..."
+        local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
+        if ! curl -fsSL "$source_url" -o "$temp_source"; then
+            rm -f "$temp_source"
+            error "Failed to download source file from $source_url"
+        fi
+    fi
 
     for type in "${add_types[@]}"; do
         if [[ -n "${types_map[$type]:-}" ]]; then
             echo "Invocation type '$type' is already configured"
             continue
         fi
+
         local file
         file=$(get_nli_file "$type") || continue
-        inject_instructions "$temp_dir/$file" "$project_dir/$file"
+        inject_instructions "$temp_source" "$project_dir/$file"
         echo "Added invocation type: $type ($file)"
         types_map["$type"]=1
     done
+
+    if [[ -n "$temp_source" ]]; then
+        rm -f "$temp_source"
+    fi
 
     for type in "${remove_types[@]}"; do
         if [[ -z "${types_map[$type]:-}" ]]; then
