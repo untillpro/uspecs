@@ -656,11 +656,6 @@ cmd_install() {
         echo "Latest version: $version"
     fi
 
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    download_target_manage_sh "$ref" "$temp_dir"
-
     local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version" "--ref" "$ref")
     for type in "${invocation_types[@]}"; do
         apply_args+=("--$type")
@@ -673,7 +668,7 @@ cmd_install() {
     fi
 
     echo "Running install..."
-    bash "$temp_dir/manage.sh" apply "${apply_args[@]}"
+    cmd_apply "${apply_args[@]}"
 }
 
 resolve_update_version() {
