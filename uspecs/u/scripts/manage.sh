@@ -875,7 +875,7 @@ cmd_it() {
         file=$(get_nli_file "$type") || continue
         remove_instructions "$project_dir/$file"
         echo "Removed invocation type: $type ($file)"
-        unset types_map["$type"]
+        unset "types_map[$type]"
     done
 
     # Build new types string preserving order from original
