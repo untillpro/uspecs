@@ -23,10 +23,9 @@ MAIN_BRANCH="${USPECS_MAIN_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
-case "$(uname -s)" in
-    Linux*)              _TMP_BASE="/tmp" ;;
-    Darwin*)             _TMP_BASE="/tmp" ;;
-    MINGW*|MSYS*|CYGWIN*) _TMP_BASE="$TEMP" ;;
+case "$OSTYPE" in
+    msys*|cygwin*) _TMP_BASE=$(cygpath -u "$TEMP") ;;
+    *)             _TMP_BASE="/tmp" ;;
 esac
 
 _TEMP_DIRS=()
