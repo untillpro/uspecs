@@ -23,6 +23,15 @@ MAIN_BRANCH="${USPECS_MAIN_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
+case "$(uname -s)" in
+    Linux*)              _TMP_BASE="/tmp" ;;
+    Darwin*)             _TMP_BASE="/tmp" ;;
+    MINGW*|MSYS*|CYGWIN*) _TMP_BASE="$TEMP" ;;
+esac
+
+_TEMP_DIRS=()
+_TEMP_FILES=()
+
 error() {
     echo "Error: $1" >&2
     exit 1
@@ -285,22 +294,33 @@ finalize_pr() {
     git branch -d "$branch_name"
 }
 
-_TEMP_DIRS=()
 
-cleanup_temp_dirs() {
+cleanup_temp() {
+    if [[ ${#_TEMP_FILES[@]} -gt 0 ]]; then
+        for file in "${_TEMP_FILES[@]}"; do
+            rm -f "$file"
+        done
+    fi
     if [[ ${#_TEMP_DIRS[@]} -gt 0 ]]; then
         for dir in "${_TEMP_DIRS[@]}"; do
             rm -rf "$dir"
         done
     fi
 }
-trap cleanup_temp_dirs EXIT
+trap cleanup_temp EXIT
 
 create_temp_dir() {
     local temp_dir
-    temp_dir=$(mktemp -d)
+    temp_dir=$(mktemp -d "$_TMP_BASE/uspecs.XXXXXX")
     _TEMP_DIRS+=("$temp_dir")
     echo "$temp_dir"
+}
+
+create_temp_file() {
+    local temp_file
+    temp_file=$(mktemp "$_TMP_BASE/uspecs.XXXXXX")
+    _TEMP_FILES+=("$temp_file")
+    echo "$temp_file"
 }
 
 show_operation_plan() {
@@ -420,12 +440,11 @@ inject_instructions() {
     fi
 
     local temp_extract
-    temp_extract=$(mktemp)
+    temp_extract=$(create_temp_file)
     sed -n "/$begin_marker/,/$end_marker/p" "$source_file" > "$temp_extract"
 
     if [[ ! -s "$temp_extract" ]]; then
         echo "Warning: No triggering instructions found in $source_file" >&2
-        rm -f "$temp_extract"
         return 1
     fi
 
@@ -435,7 +454,6 @@ inject_instructions() {
             echo ""
             cat "$temp_extract"
         } > "$target_file"
-        rm -f "$temp_extract"
         return 0
     fi
 
@@ -444,17 +462,15 @@ inject_instructions() {
             echo ""
             cat "$temp_extract"
         } >> "$target_file"
-        rm -f "$temp_extract"
         return 0
     fi
 
     local temp_output
-    temp_output=$(mktemp)
+    temp_output=$(create_temp_file)
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
     mv "$temp_output" "$target_file"
-    rm -f "$temp_extract"
 }
 
 remove_instructions() {
@@ -472,7 +488,7 @@ remove_instructions() {
     fi
 
     local temp_output
-    temp_output=$(mktemp)
+    temp_output=$(create_temp_file)
     sed "/$begin_marker/,/$end_marker/d" "$target_file" > "$temp_output"
     mv "$temp_output" "$target_file"
 }
@@ -834,12 +850,11 @@ cmd_it() {
 
     local temp_source=""
     if [[ ${#add_types[@]} -gt 0 ]]; then
-        temp_source=$(mktemp)
+        temp_source=$(create_temp_file)
 
         echo "Downloading source file for triggering instructions..."
         local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
         if ! curl -fsSL "$source_url" -o "$temp_source"; then
-            rm -f "$temp_source"
             error "Failed to download source file from $source_url"
         fi
     fi
@@ -856,10 +871,6 @@ cmd_it() {
         echo "Added invocation type: $type ($file)"
         types_map["$type"]=1
     done
-
-    if [[ -n "$temp_source" ]]; then
-        rm -f "$temp_source"
-    fi
 
     for type in "${remove_types[@]}"; do
         if [[ -z "${types_map[$type]:-}" ]]; then
@@ -907,7 +918,7 @@ cmd_it() {
     timestamp=$(get_timestamp)
 
     local temp_metadata
-    temp_metadata=$(mktemp)
+    temp_metadata=$(create_temp_file)
     sed "s/^invocation_types: .*/invocation_types: [$new_types_str]/" "$metadata_file" | \
         sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
     mv "$temp_metadata" "$metadata_file"
