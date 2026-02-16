@@ -24,7 +24,7 @@ GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
 case "$OSTYPE" in
-    msys*|cygwin*) _TMP_BASE=$(cygpath -u "$TEMP") ;;
+    msys*|cygwin*) _TMP_BASE=$(cygpath -w "$TEMP") ;;
     *)             _TMP_BASE="/tmp" ;;
 esac
 
