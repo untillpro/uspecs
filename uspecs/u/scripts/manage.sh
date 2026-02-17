@@ -286,11 +286,11 @@ show_operation_plan() {
         echo ""
         echo "Pull request:"
 
-        # Get PR info from pr.sh (may fail if git remote head not set)
-        local pr_info pr_remote main_branch target_repo_url pr_branch
-        if pr_info=$(bash "$script_dir/_lib/pr.sh" info 2>/dev/null); then
-            pr_remote=$(echo "$pr_info" | grep '^pr_remote=' | cut -d= -f2)
-            main_branch=$(echo "$pr_info" | grep '^main_branch=' | cut -d= -f2)
+        # Get PR info from pr.sh
+        local pr_output pr_remote main_branch target_repo_url pr_branch
+        if pr_output=$(bash "$script_dir/_lib/pr.sh" info 2>&1); then
+            pr_remote=$(echo "$pr_output" | grep '^pr_remote=' | cut -d= -f2)
+            main_branch=$(echo "$pr_output" | grep '^main_branch=' | cut -d= -f2)
             target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
             pr_branch="${operation}-uspecs-${target_version}"
 
@@ -299,7 +299,8 @@ show_operation_plan() {
             echo "  Base branch: $main_branch"
             echo "  PR branch: $pr_branch"
         else
-            echo "  Will be created after installation"
+            echo "  Failed to determine PR details:"
+            echo "$pr_output" | sed 's/^/    /'
         fi
     fi
     echo "=========================================="
