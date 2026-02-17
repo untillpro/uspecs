@@ -40,18 +40,6 @@ get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
-find_git_root() {
-    local dir="$PWD"
-    while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/.git" ]]; then
-            echo "$dir"
-            return 0
-        fi
-        dir=$(dirname "$dir")
-    done
-    return 1
-}
-
 get_project_dir() {
     local script_path="${BASH_SOURCE[0]}"
     if [[ -z "$script_path" || ! -f "$script_path" ]]; then
@@ -174,133 +162,6 @@ format_version_string() {
     local version="$1"
     echo "$version"
 }
-
-check_pr_prerequisites() {
-    # Check git repository
-    if ! find_git_root > /dev/null 2>&1; then
-        error "No git repository found"
-    fi
-
-    # Check GitHub CLI
-    if ! command -v gh &> /dev/null; then
-        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
-    fi
-
-    # Check origin remote
-    if ! git remote | grep -q '^origin$'; then
-        error "'origin' remote does not exist"
-    fi
-
-    # Check working directory is clean
-    if [[ -n $(git status --porcelain) ]]; then
-        error "Working directory has uncommitted changes. Commit or stash changes before using --pr flag"
-    fi
-}
-
-determine_pr_remote() {
-    if git remote | grep -q '^upstream$'; then
-        echo "upstream"
-    else
-        echo "origin"
-    fi
-}
-
-main_branch_name() {
-    local branch
-    branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || {
-        error "Cannot determine the main branch. Run: git remote set-head origin --auto"
-    }
-    echo "${branch#origin/}"
-}
-
-setup_pr_branch() {
-    local pr_remote
-    pr_remote=$(determine_pr_remote)
-    local main_branch
-    main_branch=$(main_branch_name)
-
-    echo "Switching to $main_branch branch..."
-    git checkout "$main_branch"
-
-    echo "Updating $main_branch from $pr_remote..."
-    git fetch "$pr_remote"
-    git rebase "$pr_remote/$main_branch"
-
-    echo "Pushing updated $main_branch to origin..."
-    git push origin "$main_branch"
-}
-
-pr_branch_name() {
-    local command_name="$1"
-    local version_string="$2"
-    echo "${command_name}-uspecs-${version_string}"
-}
-
-create_pr_branch() {
-    local command_name="$1"
-    local version_string="$2"
-
-    local branch_name
-    branch_name=$(pr_branch_name "$command_name" "$version_string")
-
-    echo "Creating branch: $branch_name"
-    git checkout -b "$branch_name"
-}
-
-finalize_pr() {
-    local command_name="$1"
-    local version_string="$2"
-
-    local branch_name
-    branch_name=$(pr_branch_name "$command_name" "$version_string")
-    local main_branch
-    main_branch=$(main_branch_name)
-
-    # Check if there are any changes to commit
-    if [[ -z $(git status --porcelain) ]]; then
-        echo "No changes to commit. Cleaning up..."
-        git checkout "$main_branch"
-        git branch -d "$branch_name"
-        echo "No updates were needed."
-        return 0
-    fi
-
-    local pr_remote
-    pr_remote=$(determine_pr_remote)
-
-    # Commit changes
-    echo "Committing changes..."
-    git add -A
-    git commit -m "${command_name^} uspecs to ${version_string}"
-
-    # Push to origin
-    echo "Pushing branch to origin..."
-    git push -u origin "$branch_name"
-
-    # Create PR using GitHub CLI
-    echo "Creating pull request to $pr_remote..."
-    local pr_repo
-    pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-    local pr_body="${command_name^} uspecs to version ${version_string}"
-    local pr_args=('--repo' "$pr_repo" '--base' "$main_branch" '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
-
-    if [[ "$pr_remote" == "upstream" ]]; then
-        # PR from fork to upstream
-        local origin_owner
-        origin_owner="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
-        gh pr create "${pr_args[@]}" --head "${origin_owner}:${branch_name}"
-    else
-        # PR within same repo (origin)
-        gh pr create "${pr_args[@]}" --head "$branch_name"
-    fi
-    echo "Pull request created successfully!"
-
-    # Clean up local branch (remote branch remains for PR)
-    echo "Cleaning up local branch..."
-    git checkout "$main_branch"
-    git branch -d "$branch_name"
-}
-
 
 cleanup_temp() {
     if [[ ${#_TEMP_FILES[@]} -gt 0 ]]; then
@@ -610,10 +471,14 @@ cmd_apply() {
     [[ -z "$version" ]] && error "--version is required"
     [[ ! -d "$project_dir" ]] && error "Project directory not found: $project_dir"
 
-    # PR: validate prerequisites and setup branch
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    local source_dir
+    source_dir=$(cd "$script_dir/../../.." && pwd)
+
+    # PR: validate prerequisites
     if [[ "$pr_flag" == "true" ]]; then
-        check_pr_prerequisites
-        setup_pr_branch
+        bash "$script_dir/_lib/pr.sh" check
     fi
 
     local version_string
@@ -633,9 +498,12 @@ cmd_apply() {
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_types_str" "$pr_flag" "$project_dir"
     confirm_action "$command_name" || return 0
 
-    # PR: create branch before making changes
+    # PR: capture current branch, then create feature branch
+    local branch_name="${command_name}-uspecs-${version_string}"
+    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        create_pr_branch "$command_name" "$version_string"
+        prev_branch=$(git symbolic-ref --short HEAD)
+        bash "$script_dir/_lib/pr.sh" prbranch "$branch_name"
     fi
 
     # Save existing metadata for update/upgrade
@@ -648,12 +516,6 @@ cmd_apply() {
     else
         invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
     fi
-
-    # Resolve source repo from this script's location
-    local script_dir
-    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    local source_dir
-    source_dir=$(cd "$script_dir/../../.." && pwd)
 
     if [[ "$command_name" == "install" ]]; then
         rm -f "$source_dir/uspecs/u/uspecs.yml"
@@ -679,9 +541,12 @@ cmd_apply() {
         echo "  - $file"
     done
 
-    # PR: finalize
+    # PR: commit, push, and create pull request
     if [[ "$pr_flag" == "true" ]]; then
-        finalize_pr "$command_name" "$version_string"
+        local pr_title="${command_name^} uspecs to ${version_string}"
+        local pr_body="${command_name^} uspecs to version ${version_string}"
+        bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
+            --next-branch "$prev_branch" --delete-branch
     fi
 
     echo ""
