@@ -3,19 +3,14 @@ set -Eeuo pipefail
 
 # pr.sh -- Git branch and pull request automation
 #
-# Provides reusable commands for the PR workflow: prerequisite checks,
-# branch creation from a remote default branch, and PR submission via
-# GitHub CLI.
+# Provides reusable commands for the PR workflow: branch creation from a
+# remote default branch, and PR submission via GitHub CLI.
 #
 # Concepts:
 #   pr_remote   The remote that owns the target branch for PRs.
 #               "upstream" when a fork setup is detected, otherwise "origin".
 #
 # Usage:
-#   pr.sh check
-#       Validate prerequisites: git repository, GitHub CLI, origin remote,
-#       and clean working directory.
-#
 #   pr.sh info
 #       Output PR configuration in key=value format:
 #         pr_remote=<upstream|origin>
@@ -39,18 +34,6 @@ error() {
     exit 1
 }
 
-find_git_root() {
-    local dir="$PWD"
-    while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/.git" ]]; then
-            echo "$dir"
-            return 0
-        fi
-        dir=$(dirname "$dir")
-    done
-    return 1
-}
-
 determine_pr_remote() {
     if git remote | grep -q '^upstream$'; then
         echo "upstream"
@@ -70,21 +53,6 @@ main_branch_name() {
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
-
-cmd_check() {
-    if ! find_git_root > /dev/null 2>&1; then
-        error "No git repository found"
-    fi
-    if ! command -v gh &> /dev/null; then
-        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
-    fi
-    if ! git remote | grep -q '^origin$'; then
-        error "'origin' remote does not exist"
-    fi
-    if [[ -n $(git status --porcelain) ]]; then
-        error "Working directory has uncommitted changes. Commit or stash changes first"
-    fi
-}
 
 cmd_info() {
     local pr_remote main_branch
@@ -186,14 +154,13 @@ cmd_pr() {
 # ---------------------------------------------------------------------------
 
 if [[ $# -lt 1 ]]; then
-    error "Usage: pr.sh <check|info|prbranch|pr> [args...]"
+    error "Usage: pr.sh <info|prbranch|pr> [args...]"
 fi
 
 command="$1"; shift
 case "$command" in
-    check)    cmd_check "$@" ;;
     info)     cmd_info "$@" ;;
     prbranch) cmd_prbranch "$@" ;;
     pr)       cmd_pr "$@" ;;
-    *)        error "Unknown command: $command. Available: check, info, prbranch, pr" ;;
+    *)        error "Unknown command: $command. Available: info, prbranch, pr" ;;
 esac

@@ -68,6 +68,37 @@ check_installed() {
     fi
 }
 
+check_pr_prerequisites() {
+    # Check if git repository exists
+    local dir="$PWD"
+    local found_git=false
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.git" ]]; then
+            found_git=true
+            break
+        fi
+        dir=$(dirname "$dir")
+    done
+    if [[ "$found_git" == "false" ]]; then
+        error "No git repository found"
+    fi
+
+    # Check if GitHub CLI is installed
+    if ! command -v gh &> /dev/null; then
+        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
+    fi
+
+    # Check if origin remote exists
+    if ! git remote | grep -q '^origin$'; then
+        error "'origin' remote does not exist"
+    fi
+
+    # Check if working directory is clean
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes first"
+    fi
+}
+
 read_config() {
     local project_dir
     project_dir=$(get_project_dir)
@@ -613,7 +644,7 @@ cmd_install() {
     check_not_installed "$project_dir"
 
     if [[ "$pr_flag" == "true" ]]; then
-        bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/pr.sh" check
+        check_pr_prerequisites
     fi
 
     local ref version commit="" commit_timestamp=""
@@ -630,6 +661,12 @@ cmd_install() {
         echo "Latest version: $version"
     fi
 
+    local temp_dir
+    temp_dir=$(create_temp_dir)
+
+    echo "Downloading uspecs..."
+    download_archive "$ref" "$temp_dir"
+
     local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version")
     for type in "${invocation_types[@]}"; do
         apply_args+=("--$type")
@@ -640,12 +677,6 @@ cmd_install() {
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
     fi
-
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
 
     echo "Running install..."
     bash "$temp_dir/uspecs/u/scripts/manage.sh" apply "${apply_args[@]}"
@@ -672,7 +703,7 @@ cmd_update_or_upgrade() {
     check_installed
 
     if [[ "$pr_flag" == "true" ]]; then
-        bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/pr.sh" check
+        check_pr_prerequisites
     fi
 
     local project_dir
