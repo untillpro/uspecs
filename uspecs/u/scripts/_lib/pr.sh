@@ -158,12 +158,13 @@ cmd_pr() {
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
     local pr_args=('--repo' "$pr_repo" '--base' "$main_branch" '--title' "$title" '--body' "$body")
 
+    local pr_url
     if [[ "$pr_remote" == "upstream" ]]; then
         local origin_owner
         origin_owner="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
-        gh pr create "${pr_args[@]}" --head "${origin_owner}:${branch_name}"
+        pr_url=$(gh pr create "${pr_args[@]}" --head "${origin_owner}:${branch_name}")
     else
-        gh pr create "${pr_args[@]}" --head "$branch_name"
+        pr_url=$(gh pr create "${pr_args[@]}" --head "$branch_name")
     fi
     echo "Pull request created successfully!"
 
@@ -173,6 +174,11 @@ cmd_pr() {
         echo "Deleting local branch $branch_name..."
         git branch -d "$branch_name"
     fi
+
+    # Output PR info for caller to parse (to stderr so it doesn't interfere with normal output)
+    echo "PR_URL=$pr_url" >&2
+    echo "PR_BRANCH=$branch_name" >&2
+    echo "PR_BASE=$main_branch" >&2
 }
 
 # ---------------------------------------------------------------------------

@@ -557,15 +557,36 @@ cmd_apply() {
     done
 
     # PR: commit, push, and create pull request
+    local pr_url="" pr_branch="" pr_base=""
     if [[ "$pr_flag" == "true" ]]; then
         local pr_title="${command_name^} uspecs to ${version_string}"
         local pr_body="${command_name^} uspecs to version ${version_string}"
+        local pr_info_file
+        pr_info_file=$(create_temp_file)
+
+        # Capture PR info from stderr while showing normal output
         bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
-            --next-branch "$prev_branch" --delete-branch
+            --next-branch "$prev_branch" --delete-branch 2> "$pr_info_file"
+
+        # Parse PR info from temp file
+        pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
+        pr_branch=$(grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
+        pr_base=$(grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
     fi
 
     echo ""
     echo "${command_name^} completed successfully!"
+
+    # Display PR summary if created
+    if [[ "$pr_flag" == "true" && -n "$pr_url" ]]; then
+        echo ""
+        echo "=========================================="
+        echo "Pull Request Created"
+        echo "=========================================="
+        echo "URL: $pr_url"
+        echo "Branch: $pr_branch -> $pr_base"
+        echo "=========================================="
+    fi
 }
 
 cmd_install() {
