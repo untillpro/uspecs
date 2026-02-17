@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #   manage.sh it --remove nlic
 #
 # Internal commands (not for direct use):
-#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> --ref <ref> [--current-version <ver>] [flags...]
+#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> [--current-version <ver>] [flags...]
 
 
 REPO_OWNER="untillpro"
@@ -424,15 +424,6 @@ replace_uspecs_u() {
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
 
-download_target_manage_sh() {
-    local target_ref="$1"
-    local temp_dir="$2"
-    echo "Downloading manage.sh for target version..."
-    local manage_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$target_ref/uspecs/u/scripts/manage.sh"
-    curl -fsSL "$manage_url" -o "$temp_dir/manage.sh"
-    chmod +x "$temp_dir/manage.sh"
-}
-
 inject_instructions() {
     local source_file="$1"
     local target_file="$2"
@@ -597,7 +588,7 @@ cmd_apply() {
     local command_name="$1"
     shift
 
-    local project_dir="" version="" ref="" commit="" commit_timestamp="" pr_flag=false
+    local project_dir="" version="" commit="" commit_timestamp="" pr_flag=false
     local current_version=""
     local invocation_types=()
 
@@ -605,7 +596,6 @@ cmd_apply() {
         case "$1" in
             --project-dir) project_dir="$2"; shift 2 ;;
             --version) version="$2"; shift 2 ;;
-            --ref) ref="$2"; shift 2 ;;
             --commit) commit="$2"; shift 2 ;;
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
             --current-version) current_version="$2"; shift 2 ;;
@@ -618,7 +608,6 @@ cmd_apply() {
 
     [[ -z "$project_dir" ]] && error "--project-dir is required"
     [[ -z "$version" ]] && error "--version is required"
-    [[ -z "$ref" ]] && error "--ref is required"
     [[ ! -d "$project_dir" ]] && error "Project directory not found: $project_dir"
 
     # PR: validate prerequisites and setup branch
@@ -660,20 +649,19 @@ cmd_apply() {
         invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
     fi
 
-    # Download and install files
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
+    # Resolve source repo from this script's location
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    local source_dir
+    source_dir=$(cd "$script_dir/../../.." && pwd)
 
     if [[ "$command_name" == "install" ]]; then
-        rm -f "$temp_dir/uspecs/u/uspecs.yml"
+        rm -f "$source_dir/uspecs/u/uspecs.yml"
         echo "Installing uspecs/u..."
         mkdir -p "$project_dir/uspecs"
-        cp -r "$temp_dir/uspecs/u" "$project_dir/uspecs/"
+        cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
     else
-        replace_uspecs_u "$temp_dir" "$project_dir"
+        replace_uspecs_u "$source_dir" "$project_dir"
     fi
 
     # Write metadata
@@ -687,7 +675,7 @@ cmd_apply() {
         type=$(echo "$type" | xargs)
         local file
         file=$(get_nli_file "$type") || continue
-        inject_instructions "$temp_dir/$file" "$project_dir/$file"
+        inject_instructions "$source_dir/$file" "$project_dir/$file"
         echo "  - $file"
     done
 
@@ -737,7 +725,7 @@ cmd_install() {
         echo "Latest version: $version"
     fi
 
-    local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version" "--ref" "$ref")
+    local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version")
     for type in "${invocation_types[@]}"; do
         apply_args+=("--$type")
     done
@@ -748,8 +736,14 @@ cmd_install() {
         apply_args+=("--pr")
     fi
 
+    local temp_dir
+    temp_dir=$(create_temp_dir)
+
+    echo "Downloading uspecs..."
+    download_archive "$ref" "$temp_dir"
+
     echo "Running install..."
-    cmd_apply "${apply_args[@]}"
+    bash "$temp_dir/uspecs/u/scripts/manage.sh" apply "${apply_args[@]}"
 }
 
 cmd_update_or_upgrade() {
@@ -788,9 +782,10 @@ cmd_update_or_upgrade() {
     local temp_dir
     temp_dir=$(create_temp_dir)
 
-    download_target_manage_sh "$target_ref" "$temp_dir"
+    echo "Downloading uspecs..."
+    download_archive "$target_ref" "$temp_dir"
 
-    local apply_args=("$command_name" "--project-dir" "$project_dir" "--version" "$target_version" "--ref" "$target_ref")
+    local apply_args=("$command_name" "--project-dir" "$project_dir" "--version" "$target_version")
     apply_args+=("--current-version" "$current_version")
     if [[ -n "${commit:-}" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
@@ -800,7 +795,7 @@ cmd_update_or_upgrade() {
     fi
 
     echo "Running ${command_name}..."
-    bash "$temp_dir/manage.sh" apply "${apply_args[@]}"
+    bash "$temp_dir/uspecs/u/scripts/manage.sh" apply "${apply_args[@]}"
 }
 
 cmd_it() {
