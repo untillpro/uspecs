@@ -560,7 +560,7 @@ cmd_apply() {
     local pr_url="" pr_branch="" pr_base=""
     if [[ "$pr_flag" == "true" ]]; then
         local pr_title="${command_name^} uspecs to ${version_string}"
-        local pr_body="${command_name^} uspecs to version ${version_string}"
+        local pr_body="$pr_title"
         local pr_info_file
         pr_info_file=$(create_temp_file)
 
