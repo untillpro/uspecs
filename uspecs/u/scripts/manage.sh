@@ -316,7 +316,11 @@ show_operation_plan() {
             pr_remote=$(echo "$pr_output" | grep '^pr_remote=' | cut -d= -f2)
             main_branch=$(echo "$pr_output" | grep '^main_branch=' | cut -d= -f2)
             target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
-            pr_branch="${operation}-uspecs-${target_version}"
+
+            # Use branch-safe version string for PR branch name
+            local version_branch
+            version_branch=$(format_version_string_branch "$target_version" "$commit" "$commit_timestamp")
+            pr_branch="${operation}-uspecs-${version_branch}"
 
             echo "  Target remote: $pr_remote"
             echo "  Target repo: $target_repo_url"
