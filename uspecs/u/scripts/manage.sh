@@ -814,14 +814,6 @@ cmd_update_or_upgrade() {
     bash "$temp_dir/manage.sh" apply "${apply_args[@]}"
 }
 
-cmd_update() {
-    cmd_update_or_upgrade "update" "$@"
-}
-
-cmd_upgrade() {
-    cmd_update_or_upgrade "upgrade" "$@"
-}
-
 cmd_it() {
     local add_types=()
     local remove_types=()
@@ -951,10 +943,10 @@ main() {
             cmd_install "$@"
             ;;
         update)
-            cmd_update "$@"
+            cmd_update_or_upgrade "update" "$@"
             ;;
         upgrade)
-            cmd_upgrade "$@"
+            cmd_update_or_upgrade "upgrade" "$@"
             ;;
         apply)
             cmd_apply "$@"
@@ -963,7 +955,7 @@ main() {
             cmd_it "$@"
             ;;
         *)
-            error "Unknown command: $command. Available: install, update, upgrade, it"
+            error "Unknown command: $command. Available: install, update, upgrade, apply, it"
             ;;
     esac
 }
