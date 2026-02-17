@@ -19,7 +19,7 @@ set -Eeuo pipefail
 
 REPO_OWNER="untillpro"
 REPO_NAME="uspecs"
-MAIN_BRANCH="${USPECS_MAIN_BRANCH:-main}"
+ALPHA_BRANCH="${USPECS_ALPHA_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
@@ -130,7 +130,7 @@ get_latest_major_tag() {
 
 get_latest_commit_info() {
     local response
-    response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH")
+    response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
     sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
@@ -209,19 +209,29 @@ determine_pr_remote() {
     fi
 }
 
+main_branch_name() {
+    local branch
+    branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || {
+        error "Cannot determine the main branch. Run: git remote set-head origin --auto"
+    }
+    echo "${branch#origin/}"
+}
+
 setup_pr_branch() {
     local pr_remote
     pr_remote=$(determine_pr_remote)
+    local main_branch
+    main_branch=$(main_branch_name)
 
-    echo "Switching to $MAIN_BRANCH branch..."
-    git checkout "$MAIN_BRANCH"
+    echo "Switching to $main_branch branch..."
+    git checkout "$main_branch"
 
-    echo "Updating $MAIN_BRANCH from $pr_remote..."
+    echo "Updating $main_branch from $pr_remote..."
     git fetch "$pr_remote"
-    git rebase "$pr_remote/$MAIN_BRANCH"
+    git rebase "$pr_remote/$main_branch"
 
-    echo "Pushing updated $MAIN_BRANCH to origin..."
-    git push origin "$MAIN_BRANCH"
+    echo "Pushing updated $main_branch to origin..."
+    git push origin "$main_branch"
 }
 
 pr_branch_name() {
@@ -247,11 +257,13 @@ finalize_pr() {
 
     local branch_name
     branch_name=$(pr_branch_name "$command_name" "$version_string")
+    local main_branch
+    main_branch=$(main_branch_name)
 
     # Check if there are any changes to commit
     if [[ -z $(git status --porcelain) ]]; then
         echo "No changes to commit. Cleaning up..."
-        git checkout "$MAIN_BRANCH"
+        git checkout "$main_branch"
         git branch -d "$branch_name"
         echo "No updates were needed."
         return 0
@@ -274,7 +286,7 @@ finalize_pr() {
     local pr_repo
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
     local pr_body="${command_name^} uspecs to version ${version_string}"
-    local pr_args=('--repo' "$pr_repo" '--base' "$MAIN_BRANCH" '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
+    local pr_args=('--repo' "$pr_repo" '--base' "$main_branch" '--title' "${command_name^} uspecs to ${version_string}" '--body' "$pr_body")
 
     if [[ "$pr_remote" == "upstream" ]]; then
         # PR from fork to upstream
@@ -289,7 +301,7 @@ finalize_pr() {
 
     # Clean up local branch (remote branch remains for PR)
     echo "Cleaning up local branch..."
-    git checkout "$MAIN_BRANCH"
+    git checkout "$main_branch"
     git branch -d "$branch_name"
 }
 
@@ -339,7 +351,7 @@ show_operation_plan() {
 
     # From (Source)
     echo "From:"
-    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$MAIN_BRANCH"
+    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
 
     if [[ "$target_version" == "alpha" ]]; then
         local timestamp_compact
@@ -730,7 +742,7 @@ resolve_upgrade_version() {
     local current_version="$1"
 
     if [[ "$current_version" == "alpha" ]]; then
-        error "Only applicable for stable versions. Alpha versions always track the latest commit from $MAIN_BRANCH branch, use update instead"
+        error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
     fi
 
     echo "Checking for major upgrades..."
