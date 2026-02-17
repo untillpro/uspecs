@@ -476,11 +476,6 @@ cmd_apply() {
     local source_dir
     source_dir=$(cd "$script_dir/../../.." && pwd)
 
-    # PR: validate prerequisites
-    if [[ "$pr_flag" == "true" ]]; then
-        bash "$script_dir/_lib/pr.sh" check
-    fi
-
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
@@ -576,6 +571,10 @@ cmd_install() {
 
     check_not_installed "$project_dir"
 
+    if [[ "$pr_flag" == "true" ]]; then
+        bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/pr.sh" check
+    fi
+
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
         echo "Fetching latest alpha version..."
@@ -630,6 +629,10 @@ cmd_update_or_upgrade() {
     done
 
     check_installed
+
+    if [[ "$pr_flag" == "true" ]]; then
+        bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/pr.sh" check
+    fi
 
     local project_dir
     project_dir=$(get_project_dir)
