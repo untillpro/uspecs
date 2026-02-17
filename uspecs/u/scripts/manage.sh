@@ -594,7 +594,7 @@ cmd_apply() {
     # PR: commit, push, and create pull request
     local pr_url="" pr_branch="" pr_base=""
     if [[ "$pr_flag" == "true" ]]; then
-        local pr_title="${command_name^} uspecs to ${version_string}"
+        local pr_title="uspecs ${version_string}"
         local pr_body="$pr_title"
         local pr_info_file
         pr_info_file=$(create_temp_file)
