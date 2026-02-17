@@ -347,25 +347,19 @@ show_operation_plan() {
 
     # From (Source)
     echo "From:"
-    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
-
-    echo "  Version: $target_version"
-    if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
-        echo "  Commit: $commit"
-        echo "  Timestamp: $commit_timestamp"
+    if [[ "$operation" != "install" && -n "$current_version" ]]; then
+        echo "  Version: $current_version"
     fi
+    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
 
     echo ""
 
     # To (Destination)
     echo "To:"
-
-    if [[ "$operation" != "install" ]]; then
-        echo "  Version: $target_version"
-        if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
-            echo "  Commit: $commit"
-            echo "  Timestamp: $commit_timestamp"
-        fi
+    echo "  Version: $target_version"
+    if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
+        echo "  Commit: $commit"
+        echo "  Timestamp: $commit_timestamp"
     fi
 
     echo "  Project folder: $project_dir"
