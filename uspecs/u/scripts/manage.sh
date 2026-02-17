@@ -657,7 +657,7 @@ cmd_apply() {
     if [[ "$pr_flag" == "true" && -n "$pr_url" ]]; then
         echo ""
         echo "=========================================="
-        echo "Pull Request Created"
+        echo "Pull Request created"
         echo "=========================================="
         echo "URL: $pr_url"
         echo "Branch: $pr_branch -> $pr_base"

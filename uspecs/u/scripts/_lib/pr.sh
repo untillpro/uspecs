@@ -144,6 +144,8 @@ cmd_pr() {
     if [[ "$delete_branch" == "true" ]]; then
         echo "Deleting local branch $branch_name..."
         git branch -d "$branch_name"
+        echo "Deleting local reference to remote branch..."
+        git branch -dr "origin/$branch_name"
     fi
 
     # Output PR info for caller to parse (to stderr so it doesn't interfere with normal output)
