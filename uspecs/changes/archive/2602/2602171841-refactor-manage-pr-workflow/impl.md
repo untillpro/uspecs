@@ -2,7 +2,7 @@
 
 ## Construction
 
-- [x] create: [uspecs/u/scripts/_lib/pr.sh](../../../uspecs/u/scripts/_lib/pr.sh)
+- [x] create: [uspecs/u/scripts/_lib/pr.sh](../../../../../uspecs/u/scripts/_lib/pr.sh)
   - Add info command to output PR configuration (pr_remote, main_branch)
   - Add prbranch command to create branch from remote default branch
   - Add pr command to commit, push, and create pull request
@@ -10,7 +10,7 @@
   - Handle branch cleanup and switching after PR creation
   - Output PR details (URL, branch, base) to stderr for caller parsing
 
-- [x] update: [uspecs/u/scripts/manage.sh](../../../uspecs/u/scripts/manage.sh)
+- [x] update: [uspecs/u/scripts/manage.sh](../../../../../uspecs/u/scripts/manage.sh)
   - Add --pr flag support to install, update, and upgrade commands
   - Add check_pr_prerequisites function to validate git, gh CLI, and working directory
   - Add format_version_string function to display version with commit timestamp
@@ -32,8 +32,8 @@
   - Integrate pr.sh for PR branch creation and submission
   - Update cmd_it to use new temporary file management
 
-- [x] delete: [uspecs/u/scripts/update-from-home-pr.sh](../../../uspecs/u/scripts/update-from-home-pr.sh)
+- [x] delete: [uspecs/u/scripts/update-from-home-pr.sh](../../../../../uspecs/u/scripts/update-from-home-pr.sh)
   - Functionality replaced by --pr flag in manage.sh
 
-- [x] delete: [uspecs/u/scripts/update-from-home.sh](../../../uspecs/u/scripts/update-from-home.sh)
+- [x] delete: [uspecs/u/scripts/update-from-home.sh](../../../../../uspecs/u/scripts/update-from-home.sh)
   - Functionality replaced by update command in manage.sh

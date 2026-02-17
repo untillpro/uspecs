@@ -2,6 +2,7 @@
 registered_at: 2026-02-15T01:46:55Z
 change_id: 2602150146-refactor-manage-pr-workflow
 baseline: 404b8ea20a16493d114b3b780961d8028e233166
+archived_at: 2026-02-17T18:41:18Z
 ---
 
 # Change request: Refactor manage.sh to support PR workflows and improve version management
