@@ -375,7 +375,7 @@ show_operation_plan() {
     fi
 
     echo "  Project folder: $project_dir"
-    echo "  uspecs subfolder: uspecs/u"
+    echo "  uspecs core: uspecs/u"
 
     if [[ -n "$invocation_types" ]]; then
         echo "  Natural language invocation files:"
@@ -636,6 +636,8 @@ cmd_apply() {
     local plan_invocation_types_str=""
     if [[ "$command_name" == "install" ]]; then
         plan_invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+    elif [[ -f "$metadata_file" ]]; then
+        plan_invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
     fi
 
     # Show operation plan and confirm
@@ -678,16 +680,16 @@ cmd_apply() {
     echo "Writing installation metadata..."
     write_metadata "$project_dir" "$version" "$invocation_types_str" "$commit" "$commit_timestamp" "$installed_at"
 
-    # Inject NLI instructions (install only)
-    if [[ "$command_name" == "install" ]]; then
-        echo "Injecting instructions..."
-        for type in "${invocation_types[@]}"; do
-            local file
-            file=$(get_nli_file "$type") || continue
-            inject_instructions "$temp_dir/$file" "$project_dir/$file"
-            echo "  - $file"
-        done
-    fi
+    # Inject NLI instructions
+    echo "Injecting instructions..."
+    IFS=',' read -ra inject_types <<< "$invocation_types_str"
+    for type in "${inject_types[@]}"; do
+        type=$(echo "$type" | xargs)
+        local file
+        file=$(get_nli_file "$type") || continue
+        inject_instructions "$temp_dir/$file" "$project_dir/$file"
+        echo "  - $file"
+    done
 
     # PR: finalize
     if [[ "$pr_flag" == "true" ]]; then
