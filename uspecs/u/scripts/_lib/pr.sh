@@ -44,10 +44,13 @@ determine_pr_remote() {
 
 main_branch_name() {
     local branch
-    branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || {
-        error "Cannot determine the default branch. Run: git remote set-head origin --auto"
+    branch=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}') || {
+        error "Cannot determine the default branch from remote"
     }
-    echo "${branch#origin/}"
+    if [[ -z "$branch" ]]; then
+        error "Cannot determine the default branch from remote"
+    fi
+    echo "$branch"
 }
 
 # ---------------------------------------------------------------------------
