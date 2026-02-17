@@ -200,6 +200,7 @@ show_operation_plan() {
     local invocation_types="${6:-}"
     local pr_flag="${7:-false}"
     local project_dir="${8:-}"
+    local script_dir="${9:-}"
 
     echo ""
     echo "=========================================="
@@ -247,6 +248,25 @@ show_operation_plan() {
             file=$(get_nli_file "$type") 2>/dev/null || continue
             echo "    - $file"
         done
+    fi
+
+    # Pull request (if enabled)
+    if [[ "$pr_flag" == "true" && -n "$script_dir" ]]; then
+        echo ""
+        echo "Pull request:"
+
+        # Get PR info from pr.sh
+        local pr_info pr_remote main_branch target_repo_url pr_branch
+        pr_info=$(bash "$script_dir/_lib/pr.sh" info 2>/dev/null)
+        pr_remote=$(echo "$pr_info" | grep '^pr_remote=' | cut -d= -f2)
+        main_branch=$(echo "$pr_info" | grep '^main_branch=' | cut -d= -f2)
+        target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
+        pr_branch="${operation}-uspecs-${target_version}"
+
+        echo "  Target remote: $pr_remote"
+        echo "  Target repo: $target_repo_url"
+        echo "  Base branch: $main_branch"
+        echo "  PR branch: $pr_branch"
     fi
     echo "=========================================="
 }
@@ -490,7 +510,7 @@ cmd_apply() {
     fi
 
     # Show operation plan and confirm
-    show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_types_str" "$pr_flag" "$project_dir"
+    show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_types_str" "$pr_flag" "$project_dir" "$script_dir"
     confirm_action "$command_name" || return 0
 
     # PR: capture current branch, then create feature branch
