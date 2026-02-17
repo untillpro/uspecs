@@ -535,6 +535,65 @@ write_metadata() {
     } > "$metadata_file"
 }
 
+resolve_update_version() {
+    local current_version="$1"
+
+    if [[ "$current_version" == "alpha" ]]; then
+        echo "Checking for alpha updates..."
+        local current_commit current_commit_timestamp
+        current_commit=$(get_config_value "commit")
+        current_commit_timestamp=$(get_config_value "commit_timestamp")
+        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
+
+        if [[ "$current_commit" == "$commit" ]]; then
+            echo "Already on the latest alpha version"
+            echo "  Commit: $commit"
+            echo "  Timestamp: $current_commit_timestamp"
+            return 1
+        fi
+        target_version="alpha"
+        target_ref="$commit"
+    else
+        echo "Checking for stable updates..."
+        target_version=$(get_latest_minor_tag "$current_version")
+
+        if [[ "$target_version" == "$current_version" ]]; then
+            echo "Already on the latest stable minor version: $current_version"
+
+            local latest_major
+            latest_major=$(get_latest_major_tag)
+            if [[ "$latest_major" != "$current_version" ]]; then
+                echo ""
+                echo "Upgrade available to version $latest_major"
+                echo "Use 'manage.sh upgrade' command"
+            fi
+            return 1
+        fi
+
+        target_ref="v$target_version"
+    fi
+    return 0
+}
+
+resolve_upgrade_version() {
+    local current_version="$1"
+
+    if [[ "$current_version" == "alpha" ]]; then
+        error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
+    fi
+
+    echo "Checking for major upgrades..."
+    target_version=$(get_latest_major_tag)
+
+    if [[ "$target_version" == "$current_version" ]]; then
+        echo "Already on the latest major version: $current_version"
+        return 1
+    fi
+
+    target_ref="v$target_version"
+    return 0
+}
+
 # Re-invoked by install/update/upgrade commands via target version's manage.sh
 cmd_apply() {
     if [[ $# -lt 1 ]]; then
@@ -696,65 +755,6 @@ cmd_install() {
 
     echo "Running install..."
     cmd_apply "${apply_args[@]}"
-}
-
-resolve_update_version() {
-    local current_version="$1"
-
-    if [[ "$current_version" == "alpha" ]]; then
-        echo "Checking for alpha updates..."
-        local current_commit current_commit_timestamp
-        current_commit=$(get_config_value "commit")
-        current_commit_timestamp=$(get_config_value "commit_timestamp")
-        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
-
-        if [[ "$current_commit" == "$commit" ]]; then
-            echo "Already on the latest alpha version"
-            echo "  Commit: $commit"
-            echo "  Timestamp: $current_commit_timestamp"
-            return 1
-        fi
-        target_version="alpha"
-        target_ref="$commit"
-    else
-        echo "Checking for stable updates..."
-        target_version=$(get_latest_minor_tag "$current_version")
-
-        if [[ "$target_version" == "$current_version" ]]; then
-            echo "Already on the latest stable minor version: $current_version"
-
-            local latest_major
-            latest_major=$(get_latest_major_tag)
-            if [[ "$latest_major" != "$current_version" ]]; then
-                echo ""
-                echo "Upgrade available to version $latest_major"
-                echo "Use 'manage.sh upgrade' command"
-            fi
-            return 1
-        fi
-
-        target_ref="v$target_version"
-    fi
-    return 0
-}
-
-resolve_upgrade_version() {
-    local current_version="$1"
-
-    if [[ "$current_version" == "alpha" ]]; then
-        error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
-    fi
-
-    echo "Checking for major upgrades..."
-    target_version=$(get_latest_major_tag)
-
-    if [[ "$target_version" == "$current_version" ]]; then
-        echo "Already on the latest major version: $current_version"
-        return 1
-    fi
-
-    target_ref="v$target_version"
-    return 0
 }
 
 cmd_update_or_upgrade() {
