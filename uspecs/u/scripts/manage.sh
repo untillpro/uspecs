@@ -132,6 +132,14 @@ get_latest_commit_info() {
     echo "$sha $commit_date"
 }
 
+get_alpha_version() {
+    curl -fsSL "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
+}
+
+is_alpha_version() {
+    [[ "$1" == *-a* ]]
+}
+
 download_archive() {
     local ref="$1"
     local temp_dir="$2"
@@ -155,7 +163,7 @@ get_nli_file() {
 resolve_version_ref() {
     local version="$1"
     local commit="${2:-}"
-    if [[ "$version" == "alpha" ]]; then
+    if is_alpha_version "$version"; then
         echo "$commit"
     else
         echo "v$version"
@@ -164,18 +172,7 @@ resolve_version_ref() {
 
 format_version_string() {
     local version="$1"
-    local commit="${2:-}"
-    local commit_timestamp="${3:-}"
-
-    if [[ "$version" == "alpha" ]]; then
-        # Format: alpha-YYYYMMDDHHmm-{first-8-chars-of-commit}
-        local timestamp_compact
-        timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
-        local commit_short="${commit:0:8}"
-        echo "alpha-${timestamp_compact}-${commit_short}"
-    else
-        echo "$version"
-    fi
+    echo "$version"
 }
 
 validate_pr_prerequisites() {
@@ -352,15 +349,10 @@ show_operation_plan() {
     echo "From:"
     echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
 
-    if [[ "$target_version" == "alpha" ]]; then
-        local timestamp_compact
-        timestamp_compact=$(echo "$commit_timestamp" | sed 's/[-:TZ]//g' | cut -c1-12)
-        local commit_short="${commit:0:8}"
-        echo "  Version: alpha-${timestamp_compact}-${commit_short}"
+    echo "  Version: $target_version"
+    if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
         echo "  Commit: $commit"
         echo "  Timestamp: $commit_timestamp"
-    else
-        echo "  Version: $target_version"
     fi
 
     echo ""
@@ -369,12 +361,10 @@ show_operation_plan() {
     echo "To:"
 
     if [[ "$operation" != "install" ]]; then
-        if [[ "$target_version" == "alpha" ]]; then
-            echo "  Version: alpha-${timestamp_compact}-${commit_short}"
+        echo "  Version: $target_version"
+        if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
             echo "  Commit: $commit"
             echo "  Timestamp: $commit_timestamp"
-        else
-            echo "  Version: $target_version"
         fi
     fi
 
@@ -527,7 +517,6 @@ write_metadata() {
         echo "installed_at: $installed_at"
         echo "modified_at: $timestamp"
         if [[ -n "$commit" ]]; then
-            echo "# Commit info for alpha versions"
             echo "commit: $commit"
             echo "commit_timestamp: $commit_timestamp"
         fi
@@ -537,7 +526,7 @@ write_metadata() {
 resolve_update_version() {
     local current_version="$1"
 
-    if [[ "$current_version" == "alpha" ]]; then
+    if is_alpha_version "$current_version"; then
         echo "Checking for alpha updates..."
         local current_commit current_commit_timestamp
         current_commit=$(get_config_value "commit")
@@ -545,12 +534,12 @@ resolve_update_version() {
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
 
         if [[ "$current_commit" == "$commit" ]]; then
-            echo "Already on the latest alpha version"
+            echo "Already on the latest alpha version: $current_version"
             echo "  Commit: $commit"
             echo "  Timestamp: $current_commit_timestamp"
             return 1
         fi
-        target_version="alpha"
+        target_version=$(get_alpha_version)
         target_ref="$commit"
     else
         echo "Checking for stable updates..."
@@ -577,7 +566,7 @@ resolve_update_version() {
 resolve_upgrade_version() {
     local current_version="$1"
 
-    if [[ "$current_version" == "alpha" ]]; then
+    if is_alpha_version "$current_version"; then
         error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
     fi
 
@@ -731,9 +720,10 @@ cmd_install() {
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
         echo "Fetching latest alpha version..."
+        version=$(get_alpha_version)
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
-        version="alpha"
+        echo "Latest alpha version: $version"
     else
         echo "Fetching latest stable version..."
         version=$(get_latest_tag)
