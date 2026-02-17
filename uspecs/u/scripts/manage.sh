@@ -52,12 +52,6 @@ find_git_root() {
     return 1
 }
 
-check_git_repository() {
-    if ! find_git_root > /dev/null 2>&1; then
-        error "No git repository found"
-    fi
-}
-
 get_project_dir() {
     local script_path="${BASH_SOURCE[0]}"
     if [[ -z "$script_path" || ! -f "$script_path" ]]; then
@@ -185,6 +179,11 @@ format_version_string() {
 }
 
 validate_pr_prerequisites() {
+    # Check git repository
+    if ! find_git_root > /dev/null 2>&1; then
+        error "No git repository found"
+    fi
+
     # Check GitHub CLI
     if ! command -v gh &> /dev/null; then
         error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
@@ -627,6 +626,12 @@ cmd_apply() {
     [[ -z "$ref" ]] && error "--ref is required"
     [[ ! -d "$project_dir" ]] && error "Project directory not found: $project_dir"
 
+    # PR: validate prerequisites and setup branch
+    if [[ "$pr_flag" == "true" ]]; then
+        validate_pr_prerequisites
+        setup_pr_branch
+    fi
+
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
@@ -721,13 +726,7 @@ cmd_install() {
 
     local project_dir="$PWD"
 
-    check_git_repository
     check_not_installed "$project_dir"
-
-    if [[ "$pr_flag" == "true" ]]; then
-        validate_pr_prerequisites
-        setup_pr_branch
-    fi
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
@@ -774,12 +773,6 @@ cmd_update_or_upgrade() {
                 ;;
         esac
     done
-
-    # If --pr flag is provided, validate prerequisites and setup PR workflow
-    if [[ "$pr_flag" == "true" ]]; then
-        validate_pr_prerequisites
-        setup_pr_branch
-    fi
 
     check_installed
 
