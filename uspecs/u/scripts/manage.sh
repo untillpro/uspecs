@@ -195,12 +195,20 @@ format_version_string() {
     local commit_timestamp="$3"
 
     if [[ -n "$commit_timestamp" ]]; then
-        # Extract YYYY-MM-DDTHH:MMZ from timestamp (remove seconds)
-        local short_timestamp="${commit_timestamp%:*}Z"
-        echo "${version}, ${short_timestamp}"
+        echo "${version}, ${commit_timestamp}"
     else
         echo "$version"
     fi
+}
+
+sanitize_branch_name() {
+    local name="$1"
+    name="${name//[^a-zA-Z0-9._/-]/-}"
+    while [[ "$name" == *".."* ]]; do name="${name/../-}"; done
+    name="${name//@\{/-}"; name="${name//\/./\/-}"; name="${name//\/\//\/}"
+    name="${name#/}"; name="${name%/}"; name="${name%.}"; name="${name%.lock}"
+    [[ -z "$name" || "$name" == "@" ]] && name="branch"
+    echo "$name"
 }
 
 format_version_string_branch() {
@@ -209,13 +217,15 @@ format_version_string_branch() {
     local commit_timestamp="$3"
 
     if [[ -n "$commit_timestamp" ]]; then
-        # Extract YYYY-MM-DDTHH-MMZ (replace colons with hyphens for git branch name)
-        local short_timestamp="${commit_timestamp%:*}Z"
-        short_timestamp="${short_timestamp//:/-}"
-        echo "${version}-${short_timestamp}"
+        # Replace colons with hyphens for git branch name (YYYY-MM-DDTHH-MM-SSZ)
+        local timestamp_safe="${commit_timestamp//:/-}"
+        local result="${version}-${timestamp_safe}"
     else
-        echo "$version"
+        local result="$version"
     fi
+
+    # Sanitize to ensure valid git branch name
+    sanitize_branch_name "$result"
 }
 
 cleanup_temp() {
