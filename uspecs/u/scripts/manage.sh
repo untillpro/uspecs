@@ -636,8 +636,6 @@ cmd_apply() {
     local plan_invocation_types_str=""
     if [[ "$command_name" == "install" ]]; then
         plan_invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
-    elif [[ -f "$metadata_file" ]]; then
-        plan_invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
     fi
 
     # Show operation plan and confirm
