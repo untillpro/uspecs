@@ -349,6 +349,15 @@ show_operation_plan() {
     echo "From:"
     if [[ "$operation" != "install" && -n "$current_version" ]]; then
         echo "  Version: $current_version"
+        if is_alpha_version "$current_version"; then
+            local current_commit current_commit_timestamp
+            current_commit=$(get_config_value "commit")
+            current_commit_timestamp=$(get_config_value "commit_timestamp")
+            if [[ -n "$current_commit" ]]; then
+                echo "  Commit: $current_commit"
+                echo "  Timestamp: $current_commit_timestamp"
+            fi
+        fi
     fi
     echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
 
