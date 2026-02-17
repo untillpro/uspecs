@@ -191,7 +191,16 @@ resolve_version_ref() {
 
 format_version_string() {
     local version="$1"
-    echo "$version"
+    local commit="$2"
+    local commit_timestamp="$3"
+
+    if [[ -n "$commit_timestamp" ]]; then
+        # Extract YYYY-MM-DDTHH:MMZ from timestamp (remove seconds)
+        local short_timestamp="${commit_timestamp%:*}Z"
+        echo "${version}, ${short_timestamp}"
+    else
+        echo "$version"
+    fi
 }
 
 cleanup_temp() {
