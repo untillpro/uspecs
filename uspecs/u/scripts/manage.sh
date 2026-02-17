@@ -203,6 +203,21 @@ format_version_string() {
     fi
 }
 
+format_version_string_branch() {
+    local version="$1"
+    local commit="$2"
+    local commit_timestamp="$3"
+
+    if [[ -n "$commit_timestamp" ]]; then
+        # Extract YYYY-MM-DDTHH-MMZ (replace colons with hyphens for git branch name)
+        local short_timestamp="${commit_timestamp%:*}Z"
+        short_timestamp="${short_timestamp//:/-}"
+        echo "${version}-${short_timestamp}"
+    else
+        echo "$version"
+    fi
+}
+
 cleanup_temp() {
     if [[ ${#_TEMP_FILES[@]} -gt 0 ]]; then
         for file in "${_TEMP_FILES[@]}"; do
@@ -543,6 +558,9 @@ cmd_apply() {
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
+    local version_string_branch
+    version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
+
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
     # Determine invocation types string for plan display
@@ -558,7 +576,7 @@ cmd_apply() {
     confirm_action "$command_name" || return 0
 
     # PR: capture current branch, then create feature branch
-    local branch_name="${command_name}-uspecs-${version_string}"
+    local branch_name="${command_name}-uspecs-${version_string_branch}"
     local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git symbolic-ref --short HEAD)
