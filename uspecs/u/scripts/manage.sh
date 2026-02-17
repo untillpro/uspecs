@@ -175,7 +175,7 @@ format_version_string() {
     echo "$version"
 }
 
-validate_pr_prerequisites() {
+check_pr_prerequisites() {
     # Check git repository
     if ! find_git_root > /dev/null 2>&1; then
         error "No git repository found"
@@ -623,7 +623,7 @@ cmd_apply() {
 
     # PR: validate prerequisites and setup branch
     if [[ "$pr_flag" == "true" ]]; then
-        validate_pr_prerequisites
+        check_pr_prerequisites
         setup_pr_branch
     fi
 
