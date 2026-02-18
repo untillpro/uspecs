@@ -579,6 +579,8 @@ cmd_apply() {
     local version_string_branch
     version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
 
+    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+
     local -A config
     if [[ "$command_name" != "install" ]]; then
         load_config "$project_dir" config
