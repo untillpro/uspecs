@@ -99,24 +99,6 @@ check_pr_prerequisites() {
     fi
 }
 
-read_config() {
-    local project_dir="$1"
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
-
-    if [[ ! -f "$metadata_file" ]]; then
-        error "Installation metadata file not found: $metadata_file"
-    fi
-
-    cat "$metadata_file"
-}
-
-get_config_value() {
-    local key="$1"
-    local project_dir="$2"
-    local config
-    config=$(read_config "$project_dir")
-    echo "$config" | grep "^$key:" | sed "s/^$key: *//" | sed 's/^\[\(.*\)\]$/\1/' || echo ""
-}
 
 load_config() {
     local project_dir="$1"
@@ -124,7 +106,7 @@ load_config() {
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
     if [[ ! -f "$metadata_file" ]]; then
-        error "Installation metadata file not found: $metadata_file"
+        return 0
     fi
 
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -597,10 +579,8 @@ cmd_apply() {
     local version_string_branch
     version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
 
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
-
     local -A config
-    if [[ "$command_name" != "install" && -f "$metadata_file" ]]; then
+    if [[ "$command_name" != "install" ]]; then
         load_config "$project_dir" config
     fi
 
@@ -781,8 +761,9 @@ cmd_update_or_upgrade() {
     local project_dir
     project_dir=$(get_project_dir)
 
-    local current_version
-    current_version=$(get_config_value "version" "$project_dir")
+    local -A config
+    load_config "$project_dir" config
+    local current_version="${config[version]:-}"
 
     local target_version target_ref commit commit_timestamp
     if [[ "$command_name" == "update" ]]; then
