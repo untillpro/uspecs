@@ -118,6 +118,25 @@ get_config_value() {
     echo "$config" | grep "^$key:" | sed "s/^$key: *//" | sed 's/^\[\(.*\)\]$/\1/' || echo ""
 }
 
+load_config() {
+    local project_dir="$1"
+    local -n _config_map="$2"
+    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+
+    if [[ ! -f "$metadata_file" ]]; then
+        error "Installation metadata file not found: $metadata_file"
+    fi
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        local key value
+        key="${line%%:*}"
+        value="${line#*: }"
+        value=$(echo "$value" | sed 's/^\[\(.*\)\]$/\1/')
+        _config_map["$key"]="$value"
+    done < "$metadata_file"
+}
+
 get_latest_tag() {
     curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
         grep '"name":' | \
@@ -480,9 +499,10 @@ resolve_update_version() {
 
     if is_alpha_version "$current_version"; then
         echo "Checking for alpha updates..."
-        local current_commit current_commit_timestamp
-        current_commit=$(get_config_value "commit" "$project_dir")
-        current_commit_timestamp=$(get_config_value "commit_timestamp" "$project_dir")
+        local -A config
+        load_config "$project_dir" config
+        local current_commit="${config[commit]:-}"
+        local current_commit_timestamp="${config[commit_timestamp]:-}"
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
 
         if [[ "$current_commit" == "$commit" ]]; then
@@ -579,12 +599,17 @@ cmd_apply() {
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
+    local -A config
+    if [[ "$command_name" != "install" && -f "$metadata_file" ]]; then
+        load_config "$project_dir" config
+    fi
+
     # Determine invocation methods string for plan display
     local plan_invocation_methods_str=""
     if [[ "$command_name" == "install" ]]; then
         plan_invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     elif [[ -f "$metadata_file" ]]; then
-        plan_invocation_methods_str=$(get_config_value "invocation_methods" "$project_dir")
+        plan_invocation_methods_str="${config[invocation_methods]:-}"
     fi
 
     # Show operation plan and confirm
@@ -604,8 +629,8 @@ cmd_apply() {
 
     if [[ "$command_name" != "install" ]]; then
         [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
-        invocation_methods_str=$(get_config_value "invocation_methods" "$project_dir")
-        installed_at=$(get_config_value "installed_at" "$project_dir")
+        invocation_methods_str="${config[invocation_methods]:-}"
+        installed_at="${config[installed_at]:-}"
     else
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
@@ -806,8 +831,10 @@ cmd_im() {
     local project_dir
     project_dir=$(get_project_dir)
 
-    local current_methods
-    current_methods=$(get_config_value "invocation_methods" "$project_dir")
+    local -A config
+    load_config "$project_dir" config
+
+    local current_methods="${config[invocation_methods]:-}"
 
     IFS=',' read -ra methods_array <<< "$current_methods"
     local -A methods_map
@@ -816,11 +843,10 @@ cmd_im() {
         methods_map["$method"]=1
     done
 
-    local version
-    version=$(get_config_value "version" "$project_dir")
+    local version="${config[version]}"
 
     local ref
-    ref=$(resolve_version_ref "$version" "$(get_config_value "commit" "$project_dir")")
+    ref=$(resolve_version_ref "$version" "${config[commit]:-}")
 
     local changed=false
     local temp_source=""
