@@ -131,11 +131,13 @@ get_latest_minor_tag() {
     local major minor
     IFS='.' read -r major minor _ <<< "$current_version"
 
-    curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
+    local result
+    result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
         grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         grep "^$major\.$minor\." | \
-        head -n 1
+        head -n 1 || true)
+    echo "${result:-$current_version}"
 }
 
 get_latest_major_tag() {
@@ -278,15 +280,13 @@ show_operation_plan() {
     if [[ "$operation" != "install" && -n "$current_version" ]]; then
         echo "  Version: $current_version"
         if is_alpha_version "$current_version"; then
-            local metadata_file="$project_dir/uspecs/u/uspecs.yml"
-            if [[ -f "$metadata_file" ]]; then
-                local current_commit current_commit_timestamp
-                current_commit=$(grep "^commit:" "$metadata_file" | sed 's/^commit: *//')
-                current_commit_timestamp=$(grep "^commit_timestamp:" "$metadata_file" | sed 's/^commit_timestamp: *//')
-                if [[ -n "$current_commit" ]]; then
-                    echo "  Commit: $current_commit"
-                    echo "  Timestamp: $current_commit_timestamp"
-                fi
+            local -A current_config
+            load_config "$project_dir" current_config
+            local current_commit="${current_config[commit]:-}"
+            local current_commit_timestamp="${current_config[commit_timestamp]:-}"
+            if [[ -n "$current_commit" ]]; then
+                echo "  Commit: $current_commit"
+                echo "  Timestamp: $current_commit_timestamp"
             fi
         fi
     fi
