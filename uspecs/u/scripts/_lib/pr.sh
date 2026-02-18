@@ -107,8 +107,8 @@ cmd_prbranch() {
     pr_remote=$(determine_pr_remote)
     default_branch=$(default_branch_name)
 
-    echo "Fetching $pr_remote..."
-    git fetch "$pr_remote" # //TODO: optimize by fetching only the default branch
+    echo "Fetching $pr_remote/$default_branch..."
+    git fetch "$pr_remote" "$default_branch"
 
     echo "Creating branch: $name"
     git checkout -b "$name" "$pr_remote/$default_branch"
