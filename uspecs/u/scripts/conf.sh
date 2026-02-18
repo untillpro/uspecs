@@ -820,6 +820,7 @@ cmd_im() {
     local ref
     ref=$(resolve_version_ref "$version" "$(get_config_value "commit")")
 
+    local changed=false
     local temp_source=""
     if [[ ${#add_methods[@]} -gt 0 ]]; then
         temp_source=$(create_temp_file)
@@ -842,6 +843,7 @@ cmd_im() {
         inject_instructions "$temp_source" "$project_dir/$file"
         echo "Added invocation method: $method ($file)"
         methods_map["$method"]=1
+        changed=true
     done
 
     for method in "${remove_methods[@]}"; do
@@ -854,6 +856,7 @@ cmd_im() {
         remove_instructions "$project_dir/$file"
         echo "Removed invocation method: $method ($file)"
         unset "methods_map[$method]"
+        changed=true
     done
 
     # Build new methods string preserving order from original
@@ -884,19 +887,24 @@ cmd_im() {
     local new_methods_str
     new_methods_str=$(IFS=', '; echo "${new_methods_array[*]}")
 
-    echo "Updating installation metadata..."
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
-    local timestamp
-    timestamp=$(get_timestamp)
+    if [[ "$changed" == "true" ]]; then
+        echo "Updating installation metadata..."
+        local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+        local timestamp
+        timestamp=$(get_timestamp)
 
-    local temp_metadata
-    temp_metadata=$(create_temp_file)
-    sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
-        sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
-    mv "$temp_metadata" "$metadata_file"
+        local temp_metadata
+        temp_metadata=$(create_temp_file)
+        sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
+            sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
+        mv "$temp_metadata" "$metadata_file"
 
-    echo ""
-    echo "Invocation methods updated successfully!"
+        echo ""
+        echo "Invocation methods updated successfully!"
+    else
+        echo ""
+        echo "Nothing to change."
+    fi
 }
 
 main() {
