@@ -68,37 +68,6 @@ check_installed() {
     fi
 }
 
-# TODO: move to pr.sh, make sure that current branch is default
-check_pr_prerequisites() {
-    # Check if git repository exists
-    local dir="$PWD"
-    local found_git=false
-    while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/.git" ]]; then
-            found_git=true
-            break
-        fi
-        dir=$(dirname "$dir")
-    done
-    if [[ "$found_git" == "false" ]]; then
-        error "No git repository found"
-    fi
-
-    # Check if GitHub CLI is installed
-    if ! command -v gh &> /dev/null; then
-        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
-    fi
-
-    # Check if origin remote exists
-    if ! git remote | grep -q '^origin$'; then
-        error "'origin' remote does not exist"
-    fi
-
-    # Check if working directory is clean
-    if [[ -n $(git status --porcelain) ]]; then
-        error "Working directory has uncommitted changes. Commit or stash changes first"
-    fi
-}
 
 
 load_config() {
@@ -566,6 +535,7 @@ cmd_apply() {
 
     [[ -z "$project_dir" ]] && error "--project-dir is required"
     [[ -z "$version" ]] && error "--version is required"
+    [[ "$command_name" != "install" && -z "$current_version" ]] && error "--current-version is required for update/upgrade"
     [[ ! -d "$project_dir" ]] && error "Project directory not found: $project_dir"
 
     local script_dir
@@ -581,9 +551,21 @@ cmd_apply() {
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
+    if [[ "$command_name" == "install" && -f "$metadata_file" ]]; then
+        error "uspecs is already installed, use update instead"
+    fi
+
+    # PR: fast-forward default branch (may update local uspecs.yml)
+    if [[ "$pr_flag" == "true" ]]; then
+        bash "$script_dir/_lib/pr.sh" ffdefault
+    fi
+
     local -A config
     if [[ "$command_name" != "install" ]]; then
         load_config "$project_dir" config
+        if [[ "${config[version]:-}" != "$current_version" ]]; then
+            error "Installed version '${config[version]:-}' does not match expected '$current_version'. Re-run the command to pick up the current installed version."
+        fi
     fi
 
     # Determine invocation methods string for plan display
@@ -696,10 +678,6 @@ cmd_install() {
     local project_dir="$PWD"
 
     check_not_installed "$project_dir"
-
-    if [[ "$pr_flag" == "true" ]]; then
-        check_pr_prerequisites
-    fi
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then

@@ -65,6 +65,11 @@ check_prerequisites() {
         error "No git repository found"
     fi
 
+    # Check if GitHub CLI is installed
+    if ! command -v gh &> /dev/null; then
+        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
+    fi
+
     # Check if origin remote exists
     if ! git remote | grep -q '^origin$'; then
         error "'origin' remote does not exist"
