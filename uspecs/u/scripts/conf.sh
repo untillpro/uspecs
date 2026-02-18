@@ -100,8 +100,7 @@ check_pr_prerequisites() {
 }
 
 read_config() {
-    local project_dir
-    project_dir=$(get_project_dir)
+    local project_dir="$1"
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
     if [[ ! -f "$metadata_file" ]]; then
@@ -113,8 +112,9 @@ read_config() {
 
 get_config_value() {
     local key="$1"
+    local project_dir="$2"
     local config
-    config=$(read_config)
+    config=$(read_config "$project_dir")
     echo "$config" | grep "^$key:" | sed "s/^$key: *//" | sed 's/^\[\(.*\)\]$/\1/' || echo ""
 }
 
@@ -476,12 +476,13 @@ write_metadata() {
 
 resolve_update_version() {
     local current_version="$1"
+    local project_dir="$2"
 
     if is_alpha_version "$current_version"; then
         echo "Checking for alpha updates..."
         local current_commit current_commit_timestamp
-        current_commit=$(get_config_value "commit")
-        current_commit_timestamp=$(get_config_value "commit_timestamp")
+        current_commit=$(get_config_value "commit" "$project_dir")
+        current_commit_timestamp=$(get_config_value "commit_timestamp" "$project_dir")
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
 
         if [[ "$current_commit" == "$commit" ]]; then
@@ -516,6 +517,7 @@ resolve_update_version() {
 
 resolve_upgrade_version() {
     local current_version="$1"
+    local project_dir="$2"
 
     if is_alpha_version "$current_version"; then
         error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
@@ -582,7 +584,7 @@ cmd_apply() {
     if [[ "$command_name" == "install" ]]; then
         plan_invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     elif [[ -f "$metadata_file" ]]; then
-        plan_invocation_methods_str=$(get_config_value "invocation_methods")
+        plan_invocation_methods_str=$(get_config_value "invocation_methods" "$project_dir")
     fi
 
     # Show operation plan and confirm
@@ -602,8 +604,8 @@ cmd_apply() {
 
     if [[ "$command_name" != "install" ]]; then
         [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
-        invocation_methods_str=$(get_config_value "invocation_methods")
-        installed_at=$(get_config_value "installed_at")
+        invocation_methods_str=$(get_config_value "invocation_methods" "$project_dir")
+        installed_at=$(get_config_value "installed_at" "$project_dir")
     else
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
@@ -755,13 +757,13 @@ cmd_update_or_upgrade() {
     project_dir=$(get_project_dir)
 
     local current_version
-    current_version=$(get_config_value "version")
+    current_version=$(get_config_value "version" "$project_dir")
 
     local target_version target_ref commit commit_timestamp
     if [[ "$command_name" == "update" ]]; then
-        resolve_update_version "$current_version" || return 0
+        resolve_update_version "$current_version" "$project_dir" || return 0
     else
-        resolve_upgrade_version "$current_version" || return 0
+        resolve_upgrade_version "$current_version" "$project_dir" || return 0
     fi
 
     local temp_dir
@@ -805,7 +807,7 @@ cmd_im() {
     project_dir=$(get_project_dir)
 
     local current_methods
-    current_methods=$(get_config_value "invocation_methods")
+    current_methods=$(get_config_value "invocation_methods" "$project_dir")
 
     IFS=',' read -ra methods_array <<< "$current_methods"
     local -A methods_map
@@ -815,10 +817,10 @@ cmd_im() {
     done
 
     local version
-    version=$(get_config_value "version")
+    version=$(get_config_value "version" "$project_dir")
 
     local ref
-    ref=$(resolve_version_ref "$version" "$(get_config_value "commit")")
+    ref=$(resolve_version_ref "$version" "$(get_config_value "commit" "$project_dir")")
 
     local changed=false
     local temp_source=""
