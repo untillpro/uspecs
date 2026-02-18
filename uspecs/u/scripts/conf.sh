@@ -68,6 +68,7 @@ check_installed() {
     fi
 }
 
+# TODO: move to pr.sh, make sure that current branch is default
 check_pr_prerequisites() {
     # Check if git repository exists
     local dir="$PWD"

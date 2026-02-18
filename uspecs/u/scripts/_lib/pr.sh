@@ -25,11 +25,11 @@ set -Eeuo pipefail
 #       If --delete-branch is set, delete the current branch after switching.
 #       If no changes exist, switch to --next-branch and exit cleanly.
 #
-#   pr.sh ff-default
+#   pr.sh ffdefault
+#       Fetch pr_remote/default and fast-forward current branch to it
 #       Fail fast if any of the following conditions are true:
 #           current branch is not default
 #           current branch is not clean
-#       Fetch pr_remote and fast-forward current branch to pr_remote's default branch.
 
 
 
@@ -47,6 +47,32 @@ determine_pr_remote() {
         echo "upstream"
     else
         echo "origin"
+    fi
+}
+
+check_prerequisites() {
+    # Check if git repository exists
+    local dir="$PWD"
+    local found_git=false
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.git" ]]; then
+            found_git=true
+            break
+        fi
+        dir=$(dirname "$dir")
+    done
+    if [[ "$found_git" == "false" ]]; then
+        error "No git repository found"
+    fi
+
+    # Check if origin remote exists
+    if ! git remote | grep -q '^origin$'; then
+        error "'origin' remote does not exist"
+    fi
+
+    # Check if working directory is clean
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes first"
     fi
 }
 
@@ -82,10 +108,33 @@ cmd_prbranch() {
     default_branch=$(default_branch_name)
 
     echo "Fetching $pr_remote..."
-    git fetch "$pr_remote"
+    git fetch "$pr_remote" # //TODO: optimize by fetching only the default branch
 
     echo "Creating branch: $name"
     git checkout -b "$name" "$pr_remote/$default_branch"
+}
+
+cmd_ffdefault() {
+    check_prerequisites
+
+    local pr_remote default_branch
+    pr_remote=$(determine_pr_remote)
+    default_branch=$(default_branch_name)
+
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    if [[ "$current_branch" != "$default_branch" ]]; then
+        error "Current branch '$current_branch' is not the default branch '$default_branch'"
+    fi
+
+    echo "Fetching $pr_remote/$default_branch..."
+    git fetch "$pr_remote" "$default_branch"
+
+    echo "Fast-forwarding $current_branch..."
+    if ! git merge --ff-only "$pr_remote/$default_branch"; then
+        error "Cannot fast-forward '$current_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+    fi
 }
 
 cmd_pr() {
@@ -167,13 +216,14 @@ cmd_pr() {
 # ---------------------------------------------------------------------------
 
 if [[ $# -lt 1 ]]; then
-    error "Usage: pr.sh <info|prbranch|pr> [args...]"
+    error "Usage: pr.sh <info|prbranch|pr|ffdefault> [args...]"
 fi
 
 command="$1"; shift
 case "$command" in
-    info)     cmd_info "$@" ;;
-    prbranch) cmd_prbranch "$@" ;;
-    pr)       cmd_pr "$@" ;;
-    *)        error "Unknown command: $command. Available: info, prbranch, pr" ;;
+    info)      cmd_info "$@" ;;
+    prbranch)  cmd_prbranch "$@" ;;
+    pr)        cmd_pr "$@" ;;
+    ffdefault) cmd_ffdefault "$@" ;;
+    *)         error "Unknown command: $command. Available: info, prbranch, pr, ffdefault" ;;
 esac
