@@ -276,7 +276,7 @@ show_operation_plan() {
     echo "=========================================="
 
     # From (Source)
-    echo "From:"
+    echo "Version to deploy:"
     if [[ "$operation" != "install" && -n "$current_version" ]]; then
         echo "  Version: $current_version"
         if is_alpha_version "$current_version"; then
@@ -295,7 +295,7 @@ show_operation_plan() {
     echo ""
 
     # To (Destination)
-    echo "To:"
+    echo "Existing version:"
     echo "  Version: $target_version"
     if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
         echo "  Commit: $commit"
