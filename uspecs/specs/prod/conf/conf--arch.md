@@ -1,15 +1,15 @@
-# Context architecture: prod/mgmt
+# Context architecture: prod/conf
 
 ## Key components
 
 uspecs components:
 
-- [manage.sh: bash script](../../../uspecs/u/scripts/manage.sh)
-  - Manages uspecs lifecycle (install, update, upgrade, invocation type configuration)
+- [conf.sh: bash script](../../../uspecs/u/scripts/conf.sh)
+  - Manages uspecs lifecycle (install, update, upgrade, invocation method configuration)
   - Orchestrates version detection, download, and local installation
 
 - uspecs.yml: installation metadata file, uspecs/u/uspecs.yml
-  - Stores installation metadata (version, timestamps, invocation types, commit info for alpha)
+  - Stores installation metadata (version, timestamps, invocation methods, commit info for alpha)
   - Single source of truth for installed uspecs state
 
 External systems:
@@ -21,19 +21,19 @@ External systems:
 Related components:
 
 - AGENTS.md: agent config file
-  - Contains instructions for nlia invocation type
-  - Managed by: manage.sh (injection/removal of instructions)
+  - Contains instructions for nlia invocation method
+  - Managed by: conf.sh (injection/removal of instructions)
 
 - CLAUDE.md: agent config file
-  - Contains instructions for nlic invocation type
-  - Managed by: manage.sh (injection/removal of instructions)
+  - Contains instructions for nlic invocation method
+  - Managed by: conf.sh (injection/removal of instructions)
 
 ## Key flows
 
 ### Version detection and download
 
 ```text
-Engineer -> manage.sh (install/update/upgrade)
+Engineer -> conf.sh (install/update/upgrade)
               |
               +-- determine version type (stable/alpha)
               |
@@ -50,7 +50,7 @@ Engineer -> manage.sh (install/update/upgrade)
 ### Local installation
 
 ```text
-manage.sh (after download)
+conf.sh (after download)
   |
   +-- validate preconditions
   |     |
@@ -65,9 +65,9 @@ manage.sh (after download)
   |     |
   |     +-- version, timestamps
   |     +-- commit info (alpha only)
-  |     +-- invocation_types list
+  |     +-- invocation_methods list
   |
-  +-- inject instructions (if invocation types specified)
+  +-- inject instructions (if invocation methods specified)
   |     |
   |     +-- AGENTS.md (for nlia)
   |     +-- CLAUDE.md (for nlic)
@@ -83,7 +83,7 @@ Stable version:
 
 ```yaml
 version: 1.2.3
-invocation_types: [nlia, nlic]
+invocation_methods: [nlia, nlic]
 installed_at: 2026-02-14T17:49:00Z
 modified_at: 2026-02-14T18:30:00Z
 ```
@@ -92,7 +92,7 @@ Alpha version:
 
 ```yaml
 version: alpha
-invocation_types: [nlia, nlic]
+invocation_methods: [nlia, nlic]
 installed_at: 2026-02-14T17:49:00Z
 modified_at: 2026-02-14T18:30:00Z
 commit: 967257e2d86e4520b48e69d6300c603db359689b

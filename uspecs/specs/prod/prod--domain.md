@@ -35,10 +35,8 @@ Systems:
 - Active Change Request: a Change Request that is being actively worked on
 - Invocation Method: how Engineer interacts with uspecs
   - NLI (Natural Language Invocation): instructions injected into agent config files
+    - `nlia` (AGENTS.md), `nlic` (CLAUDE.md)
   - CB (Command-Based): direct command execution (to be defined)
-- Invocation Type: specific invocation target
-  - NLI Types: nlia (AGENTS.md), nlic (CLAUDE.md)
-  - CB Types: multiple agent-specific types (to be defined)
 - Version Type: classification of installed uspecs version
   - Stable: released versions identified by semantic version tags (e.g., 1.2.3)
   - Alpha: development versions from the main branch
@@ -51,13 +49,14 @@ Systems:
 
 ## Contexts
 
-### mgmt
+### conf
 
-Manage the System lifecycle - install, update, upgrade and maintain uspecs per project.
+System lifecycle management and configuration.
 
 Relationships with external actors:
 
-- 🎯mgmt ->|manage| 👤Engineer
+- 🎯conf ->|lifecycle management| 👤Engineer
+- 🎯conf ->|configuration| ⚙️AI Agent
 
 ### softeng
 
@@ -73,4 +72,4 @@ Relationships with external actors:
 
 ## Context map
 
-- mgmt -> |working uspecs| softeng
+- conf -> |working uspecs| softeng

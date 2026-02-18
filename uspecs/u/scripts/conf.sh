@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# manage.sh
+# conf.sh
 #
 # Description:
-#   Manages uspecs lifecycle: install, update, upgrade, and invocation type configuration
+#   Manages uspecs lifecycle: install, update, upgrade, and invocation method configuration
 #
 # Usage:
-#   manage.sh install --nlia [--alpha] [--pr]
-#   manage.sh update [--pr]
-#   manage.sh upgrade [--pr]
-#   manage.sh it --add nlia
-#   manage.sh it --remove nlic
+#   conf.sh install --nlia [--alpha] [--pr]
+#   conf.sh update [--pr]
+#   conf.sh upgrade [--pr]
+#   conf.sh it --add nlia
+#   conf.sh it --remove nlic
 #
 # Internal commands (not for direct use):
-#   manage.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> [--current-version <ver>] [flags...]
+#   conf.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> [--current-version <ver>] [flags...]
 
 
 REPO_OWNER="untillpro"
@@ -168,12 +168,12 @@ download_archive() {
 }
 
 get_nli_file() {
-    local type="$1"
-    case "$type" in
+    local method="$1"
+    case "$method" in
         nlia) echo "AGENTS.md" ;;
         nlic) echo "CLAUDE.md" ;;
         *)
-            echo "Warning: Unknown NLI type: $type" >&2
+            echo "Warning: Unknown invocation method: $method" >&2
             return 1
             ;;
     esac
@@ -262,7 +262,7 @@ show_operation_plan() {
     local target_version="$3"
     local commit="${4:-}"
     local commit_timestamp="${5:-}"
-    local invocation_types="${6:-}"
+    local invocation_methods="${6:-}"
     local pr_flag="${7:-false}"
     local project_dir="${8:-}"
     local script_dir="${9:-}"
@@ -304,13 +304,13 @@ show_operation_plan() {
     echo "  Project folder: $project_dir"
     echo "  uspecs core: uspecs/u"
 
-    if [[ -n "$invocation_types" ]]; then
+    if [[ -n "$invocation_methods" ]]; then
         echo "  Natural language invocation files:"
-        IFS=',' read -ra types_array <<< "$invocation_types"
-        for type in "${types_array[@]}"; do
-            type=$(echo "$type" | xargs)
+        IFS=',' read -ra methods_array <<< "$invocation_methods"
+        for method in "${methods_array[@]}"; do
+            method=$(echo "$method" | xargs)
             local file
-            file=$(get_nli_file "$type") 2>/dev/null || continue
+            file=$(get_nli_file "$method") 2>/dev/null || continue
             echo "    - $file"
         done
     fi
@@ -447,7 +447,7 @@ remove_instructions() {
 write_metadata() {
     local project_dir="$1"
     local version="$2"
-    local invocation_types="$3"
+    local invocation_methods="$3"
     local commit="${4:-}"
     local commit_timestamp="${5:-}"
     local installed_at="${6:-}"
@@ -464,7 +464,7 @@ write_metadata() {
         echo "# uspecs installation metadata"
         echo "# DO NOT EDIT - managed by uspecs"
         echo "version: $version"
-        echo "invocation_types: [$invocation_types]"
+        echo "invocation_methods: [$invocation_methods]"
         echo "installed_at: $installed_at"
         echo "modified_at: $timestamp"
         if [[ -n "$commit" ]]; then
@@ -504,7 +504,7 @@ resolve_update_version() {
             if [[ "$latest_major" != "$current_version" ]]; then
                 echo ""
                 echo "Upgrade available to version $latest_major"
-                echo "Use 'manage.sh upgrade' command"
+                echo "Use 'conf.sh upgrade' command"
             fi
             return 1
         fi
@@ -533,10 +533,10 @@ resolve_upgrade_version() {
     return 0
 }
 
-# Re-invoked by install/update/upgrade commands via target version's manage.sh
+# Re-invoked by install/update/upgrade commands via target version's conf.sh
 cmd_apply() {
     if [[ $# -lt 1 ]]; then
-        error "Usage: manage.sh apply <install|update|upgrade> [flags...]"
+        error "Usage: conf.sh apply <install|update|upgrade> [flags...]"
     fi
 
     local command_name="$1"
@@ -544,7 +544,7 @@ cmd_apply() {
 
     local project_dir="" version="" commit="" commit_timestamp="" pr_flag=false
     local current_version=""
-    local invocation_types=()
+    local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -554,8 +554,8 @@ cmd_apply() {
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
             --current-version) current_version="$2"; shift 2 ;;
             --pr) pr_flag=true; shift ;;
-            --nlia) invocation_types+=("nlia"); shift ;;
-            --nlic) invocation_types+=("nlic"); shift ;;
+            --nlia) invocation_methods+=("nlia"); shift ;;
+            --nlic) invocation_methods+=("nlic"); shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
@@ -577,16 +577,16 @@ cmd_apply() {
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
-    # Determine invocation types string for plan display
-    local plan_invocation_types_str=""
+    # Determine invocation methods string for plan display
+    local plan_invocation_methods_str=""
     if [[ "$command_name" == "install" ]]; then
-        plan_invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+        plan_invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     elif [[ -f "$metadata_file" ]]; then
-        plan_invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
+        plan_invocation_methods_str=$(grep "^invocation_methods:" "$metadata_file" | sed 's/^invocation_methods: *\[//' | sed 's/\]$//')
     fi
 
     # Show operation plan and confirm
-    show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_types_str" "$pr_flag" "$project_dir" "$script_dir"
+    show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
     confirm_action "$command_name" || return 0
 
     # PR: capture current branch, then create feature branch
@@ -598,14 +598,14 @@ cmd_apply() {
     fi
 
     # Save existing metadata for update/upgrade
-    local invocation_types_str="" installed_at=""
+    local invocation_methods_str="" installed_at=""
 
     if [[ "$command_name" != "install" ]]; then
         [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
-        invocation_types_str=$(grep "^invocation_types:" "$metadata_file" | sed 's/^invocation_types: *\[//' | sed 's/\]$//')
+        invocation_methods_str=$(grep "^invocation_methods:" "$metadata_file" | sed 's/^invocation_methods: *\[//' | sed 's/\]$//')
         installed_at=$(grep "^installed_at:" "$metadata_file" | sed 's/^installed_at: *//')
     else
-        invocation_types_str=$(IFS=', '; echo "${invocation_types[*]}")
+        invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
 
     if [[ "$command_name" == "install" ]]; then
@@ -619,15 +619,15 @@ cmd_apply() {
 
     # Write metadata
     echo "Writing installation metadata..."
-    write_metadata "$project_dir" "$version" "$invocation_types_str" "$commit" "$commit_timestamp" "$installed_at"
+    write_metadata "$project_dir" "$version" "$invocation_methods_str" "$commit" "$commit_timestamp" "$installed_at"
 
     # Inject NLI instructions
     echo "Injecting instructions..."
-    IFS=',' read -ra inject_types <<< "$invocation_types_str"
-    for type in "${inject_types[@]}"; do
-        type=$(echo "$type" | xargs)
+    IFS=',' read -ra inject_methods <<< "$invocation_methods_str"
+    for method in "${inject_methods[@]}"; do
+        method=$(echo "$method" | xargs)
         local file
-        file=$(get_nli_file "$type") || continue
+        file=$(get_nli_file "$method") || continue
         inject_instructions "$source_dir/$file" "$project_dir/$file"
         echo "  - $file"
     done
@@ -668,20 +668,20 @@ cmd_apply() {
 cmd_install() {
     local alpha=false
     local pr_flag=false
-    local invocation_types=()
+    local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --alpha) alpha=true; shift ;;
             --pr) pr_flag=true; shift ;;
-            --nlia) invocation_types+=("nlia"); shift ;;
-            --nlic) invocation_types+=("nlic"); shift ;;
+            --nlia) invocation_methods+=("nlia"); shift ;;
+            --nlic) invocation_methods+=("nlic"); shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
 
-    if [[ ${#invocation_types[@]} -eq 0 ]]; then
-        error "At least one invocation type (--nlia or --nlic) is required"
+    if [[ ${#invocation_methods[@]} -eq 0 ]]; then
+        error "At least one invocation method (--nlia or --nlic) is required"
     fi
 
     local project_dir="$PWD"
@@ -713,8 +713,8 @@ cmd_install() {
     download_archive "$ref" "$temp_dir"
 
     local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version")
-    for type in "${invocation_types[@]}"; do
-        apply_args+=("--$type")
+    for method in "${invocation_methods[@]}"; do
+        apply_args+=("--$method")
     done
     if [[ -n "$commit" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
@@ -724,7 +724,7 @@ cmd_install() {
     fi
 
     echo "Running install..."
-    bash "$temp_dir/uspecs/u/scripts/manage.sh" apply "${apply_args[@]}"
+    bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
 }
 
 cmd_update_or_upgrade() {
@@ -780,22 +780,22 @@ cmd_update_or_upgrade() {
     fi
 
     echo "Running ${command_name}..."
-    bash "$temp_dir/uspecs/u/scripts/manage.sh" apply "${apply_args[@]}"
+    bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
 }
 
 cmd_it() {
-    local add_types=()
-    local remove_types=()
+    local add_methods=()
+    local remove_methods=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --add) add_types+=("$2"); shift 2 ;;
-            --remove) remove_types+=("$2"); shift 2 ;;
+            --add) add_methods+=("$2"); shift 2 ;;
+            --remove) remove_methods+=("$2"); shift 2 ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
 
-    if [[ ${#add_types[@]} -eq 0 && ${#remove_types[@]} -eq 0 ]]; then
+    if [[ ${#add_methods[@]} -eq 0 && ${#remove_methods[@]} -eq 0 ]]; then
         error "At least one --add or --remove flag is required"
     fi
 
@@ -804,14 +804,14 @@ cmd_it() {
     local project_dir
     project_dir=$(get_project_dir)
 
-    local current_types
-    current_types=$(get_config_value "invocation_types")
+    local current_methods
+    current_methods=$(get_config_value "invocation_methods")
 
-    IFS=',' read -ra types_array <<< "$current_types"
-    local -A types_map
-    for type in "${types_array[@]}"; do
-        type=$(echo "$type" | xargs)
-        types_map["$type"]=1
+    IFS=',' read -ra methods_array <<< "$current_methods"
+    local -A methods_map
+    for method in "${methods_array[@]}"; do
+        method=$(echo "$method" | xargs)
+        methods_map["$method"]=1
     done
 
     local version
@@ -821,7 +821,7 @@ cmd_it() {
     ref=$(resolve_version_ref "$version" "$(get_config_value "commit")")
 
     local temp_source=""
-    if [[ ${#add_types[@]} -gt 0 ]]; then
+    if [[ ${#add_methods[@]} -gt 0 ]]; then
         temp_source=$(create_temp_file)
 
         echo "Downloading source file for triggering instructions..."
@@ -831,58 +831,58 @@ cmd_it() {
         fi
     fi
 
-    for type in "${add_types[@]}"; do
-        if [[ -n "${types_map[$type]:-}" ]]; then
-            echo "Invocation type '$type' is already configured"
+    for method in "${add_methods[@]}"; do
+        if [[ -n "${methods_map[$method]:-}" ]]; then
+            echo "Invocation method '$method' is already configured"
             continue
         fi
 
         local file
-        file=$(get_nli_file "$type") || continue
+        file=$(get_nli_file "$method") || continue
         inject_instructions "$temp_source" "$project_dir/$file"
-        echo "Added invocation type: $type ($file)"
-        types_map["$type"]=1
+        echo "Added invocation method: $method ($file)"
+        methods_map["$method"]=1
     done
 
-    for type in "${remove_types[@]}"; do
-        if [[ -z "${types_map[$type]:-}" ]]; then
-            echo "Invocation type '$type' is not configured"
+    for method in "${remove_methods[@]}"; do
+        if [[ -z "${methods_map[$method]:-}" ]]; then
+            echo "Invocation method '$method' is not configured"
             continue
         fi
         local file
-        file=$(get_nli_file "$type") || continue
+        file=$(get_nli_file "$method") || continue
         remove_instructions "$project_dir/$file"
-        echo "Removed invocation type: $type ($file)"
-        unset "types_map[$type]"
+        echo "Removed invocation method: $method ($file)"
+        unset "methods_map[$method]"
     done
 
-    # Build new types string preserving order from original
-    local new_types_array=()
-    for type in "${types_array[@]}"; do
-        type=$(echo "$type" | xargs)
-        if [[ -n "${types_map[$type]:-}" ]]; then
-            new_types_array+=("$type")
+    # Build new methods string preserving order from original
+    local new_methods_array=()
+    for method in "${methods_array[@]}"; do
+        method=$(echo "$method" | xargs)
+        if [[ -n "${methods_map[$method]:-}" ]]; then
+            new_methods_array+=("$method")
         fi
     done
-    # Add any new types that were successfully added (present in types_map)
-    for type in "${add_types[@]}"; do
-        if [[ -z "${types_map[$type]:-}" ]]; then
+    # Add any new methods that were successfully added (present in methods_map)
+    for method in "${add_methods[@]}"; do
+        if [[ -z "${methods_map[$method]:-}" ]]; then
             continue
         fi
         local found=0
-        for existing in "${new_types_array[@]}"; do
-            if [[ "$existing" == "$type" ]]; then
+        for existing in "${new_methods_array[@]}"; do
+            if [[ "$existing" == "$method" ]]; then
                 found=1
                 break
             fi
         done
         if [[ $found -eq 0 ]]; then
-            new_types_array+=("$type")
+            new_methods_array+=("$method")
         fi
     done
 
-    local new_types_str
-    new_types_str=$(IFS=', '; echo "${new_types_array[*]}")
+    local new_methods_str
+    new_methods_str=$(IFS=', '; echo "${new_methods_array[*]}")
 
     echo "Updating installation metadata..."
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
@@ -891,17 +891,17 @@ cmd_it() {
 
     local temp_metadata
     temp_metadata=$(create_temp_file)
-    sed "s/^invocation_types: .*/invocation_types: [$new_types_str]/" "$metadata_file" | \
+    sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
         sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
     mv "$temp_metadata" "$metadata_file"
 
     echo ""
-    echo "Invocation types updated successfully!"
+    echo "Invocation methods updated successfully!"
 }
 
 main() {
     if [[ $# -lt 1 ]]; then
-        error "Usage: manage.sh <command> [args...]"
+        error "Usage: conf.sh <command> [args...]"
     fi
 
     local command="$1"
