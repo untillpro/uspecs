@@ -44,3 +44,5 @@
   - update: `manage.sh` -> `conf.sh` in header, usage, error messages, and internal script path calls
   - update: "invocation type/types" -> "invocation method/methods" in user messages
   - update: `invocation_types` -> `invocation_methods` in YAML key reads and writes
+  - fix: `show_operation_plan` - corrected section order and labels: "Incoming version:" (target) shown first, "Existing version:" (current + project details) shown second
+  - fix: `get_latest_minor_tag` - added `|| true` pipefail guard and `$current_version` fallback when no tag found
