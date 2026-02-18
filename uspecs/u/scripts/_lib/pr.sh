@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #   pr.sh info
 #       Output PR configuration in key=value format:
 #         pr_remote=<upstream|origin>
-#         main_branch=<branch-name>
+#         default_branch=<branch-name>
 #
 #   pr.sh prbranch <name>
 #       Fetch pr_remote and create a local branch from its default branch.
@@ -24,6 +24,14 @@ set -Eeuo pipefail
 #       pr_remote's default branch. Switch to --next-branch afterwards.
 #       If --delete-branch is set, delete the current branch after switching.
 #       If no changes exist, switch to --next-branch and exit cleanly.
+#
+#   pr.sh ff-default
+#       Fail fast if any of the following conditions are true:
+#           current branch is not default
+#           current branch is not clean
+#       Fetch pr_remote and fast-forward current branch to pr_remote's default branch.
+
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,7 +50,7 @@ determine_pr_remote() {
     fi
 }
 
-main_branch_name() {
+default_branch_name() {
     local branch
     branch=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}') || {
         error "Cannot determine the default branch from remote"
@@ -58,26 +66,26 @@ main_branch_name() {
 # ---------------------------------------------------------------------------
 
 cmd_info() {
-    local pr_remote main_branch
+    local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    main_branch=$(main_branch_name)
+    default_branch=$(default_branch_name)
     echo "pr_remote=$pr_remote"
-    echo "main_branch=$main_branch"
+    echo "default_branch=$default_branch"
 }
 
 cmd_prbranch() {
     local name="${1:-}"
     [[ -z "$name" ]] && error "Usage: pr.sh prbranch <name>"
 
-    local pr_remote main_branch
+    local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    main_branch=$(main_branch_name)
+    default_branch=$(default_branch_name)
 
     echo "Fetching $pr_remote..."
     git fetch "$pr_remote"
 
     echo "Creating branch: $name"
-    git checkout -b "$name" "$pr_remote/$main_branch"
+    git checkout -b "$name" "$pr_remote/$default_branch"
 }
 
 cmd_pr() {
@@ -95,8 +103,8 @@ cmd_pr() {
     [[ -z "$body" ]]        && error "--body is required"
     [[ -z "$next_branch" ]] && error "--next-branch is required"
 
-    local main_branch branch_name
-    main_branch=$(main_branch_name)
+    local default_branch branch_name
+    default_branch=$(default_branch_name)
     branch_name=$(git symbolic-ref --short HEAD)
 
     if [[ "$delete_branch" == "true" && "$branch_name" == "$next_branch" ]]; then
@@ -127,7 +135,7 @@ cmd_pr() {
     echo "Creating pull request to $pr_remote..."
     local pr_repo
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-    local pr_args=('--repo' "$pr_repo" '--base' "$main_branch" '--title' "$title" '--body' "$body")
+    local pr_args=('--repo' "$pr_repo" '--base' "$default_branch" '--title' "$title" '--body' "$body")
 
     local pr_url
     if [[ "$pr_remote" == "upstream" ]]; then
@@ -151,7 +159,7 @@ cmd_pr() {
     # Output PR info for caller to parse (to stderr so it doesn't interfere with normal output)
     echo "PR_URL=$pr_url" >&2
     echo "PR_BRANCH=$branch_name" >&2
-    echo "PR_BASE=$main_branch" >&2
+    echo "PR_BASE=$default_branch" >&2
 }
 
 # ---------------------------------------------------------------------------
