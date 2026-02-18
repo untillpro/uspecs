@@ -275,8 +275,19 @@ show_operation_plan() {
     echo "Operation: $operation"
     echo "=========================================="
 
-    # From (Source)
-    echo "Version to deploy:"
+    # Incoming
+    echo "Incoming version:"
+    echo "  Version: $target_version"
+    if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
+        echo "  Commit: $commit"
+        echo "  Timestamp: $commit_timestamp"
+    fi
+    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
+
+    echo ""
+
+    # Existing
+    echo "Existing version:"
     if [[ "$operation" != "install" && -n "$current_version" ]]; then
         echo "  Version: $current_version"
         if is_alpha_version "$current_version"; then
@@ -290,18 +301,6 @@ show_operation_plan() {
             fi
         fi
     fi
-    echo "  Endpoint: $GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH"
-
-    echo ""
-
-    # To (Destination)
-    echo "Existing version:"
-    echo "  Version: $target_version"
-    if is_alpha_version "$target_version" && [[ -n "$commit" ]]; then
-        echo "  Commit: $commit"
-        echo "  Timestamp: $commit_timestamp"
-    fi
-
     echo "  Project folder: $project_dir"
     echo "  uspecs core: uspecs/u"
 
