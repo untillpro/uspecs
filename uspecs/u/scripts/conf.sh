@@ -10,8 +10,8 @@ set -Eeuo pipefail
 #   conf.sh install --nlia [--alpha] [--pr]
 #   conf.sh update [--pr]
 #   conf.sh upgrade [--pr]
-#   conf.sh it --add nlia
-#   conf.sh it --remove nlic
+#   conf.sh im --add nlia
+#   conf.sh im --remove nlic
 #
 # Internal commands (not for direct use):
 #   conf.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> [--current-version <ver>] [flags...]
@@ -783,7 +783,7 @@ cmd_update_or_upgrade() {
     bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
 }
 
-cmd_it() {
+cmd_im() {
     local add_methods=()
     local remove_methods=()
 
@@ -920,11 +920,11 @@ main() {
         apply)
             cmd_apply "$@"
             ;;
-        it)
-            cmd_it "$@"
+        im)
+            cmd_im "$@"
             ;;
         *)
-            error "Unknown command: $command. Available: install, update, upgrade, apply, it"
+            error "Unknown command: $command. Available: install, update, upgrade, apply, im"
             ;;
     esac
 }
