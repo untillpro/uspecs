@@ -833,20 +833,20 @@ cmd_im() {
 
     local changed=false
     local temp_source=""
-    if [[ ${#add_methods[@]} -gt 0 ]]; then
-        temp_source=$(create_temp_file)
-
-        echo "Downloading source file for triggering instructions..."
-        local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
-        if ! curl -fsSL "$source_url" -o "$temp_source"; then
-            error "Failed to download source file from $source_url"
-        fi
-    fi
 
     for method in "${add_methods[@]}"; do
         if [[ -n "${methods_map[$method]:-}" ]]; then
             echo "Invocation method '$method' is already configured"
             continue
+        fi
+
+        if [[ -z "$temp_source" ]]; then
+            temp_source=$(create_temp_file)
+            echo "Downloading source file for triggering instructions..."
+            local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
+            if ! curl -fsSL "$source_url" -o "$temp_source"; then
+                error "Failed to download source file from $source_url"
+            fi
         fi
 
         local file
