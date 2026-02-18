@@ -115,7 +115,7 @@ get_config_value() {
     local key="$1"
     local config
     config=$(read_config)
-    echo "$config" | grep "^$key:" | sed "s/^$key: *//" | sed 's/^"\(.*\)"$/\1/' | sed 's/^\[\(.*\)\]$/\1/'
+    echo "$config" | grep "^$key:" | sed "s/^$key: *//" | sed 's/^\[\(.*\)\]$/\1/' || echo ""
 }
 
 get_latest_tag() {
@@ -582,7 +582,7 @@ cmd_apply() {
     if [[ "$command_name" == "install" ]]; then
         plan_invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     elif [[ -f "$metadata_file" ]]; then
-        plan_invocation_methods_str=$(grep "^invocation_methods:" "$metadata_file" | sed 's/^invocation_methods: *\[//' | sed 's/\]$//')
+        plan_invocation_methods_str=$(get_config_value "invocation_methods")
     fi
 
     # Show operation plan and confirm
@@ -602,8 +602,8 @@ cmd_apply() {
 
     if [[ "$command_name" != "install" ]]; then
         [[ ! -f "$metadata_file" ]] && error "Installation metadata file not found: $metadata_file"
-        invocation_methods_str=$(grep "^invocation_methods:" "$metadata_file" | sed 's/^invocation_methods: *\[//' | sed 's/\]$//')
-        installed_at=$(grep "^installed_at:" "$metadata_file" | sed 's/^installed_at: *//')
+        invocation_methods_str=$(get_config_value "invocation_methods")
+        installed_at=$(get_config_value "installed_at")
     else
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
