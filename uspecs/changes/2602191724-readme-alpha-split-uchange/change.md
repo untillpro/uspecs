@@ -28,4 +28,4 @@ Add feature file for archive change:
 
 Update cross-references:
 
-- Update `AGENTS.md` triggering instructions to map `uarchive` to `actn-uarchive.md`
+- Update `AGENTS.md` and `CLAUDE.md` triggering instructions to map `uarchive` to `actn-uarchive.md`
