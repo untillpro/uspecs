@@ -740,10 +740,6 @@ cmd_update_or_upgrade() {
 
     check_installed
 
-    if [[ "$pr_flag" == "true" ]]; then
-        check_pr_prerequisites
-    fi
-
     local project_dir
     project_dir=$(get_project_dir)
 
