@@ -9,19 +9,19 @@ Install uspecs with natural language invocation support for AI agents.
 For AGENTS.md (nlia):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlia
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia
 ```
 
 For CLAUDE.md (nlic):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlic
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlic
 ```
 
 For both:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlia --nlic
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --nlic
 ```
 
 Optional flags:
@@ -31,7 +31,7 @@ Optional flags:
 Example with alpha:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/manage.sh | bash -s install --nlia --alpha
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --alpha
 ```
 
 ### Update
@@ -39,7 +39,7 @@ curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scri
 Update to the latest version:
 
 ```sh
-uspecs/u/scripts/manage.sh update
+uspecs/u/scripts/conf.sh update
 ```
 
 Behavior:
@@ -52,15 +52,15 @@ Behavior:
 Upgrade to the latest major version (stable versions only):
 
 ```sh
-uspecs/u/scripts/manage.sh upgrade
+uspecs/u/scripts/conf.sh upgrade
 ```
 
-### Configure Invocation Types
+### Configure Invocation Methods
 
-Add or remove invocation types:
+Add or remove invocation methods:
 
 ```sh
-uspecs/u/scripts/manage.sh it --add nlia
-uspecs/u/scripts/manage.sh it --remove nlic
-uspecs/u/scripts/manage.sh it --add nlia --add nlic
+uspecs/u/scripts/conf.sh it --add nlia
+uspecs/u/scripts/conf.sh it --remove nlic
+uspecs/u/scripts/conf.sh it --add nlia --add nlic
 ```

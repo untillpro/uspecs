@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #   pr.sh info
 #       Output PR configuration in key=value format:
 #         pr_remote=<upstream|origin>
-#         main_branch=<branch-name>
+#         default_branch=<branch-name>
 #
 #   pr.sh prbranch <name>
 #       Fetch pr_remote and create a local branch from its default branch.
@@ -24,6 +24,14 @@ set -Eeuo pipefail
 #       pr_remote's default branch. Switch to --next-branch afterwards.
 #       If --delete-branch is set, delete the current branch after switching.
 #       If no changes exist, switch to --next-branch and exit cleanly.
+#
+#   pr.sh ffdefault
+#       Fetch pr_remote/default and fast-forward current branch to it
+#       Fail fast if any of the following conditions are true:
+#           current branch is not default
+#           current branch is not clean
+
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,7 +50,38 @@ determine_pr_remote() {
     fi
 }
 
-main_branch_name() {
+check_prerequisites() {
+    # Check if git repository exists
+    local dir="$PWD"
+    local found_git=false
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.git" ]]; then
+            found_git=true
+            break
+        fi
+        dir=$(dirname "$dir")
+    done
+    if [[ "$found_git" == "false" ]]; then
+        error "No git repository found"
+    fi
+
+    # Check if GitHub CLI is installed
+    if ! command -v gh &> /dev/null; then
+        error "GitHub CLI (gh) is not installed. Install from https://cli.github.com/"
+    fi
+
+    # Check if origin remote exists
+    if ! git remote | grep -q '^origin$'; then
+        error "'origin' remote does not exist"
+    fi
+
+    # Check if working directory is clean
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes first"
+    fi
+}
+
+default_branch_name() {
     local branch
     branch=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}') || {
         error "Cannot determine the default branch from remote"
@@ -58,26 +97,49 @@ main_branch_name() {
 # ---------------------------------------------------------------------------
 
 cmd_info() {
-    local pr_remote main_branch
+    local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    main_branch=$(main_branch_name)
+    default_branch=$(default_branch_name)
     echo "pr_remote=$pr_remote"
-    echo "main_branch=$main_branch"
+    echo "default_branch=$default_branch"
 }
 
 cmd_prbranch() {
     local name="${1:-}"
     [[ -z "$name" ]] && error "Usage: pr.sh prbranch <name>"
 
-    local pr_remote main_branch
+    local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    main_branch=$(main_branch_name)
+    default_branch=$(default_branch_name)
 
-    echo "Fetching $pr_remote..."
-    git fetch "$pr_remote"
+    echo "Fetching $pr_remote/$default_branch..."
+    git fetch "$pr_remote" "$default_branch"
 
     echo "Creating branch: $name"
-    git checkout -b "$name" "$pr_remote/$main_branch"
+    git checkout -b "$name" "$pr_remote/$default_branch"
+}
+
+cmd_ffdefault() {
+    check_prerequisites
+
+    local pr_remote default_branch
+    pr_remote=$(determine_pr_remote)
+    default_branch=$(default_branch_name)
+
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    if [[ "$current_branch" != "$default_branch" ]]; then
+        error "Current branch '$current_branch' is not the default branch '$default_branch'"
+    fi
+
+    echo "Fetching $pr_remote/$default_branch..."
+    git fetch "$pr_remote" "$default_branch"
+
+    echo "Fast-forwarding $current_branch..."
+    if ! git merge --ff-only "$pr_remote/$default_branch"; then
+        error "Cannot fast-forward '$current_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+    fi
 }
 
 cmd_pr() {
@@ -95,8 +157,8 @@ cmd_pr() {
     [[ -z "$body" ]]        && error "--body is required"
     [[ -z "$next_branch" ]] && error "--next-branch is required"
 
-    local main_branch branch_name
-    main_branch=$(main_branch_name)
+    local default_branch branch_name
+    default_branch=$(default_branch_name)
     branch_name=$(git symbolic-ref --short HEAD)
 
     if [[ "$delete_branch" == "true" && "$branch_name" == "$next_branch" ]]; then
@@ -127,7 +189,7 @@ cmd_pr() {
     echo "Creating pull request to $pr_remote..."
     local pr_repo
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-    local pr_args=('--repo' "$pr_repo" '--base' "$main_branch" '--title' "$title" '--body' "$body")
+    local pr_args=('--repo' "$pr_repo" '--base' "$default_branch" '--title' "$title" '--body' "$body")
 
     local pr_url
     if [[ "$pr_remote" == "upstream" ]]; then
@@ -151,7 +213,7 @@ cmd_pr() {
     # Output PR info for caller to parse (to stderr so it doesn't interfere with normal output)
     echo "PR_URL=$pr_url" >&2
     echo "PR_BRANCH=$branch_name" >&2
-    echo "PR_BASE=$main_branch" >&2
+    echo "PR_BASE=$default_branch" >&2
 }
 
 # ---------------------------------------------------------------------------
@@ -159,13 +221,14 @@ cmd_pr() {
 # ---------------------------------------------------------------------------
 
 if [[ $# -lt 1 ]]; then
-    error "Usage: pr.sh <info|prbranch|pr> [args...]"
+    error "Usage: pr.sh <info|prbranch|pr|ffdefault> [args...]"
 fi
 
 command="$1"; shift
 case "$command" in
-    info)     cmd_info "$@" ;;
-    prbranch) cmd_prbranch "$@" ;;
-    pr)       cmd_pr "$@" ;;
-    *)        error "Unknown command: $command. Available: info, prbranch, pr" ;;
+    info)      cmd_info "$@" ;;
+    prbranch)  cmd_prbranch "$@" ;;
+    pr)        cmd_pr "$@" ;;
+    ffdefault) cmd_ffdefault "$@" ;;
+    *)         error "Unknown command: $command. Available: info, prbranch, pr, ffdefault" ;;
 esac

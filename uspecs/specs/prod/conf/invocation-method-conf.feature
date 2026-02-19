@@ -1,11 +1,11 @@
-Feature: Configure invocation types
-  Engineer adds or removes invocation types
+Feature: Configure invocation methods
+  Engineer adds or removes invocation methods
 
-  Scenario Outline: Manage invocation type
-    When Engineer runs "manage.sh it <action> <type>"
+  Scenario Outline: Manage invocation method
+    When Engineer runs "conf.sh it <action> <type>"
     Then <file> is created if it does not exist
     And instructions are <result> in <file>
-    And config file invocation_types list is updated
+    And config file invocation_methods list is updated
 
     Examples:
       | action   | type | file      | result       |
