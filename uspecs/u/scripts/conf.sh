@@ -256,33 +256,35 @@ show_operation_plan() {
 
     echo ""
 
-    # Existing
-    echo "Existing version:"
-    if [[ "$operation" != "install" && -n "$current_version" ]]; then
-        echo "  Version: $current_version"
-        if is_alpha_version "$current_version"; then
-            local -A current_config
-            load_config "$project_dir" current_config
-            local current_commit="${current_config[commit]:-}"
-            local current_commit_timestamp="${current_config[commit_timestamp]:-}"
-            if [[ -n "$current_commit" ]]; then
-                echo "  Commit: $current_commit"
-                echo "  Timestamp: $current_commit_timestamp"
+    # Existing version (skipped for install)
+    if [[ "$operation" != "install" ]]; then
+        echo "Existing version:"
+        if [[ -n "$current_version" ]]; then
+            echo "  Version: $current_version"
+            if is_alpha_version "$current_version"; then
+                local -A current_config
+                load_config "$project_dir" current_config
+                local current_commit="${current_config[commit]:-}"
+                local current_commit_timestamp="${current_config[commit_timestamp]:-}"
+                if [[ -n "$current_commit" ]]; then
+                    echo "  Commit: $current_commit"
+                    echo "  Timestamp: $current_commit_timestamp"
+                fi
             fi
         fi
-    fi
-    echo "  Project folder: $project_dir"
-    echo "  uspecs core: uspecs/u"
+        echo "  Project folder: $project_dir"
+        echo "  uspecs core: uspecs/u"
 
-    if [[ -n "$invocation_methods" ]]; then
-        echo "  Natural language invocation files:"
-        IFS=',' read -ra methods_array <<< "$invocation_methods"
-        for method in "${methods_array[@]}"; do
-            method=$(echo "$method" | xargs)
-            local file
-            file=$(get_nli_file "$method") 2>/dev/null || continue
-            echo "    - $file"
-        done
+        if [[ -n "$invocation_methods" ]]; then
+            echo "  Natural language invocation files:"
+            IFS=',' read -ra methods_array <<< "$invocation_methods"
+            for method in "${methods_array[@]}"; do
+                method=$(echo "$method" | xargs)
+                local file
+                file=$(get_nli_file "$method") 2>/dev/null || continue
+                echo "    - $file"
+            done
+        fi
     fi
 
     # Pull request (if enabled)
