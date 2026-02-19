@@ -563,7 +563,11 @@ cmd_apply() {
     fi
 
     local -A config
-    if [[ "$command_name" != "install" ]]; then
+    if [[ "$command_name" == "install" ]]; then
+        if [[ -f "$metadata_file" ]]; then
+            error "uspecs is already installed, use update instead"
+        fi
+    else
         load_config "$project_dir" config
         if [[ "${config[version]:-}" != "$current_version" ]]; then
             error "Installed version '${config[version]:-}' does not match expected '$current_version'. Re-run the command to pick up the current installed version."
