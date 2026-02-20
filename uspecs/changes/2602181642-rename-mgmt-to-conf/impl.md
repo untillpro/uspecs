@@ -6,25 +6,25 @@
   - rename: `mgmt` context name, description, and context map entry to `conf`
   - rename: "Invocation Type" concept to "Invocation Method"
 
-- [x] rename: [mgmt/invocation-type-mgmt.feature](../../specs/prod/mgmt/invocation-type-mgmt.feature)
+- [x] rename: [mgmt/invocation-type-conf.feature](../../specs/prod/conf/invocation-method-conf.feature)
   - rename: to conf/invocation-method-conf.feature
   - update: feature title "Configure invocation types" to "Configure invocation methods"
   - update: `manage.sh it` -> `conf.sh it` in scenario steps
   - update: `invocation_types` -> `invocation_methods` in config file reference
 
-- [x] move: [mgmt/install.feature](../../specs/prod/mgmt/install.feature)
+- [x] move: [mgmt/install.feature](../../specs/prod/conf/install.feature)
   - move: to conf/install.feature
   - update: "invocation type" -> "invocation method"
 
-- [x] move: [mgmt/update.feature](../../specs/prod/mgmt/update.feature)
+- [x] move: [mgmt/update.feature](../../specs/prod/conf/update.feature)
   - move: to conf/update.feature
   - update: `manage.sh` -> `conf.sh` in scenario steps
 
-- [x] move: [mgmt/upgrade.feature](../../specs/prod/mgmt/upgrade.feature)
+- [x] move: [mgmt/upgrade.feature](../../specs/prod/conf/upgrade.feature)
   - move: to conf/upgrade.feature
   - update: `manage.sh` -> `conf.sh` in scenario steps
 
-- [x] rename: [mgmt/mgmt--arch.md](../../specs/prod/mgmt/mgmt--arch.md)
+- [x] rename: [mgmt/mgmt--arch.md](../../specs/prod/conf/conf--arch.md)
   - rename: to conf/conf--arch.md
   - update: `prod/mgmt` -> `prod/conf` in header
   - update: `manage.sh` -> `conf.sh` throughout
@@ -39,7 +39,7 @@
   - rename: `### mgmt` -> `### conf`
   - update: context description, relationships, and context map entry
 
-- [x] rename: [u/scripts/manage.sh](../../u/scripts/manage.sh)
+- [x] rename: [u/scripts/conf.sh](../../u/scripts/conf.sh)
   - rename: to u/scripts/conf.sh
   - update: `manage.sh` -> `conf.sh` in header, usage, error messages, and internal script path calls
   - update: "invocation type/types" -> "invocation method/methods" in user messages

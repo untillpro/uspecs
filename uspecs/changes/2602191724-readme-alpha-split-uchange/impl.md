@@ -2,7 +2,7 @@
 
 ## Functional design
 
-- [x] create: [specs/prod/softeng/archive.feature](../../specs/prod/softeng/archive.feature)
+- [x] create: [specs/prod/softeng/uarchive.feature](../../specs/prod/softeng/uarchive.feature)
   - add: Gherkin concise scenarios covering the archive change action
 
 ## Technical design

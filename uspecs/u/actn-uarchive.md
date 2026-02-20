@@ -19,7 +19,7 @@ Parameters:
 
 Flow:
 
-- Follow instructions from Scenarios section
+- Identify Active Change Folder to archive, if unclear, ask user to specify folder name
 - Execute `bash uspecs/u/scripts/uspecs.sh change archive <absolute-path-to-change-folder>`
 - Analyze output, show to user and STOP
 
