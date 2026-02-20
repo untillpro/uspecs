@@ -2,6 +2,7 @@
 registered_at: 2026-02-18T16:43:05Z
 change_id: 2602181642-rename-mgmt-to-conf
 baseline: 1987769ee1d49a594d182abedac9c559ae4091e1
+archived_at: 2026-02-20T11:20:21Z
 ---
 
 # Change request: Rename mgmt to conf, invocation type to invocation method
