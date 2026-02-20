@@ -13,19 +13,19 @@
 
 ## Construction
 
-- [ ] update: [u/actn-uchange.md](../../u/actn-uchange.md)
+- [x] update: [u/actn-uchange.md](../../u/actn-uchange.md)
   - remove: "Archive change" section (flow, parameters)
   - update: title from "Actions: Changes management" to "Action: Create change"
 
-- [ ] create: [u/actn-uarchive.md](../../u/actn-uarchive.md)
+- [x] create: [u/actn-uarchive.md](../../u/actn-uarchive.md)
   - add: archive change flow, parameters, and Gherkin scenario extracted from actn-uchange.md
 
-- [ ] update: [README.md](../../../README.md)
+- [x] update: [README.md](../../../README.md)
   - update: make alpha+nlia curl command the first and prominent install option
   - update: move other install variants into collapsed `<details>` sections marked as not ready
 
-- [ ] update: [AGENTS.md](../../../AGENTS.md)
+- [x] update: [AGENTS.md](../../../AGENTS.md)
   - add: `uarchive` mapped to `actn-uarchive.md` in triggering instructions
 
-- [ ] update: [CLAUDE.md](../../../CLAUDE.md)
+- [x] update: [CLAUDE.md](../../../CLAUDE.md)
   - add: `uarchive` mapped to `actn-uarchive.md` in triggering instructions

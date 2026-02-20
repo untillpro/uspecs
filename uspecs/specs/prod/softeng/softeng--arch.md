@@ -14,10 +14,12 @@ sequenceDiagram
     participant templates as 📄templates/
     participant artifacts as 📁Artifacts
 
-    engineer->>ai_agent: u* keyword
-    ai_agent->>actn: read workflow
-    ai_agent->>templates: read output templates
+    engineer->>ai_agent: u-keyword [instructions, parameters]
+    activate ai_agent
+    actn -->> ai_agent: workflow steps
+    templates-->>ai_agent: templates
     ai_agent->>artifacts: read/create/update
+    deactivate ai_agent
     ai_agent-->>engineer: report result
 ```
 

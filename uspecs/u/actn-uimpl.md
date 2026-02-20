@@ -1,6 +1,10 @@
 # Action: Change request implementation
 
-## Implementation overview
+## Overview
+
+Execute implementation plan items for an Active Change Request, one scenario at a time.
+
+## Instructions
 
 Rules:
 
@@ -18,17 +22,16 @@ Parameters:
 
 Flow:
 
-1. Determine which scenario matches from the `Scenarios` section:
-   - If all to-do items are checked -> Execute "all to-do items checked" scenario
-   - If some to-do items are unchecked -> Execute "some to-do items unchecked" scenario
-   - Edge cases (no active change, multiple changes) -> Execute corresponding edge case scenario
+- Determine which scenario matches from the `Scenarios` section:
+  - If all to-do items are checked -> Execute "all to-do items checked" scenario
+  - If some to-do items are unchecked -> Execute "some to-do items unchecked" scenario
+  - Edge cases (no active change, multiple changes) -> Execute corresponding edge case scenario
+- Within the matching scenario:
+  - For "all to-do items checked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
+  - For "some to-do items unchecked" scenario: Implement each unchecked item and check it immediately after implementation (stop at Review Item if unchecked)
+  - For edge cases: Follow the specific scenario behavior
 
-2. Within the matching scenario:
-   - For "all to-do items checked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
-   - For "some to-do items unchecked" scenario: Implement each unchecked item and check it immediately after implementation (stop at Review Item if unchecked)
-   - For edge cases: Follow the specific scenario behavior
-
-3. Use definitions and structures from sections below when executing actions
+Use definitions and structures from sections below when executing actions
 
 ## Definitions
 
@@ -120,8 +123,8 @@ Example:
   - `npm install express`
 
 - [ ] update: [tsconfig.json](../../tsconfig.json): Enable strict mode
-  - `Manual edit - Set strict: true` 
-```  
+  - `Manual edit - Set strict: true`
+```
 
 ### Sections: Functional design, Technical design, Construction
 

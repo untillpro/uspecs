@@ -1,12 +1,17 @@
 # uspecs
 
-## Installation
+## Install uspecs with natural language invocation support for AI agents
 
-### Natural Language Invocation
+For AGENTS.md (nlia), alpha version:
 
-Install uspecs with natural language invocation support for AI agents.
+```sh
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --alpha
+```
 
-For AGENTS.md (nlia):
+<details>
+<summary>Other variants (not ready)</summary>
+
+For AGENTS.md (nlia), stable version:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia
@@ -24,15 +29,7 @@ For both:
 curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --nlic
 ```
 
-Optional flags:
-
-- `--alpha`: installs the latest alpha version from the main branch (default: latest stable version)
-
-Example with alpha:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --alpha
-```
+</details>
 
 ### Update
 
@@ -55,7 +52,7 @@ Upgrade to the latest major version (stable versions only):
 uspecs/u/scripts/conf.sh upgrade
 ```
 
-### Configure Invocation Methods
+### Configure invocation methods
 
 Add or remove invocation methods:
 

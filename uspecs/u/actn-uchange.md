@@ -1,12 +1,14 @@
-# Actions: Changes management
+# Action: Create change
 
-Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md`  before proceeding any instructions.
+## Overview
 
-## Create change (new change)
+Create a new change request folder with a structured Change File. Optionally fetch issue content from an issue URL (GitLab, GitHub, Jira) and create a git branch.
+
+## Instructions
 
 Rules:
 
-- Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
+- Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
 - Strictly use definitions from the Definitions section
 - When you fetch issue content
   - Convert it to rich markdown format suitable for Issue File
@@ -56,21 +58,6 @@ Flow:
 ## Definitions
 
 - Change File Template 1: ref. `$templates_folder/tmpl-change.md`
-
-## Archive change
-
-Parameters:
-
-- Input
-  - Active Change Folder path
-- Output
-  - Folder moved to `$changes_folder/archive/yymm/` with archived_at metadata (if all items are checked or cancelled)
-
-Flow:
-
-- Identify Active Change Folder to archive, if unclear, ask user to specify folder name
-- Execute `bash uspecs/u/scripts/uspecs.sh change archive <absolute-path-to-change-folder>`
-- Analyze output, show to user and STOP
 
 ## Scenarios
 
