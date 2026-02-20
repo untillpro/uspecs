@@ -22,6 +22,7 @@ Parameters:
 
 Flow:
 
+- Read all files present in the Active Change Folder (change.md, impl.md, issue.md, decs.md, how.md and others - whichever exist) before any further processing
 - Determine which scenario matches from the `Scenarios` section:
   - If all to-do items are checked -> Execute "all to-do items checked" scenario
   - If some to-do items are unchecked -> Execute "some to-do items unchecked" scenario
