@@ -2,6 +2,7 @@
 registered_at: 2026-02-20T11:56:33Z
 change_id: 2602201156-uimpl-impl-header-and-order
 baseline: 9615f8c4debf4ae39bd9e13a19f81b2afd898372
+archived_at: 2026-02-20T12:12:36Z
 ---
 
 # Change request: Uimpl impl.md header and section order
