@@ -70,8 +70,15 @@ extract_change_name() {
 move_folder() {
     local source="$1"
     local destination="$2"
+    local project_dir="${3:-}"
     if git rev-parse --git-dir > /dev/null 2>&1; then
-        git mv "$source" "$destination" 2>/dev/null || mv "$source" "$destination"
+        if [[ -n "$project_dir" ]]; then
+            local rel_src="${source#"$project_dir/"}"
+            local rel_dst="${destination#"$project_dir/"}"
+            (cd "$project_dir" && git mv "$rel_src" "$rel_dst" 2>/dev/null) || mv "$source" "$destination"
+        else
+            git mv "$source" "$destination" 2>/dev/null || mv "$source" "$destination"
+        fi
     else
         mv "$source" "$destination"
     fi
@@ -310,6 +317,7 @@ cmd_change_archive() {
             }
             next
         }
+        /^archived_at:/ { next }
         { print }
     ' "$change_file" > "$temp_file"
     if mv "$temp_file" "$change_file"; then
@@ -345,13 +353,15 @@ cmd_change_archive() {
     fi
 
     if git rev-parse --git-dir > /dev/null 2>&1; then
-        git add "$path_to_change_folder"
+        local rel_change_folder="${path_to_change_folder#"$project_dir/"}"
+        (cd "$project_dir" && git add "$rel_change_folder")
     fi
 
-    move_folder "$path_to_change_folder" "$archive_path"
+    move_folder "$path_to_change_folder" "$archive_path" "$project_dir"
 
     if git rev-parse --git-dir > /dev/null 2>&1; then
-        git add "$archive_path"
+        local rel_archive_path="${archive_path#"$project_dir/"}"
+        (cd "$project_dir" && git add "$rel_archive_path")
     fi
 
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
