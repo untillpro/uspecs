@@ -50,15 +50,6 @@ count_uncompleted_items() {
     echo "${count:-0}" | tr -d ' '
 }
 
-check_uncommitted_changes() {
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-            error "Uncommitted changes detected. Commit or stash changes before archiving."
-        fi
-    fi
-}
-
-
 extract_change_name() {
     local folder_name="$1"
     echo "$folder_name" | sed 's/^[0-9]\{10\}-//'
@@ -267,8 +258,6 @@ cmd_change_archive() {
         error "Folder is already in archive: $path_to_change_folder"
     fi
 
-    check_uncommitted_changes
-
     local uncompleted_count
     uncompleted_count=$(count_uncompleted_items "$path_to_change_folder")
 
@@ -336,7 +325,15 @@ cmd_change_archive() {
         error "Archive folder already exists: $archive_path"
     fi
 
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        git add "$path_to_change_folder"
+    fi
+
     move_folder "$path_to_change_folder" "$archive_path"
+
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        git add "$archive_path"
+    fi
 
     echo "Archived change: $archive_path"
 }
