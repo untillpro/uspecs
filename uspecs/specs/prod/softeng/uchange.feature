@@ -1,17 +1,16 @@
 Feature: Create change request
   Engineer asks AI Agent to create change request
 
-  Scenario: Create change request without issue reference
-    When Engineer asks AI Agent to create change request without issue reference
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
-    And Frontmatter does not have issue_url value
+  Scenario: Create change request, no options
+    When Engineer invokes uchange action
+
+    # Just change.md with frontmatter
+    Then base change request is created
 
   Scenario Outline: Create change request with issue reference
     Given AI Agent <ability> to fetch issue content from the referenced issue URL
-    When Engineer asks AI Agent to create change request with issue reference
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
+    When Engineer invokes uchange action with issue reference
+    Then base change request is created
     And Frontmatter has issue_url value set to the referenced issue URL
     And Issue File <issue-file-created-and-contains> the fetched issue contents in markdown format
     And Change File <references> Issue File in the Why section
@@ -20,14 +19,11 @@ Feature: Create change request
       | has ability to fetch content   | references Issue File         | contains fetched issue content  |
       | does not have ability to fetch | does not reference Issue File | is not created                  |
 
-  Scenario Outline: Create change request with --branch option
-    When Engineer asks AI Agent to create change request with --branch option
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
+  Scenario: Create change request with --branch option
+    When Engineer invokes uchange action with --branch option
+    Then base change request is created
     And Git branch is created with name following branch naming rules
-    And Branch creation <result> <reason>
-    Examples:
-      | result   | reason                                    |
-      | succeeds | when git repository exists                |
-      | fails    | when git repository does not exist        |
-      | fails    | when branch with same name already exists |
+
+  Scenario: All options are independently composable
+    When Engineer invokes uchange action with --branch option and issue reference
+    Then all options are applied

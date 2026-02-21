@@ -4,15 +4,18 @@ set -Eeuo pipefail
 # uspecs automation
 #
 # Usage:
-#   uspecs change frontmatter <path-to-change-md> [--issue-url <url>]
+#   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <path-to-change-folder>
 #
-# change frontmatter:
-#   Adds frontmatter to existing change.md with auto-generated metadata:
+# change new:
+#   Creates Change Folder and change.md with frontmatter:
+#     - Folder: <changes_folder from conf.md>/ymdHM-<change-name>
 #     - registered_at: YYYY-MM-DDTHH:MM:SSZ
-#     - change_id: ymdHM-<change-name-kebab-case>
+#     - change_id: ymdHM-<change-name>
 #     - baseline: <commit-hash> (if git repository)
 #     - issue_url: <url> (if --issue-url provided)
+#   Creates git branch (if --branch provided and git repository exists)
+#   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
 # change archive:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
@@ -55,6 +58,7 @@ check_uncommitted_changes() {
     fi
 }
 
+
 extract_change_name() {
     local folder_name="$1"
     echo "$folder_name" | sed 's/^[0-9]\{10\}-//'
@@ -70,11 +74,42 @@ move_folder() {
     fi
 }
 
-cmd_change_frontmatter() {
-    local path_to_change_md=""
-    local issue_url=""
+get_project_dir() {
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    # scripts/ -> u/ -> uspecs/ -> project root
+    cd "$script_dir/../../.." && pwd
+}
 
-    # Parse arguments
+read_conf_param() {
+    local param_name="$1"
+    local conf_file
+    conf_file="$(get_project_dir)/uspecs/u/conf.md"
+
+    if [ ! -f "$conf_file" ]; then
+        error "conf.md not found: $conf_file"
+    fi
+
+    local line raw
+    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    raw="${line#*: }"
+
+    if [ -z "$raw" ]; then
+        error "Parameter '${param_name}' not found in conf.md"
+    fi
+
+    # trim leading/trailing whitespace and surrounding backticks
+    local value
+    value=$(echo "$raw" | sed 's/^[[:space:]`]*//' | sed 's/[[:space:]`]*$//')
+
+    echo "$value"
+}
+
+cmd_change_new() {
+    local change_name=""
+    local issue_url=""
+    local create_branch=""
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --issue-url)
@@ -84,9 +119,13 @@ cmd_change_frontmatter() {
                 issue_url="$2"
                 shift 2
                 ;;
+            --branch)
+                create_branch="1"
+                shift
+                ;;
             *)
-                if [ -z "$path_to_change_md" ]; then
-                    path_to_change_md="$1"
+                if [ -z "$change_name" ]; then
+                    change_name="$1"
                     shift
                 else
                     error "Unknown argument: $1"
@@ -95,63 +134,69 @@ cmd_change_frontmatter() {
         esac
     done
 
-    if [ -z "$path_to_change_md" ]; then
-        error "path-to-change-md is required"
+    if [ -z "$change_name" ]; then
+        error "change-name is required"
     fi
 
-    if [ ! -f "$path_to_change_md" ]; then
-        error "File not found: $path_to_change_md"
+    if [[ ! "$change_name" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+        error "change-name must be kebab-case (lowercase letters, numbers, hyphens): $change_name"
     fi
 
-    local change_folder
-    change_folder=$(dirname "$path_to_change_md")
+    local changes_folder_rel
+    changes_folder_rel=$(read_conf_param "changes_folder")
 
-    local folder_name
-    folder_name=$(basename "$change_folder")
+    local project_dir
+    project_dir=$(get_project_dir)
 
-    if [[ ! "$folder_name" =~ ^[0-9]{10}- ]]; then
-        error "Change folder must follow format ymdHM-change-name: $folder_name"
+    local changes_folder="$project_dir/$changes_folder_rel"
+
+    if [ ! -d "$changes_folder" ]; then
+        error "Changes folder not found: $changes_folder"
     fi
 
-    local content
-    content=$(cat "$path_to_change_md")
+    local timestamp
+    timestamp=$(date -u +"%y%m%d%H%M")
 
-    if [ -z "$content" ]; then
-        error "File is empty: $path_to_change_md"
+    local folder_name="${timestamp}-${change_name}"
+    local change_folder="$changes_folder/$folder_name"
+
+    if [ -d "$change_folder" ]; then
+        error "Change folder already exists: $change_folder"
     fi
 
-    local timestamp baseline
-    timestamp=$(get_timestamp)
+    mkdir -p "$change_folder"
+
+    local registered_at baseline
+    registered_at=$(get_timestamp)
     baseline=$(get_baseline)
 
-    local metadata="---"$'\n'
-    metadata+="registered_at: $timestamp"$'\n'
-    metadata+="change_id: $folder_name"$'\n'
+    local frontmatter="---"$'\n'
+    frontmatter+="registered_at: $registered_at"$'\n'
+    frontmatter+="change_id: $folder_name"$'\n'
 
     if [ -n "$baseline" ]; then
-        metadata+="baseline: $baseline"$'\n'
+        frontmatter+="baseline: $baseline"$'\n'
     fi
 
     if [ -n "$issue_url" ]; then
-        metadata+="issue_url: $issue_url"$'\n'
+        frontmatter+="issue_url: $issue_url"$'\n'
     fi
 
-    metadata+="---"
+    frontmatter+="---"
 
-    local temp_file
-    temp_file=$(mktemp)
-    {
-        echo "$metadata"
-        echo ""
-        echo "$content"
-    } > "$temp_file"
+    printf '%s\n' "$frontmatter" > "$change_folder/change.md"
 
-    mv "$temp_file" "$path_to_change_md" || {
-        rm -f "$temp_file"
-        error "Failed to update change.md"
-    }
+    if [ -n "$create_branch" ]; then
+        if git rev-parse --git-dir > /dev/null 2>&1; then
+            if ! git checkout -b "$change_name" 2>/dev/null; then
+                echo "Warning: Failed to create branch '$change_name'" >&2
+            fi
+        else
+            echo "Warning: Not a git repository, cannot create branch" >&2
+        fi
+    fi
 
-    echo "Added frontmatter to: $path_to_change_md"
+    echo "$changes_folder_rel/$folder_name"
 }
 
 convert_links_to_relative() {
@@ -313,8 +358,8 @@ main() {
             shift
 
             case "$subcommand" in
-                frontmatter)
-                    cmd_change_frontmatter "$@"
+                new)
+                    cmd_change_new "$@"
                     ;;
                 archive)
                     cmd_change_archive "$@"
