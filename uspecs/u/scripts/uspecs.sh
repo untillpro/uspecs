@@ -6,9 +6,6 @@ set -Eeuo pipefail
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <change-folder-name>
-#   uspecs pr mergedef
-#   uspecs pr create --title <title> --body <body>
-#   uspecs diff specs
 #
 # change new:
 #   Creates Change Folder and change.md with frontmatter:
@@ -23,15 +20,6 @@ set -Eeuo pipefail
 # change archive:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
-#
-# pr mergedef:
-#   Validates preconditions and merges pr_remote/default_branch into the current branch.
-#
-# pr create --title <title> --body <body>:
-#   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
-#
-# diff specs:
-#   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
 
 error() {
     echo "Error: $1" >&2
@@ -77,13 +65,9 @@ move_folder() {
     fi
 }
 
-get_script_dir() {
-    cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
-}
-
 get_project_dir() {
     local script_dir
-    script_dir=$(get_script_dir)
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     # scripts/ -> u/ -> uspecs/ -> project root
     cd "$script_dir/../../.." && pwd
 }
@@ -365,9 +349,6 @@ main() {
     local command="$1"
     shift
 
-    local lib_dir
-    lib_dir="$(get_script_dir)/_lib"
-
     case "$command" in
         change)
             if [ $# -lt 1 ]; then
@@ -385,41 +366,6 @@ main() {
                     ;;
                 *)
                     error "Unknown change subcommand: $subcommand"
-                    ;;
-            esac
-            ;;
-        pr)
-            if [ $# -lt 1 ]; then
-                error "Usage: uspecs pr <subcommand> [args...]"
-            fi
-            local subcommand="$1"
-            shift
-
-            case "$subcommand" in
-                mergedef)
-                    "$lib_dir/pr.sh" mergedef "$@"
-                    ;;
-                create)
-                    "$lib_dir/pr.sh" changepr "$@"
-                    ;;
-                *)
-                    error "Unknown pr subcommand: $subcommand. Available: mergedef, create"
-                    ;;
-            esac
-            ;;
-        diff)
-            if [ $# -lt 1 ]; then
-                error "Usage: uspecs diff <target>"
-            fi
-            local target="$1"
-            shift
-
-            case "$target" in
-                specs)
-                    "$lib_dir/pr.sh" diff specs "$@"
-                    ;;
-                *)
-                    error "Unknown diff target: $target. Available: specs"
                     ;;
             esac
             ;;

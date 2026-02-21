@@ -46,8 +46,3 @@ Non-exhaustive list of actions and their artifacts:
   - action file: actn-udecs.md
   - input: change.md, optional decs.md
   - output: decs.md
-
-- upr
-  - action file: actn-upr.md
-  - input: Active Change Folder, change_branch
-  - output: PR created on GitHub, pr_branch with squashed commits, change_branch deleted
