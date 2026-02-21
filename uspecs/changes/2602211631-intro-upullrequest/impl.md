@@ -33,6 +33,9 @@
 - [x] create: [u/templates/tmpl-pr.md](../../u/templates/tmpl-pr.md)
   - add: PR title and body formatting template — covers both issue-referenced and plain cases
 
+- [x] update: [u/templates/tmpl-fd.md](../../u/templates/tmpl-fd.md)
+  - add: Concise scenario rules, user-facing behavior focus, and `Rule: Edge cases` section with example
+
 ### Documentation and triggers
 
 - [x] update: [u/conf.md](../../u/conf.md)
