@@ -21,11 +21,6 @@ set -Eeuo pipefail
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
 
-_script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=_lib/utils.sh
-source "$_script_dir/_lib/utils.sh"
-checkcmds grep wc sed find awk mktemp date git
-
 error() {
     echo "Error: $1" >&2
     exit 1
