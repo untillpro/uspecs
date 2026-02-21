@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
-#   uspecs change archive <path-to-change-folder>
+#   uspecs change archive <change-folder-name>
 #
 # change new:
 #   Creates Change Folder and change.md with frontmatter:
@@ -241,11 +241,20 @@ convert_links_to_relative() {
 }
 
 cmd_change_archive() {
-    local path_to_change_folder="$1"
+    local folder_name="$1"
 
-    if [ -z "$path_to_change_folder" ]; then
-        error "path-to-change-folder is required"
+    if [ -z "$folder_name" ]; then
+        error "change-folder-name is required"
     fi
+
+    local changes_folder_rel
+    changes_folder_rel=$(read_conf_param "changes_folder")
+
+    local project_dir
+    project_dir=$(get_project_dir)
+
+    local changes_folder="$project_dir/$changes_folder_rel"
+    local path_to_change_folder="$changes_folder/$folder_name"
 
     if [ ! -d "$path_to_change_folder" ]; then
         error "Folder not found: $path_to_change_folder"
@@ -256,11 +265,8 @@ cmd_change_archive() {
         error "change.md not found in folder: $path_to_change_folder"
     fi
 
-    local folder_name
-    folder_name=$(basename "$path_to_change_folder")
-
-    if [[ "$path_to_change_folder" == */archive/* ]]; then
-        error "Folder is already in archive: $path_to_change_folder"
+    if [[ "$folder_name" == *archive* ]]; then
+        error "Folder is already in archive: $folder_name"
     fi
 
     local uncompleted_count
@@ -273,7 +279,7 @@ cmd_change_archive() {
         grep -rn "^\s*-\s*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
         echo ""
         echo "Complete or cancel todo items before archiving"
-        exit 0
+        exit 1
     fi
 
     local timestamp
@@ -307,9 +313,6 @@ cmd_change_archive() {
         error "Failed to convert links to relative paths"
     fi
 
-    local changes_folder
-    changes_folder=$(dirname "$path_to_change_folder")
-
     local archive_folder="$changes_folder/archive"
 
     local date_prefix
@@ -340,7 +343,7 @@ cmd_change_archive() {
         git add "$archive_path"
     fi
 
-    echo "Archived change: $archive_path"
+    echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
 }
 
 main() {

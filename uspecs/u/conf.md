@@ -2,6 +2,8 @@
 
 ## Parameters
 
+All paths are relative to the project root:
+
 - specs_folder: uspecs/specs
 - changes_folder: uspecs/changes
 - changes_archive: `$changes_folder/archive`
