@@ -272,6 +272,14 @@ cmd_pr() {
 }
 
 cmd_mergedef() {
+    local validate_only=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --validate) validate_only=true; shift ;;
+            *) error "Unknown flag: $1" ;;
+        esac
+    done
+
     check_prerequisites
 
     local pr_remote default_branch current_branch
@@ -285,6 +293,12 @@ cmd_mergedef() {
 
     if [[ "$current_branch" == *--pr ]]; then
         error "Current branch '$current_branch' ends with '--pr'; cannot create PR from a PR branch"
+    fi
+
+    if [[ "$validate_only" == "true" ]]; then
+        echo "change_branch=$current_branch"
+        echo "default_branch=$default_branch"
+        return 0
     fi
 
     echo "Fetching $pr_remote/$default_branch..."

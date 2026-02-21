@@ -24,11 +24,15 @@ Parameters:
 
 Flow:
 
+- Validate preconditions:
+  - Run `bash uspecs/u/scripts/uspecs.sh pr mergedef --validate`
+  - If script exits with error: report the error and stop
+  - Parse `change_branch` and `default_branch` from script output
 - Read Active Change Folder (change.md) to determine `issue_url` (may be absent) and derive `issue_id` from the URL (last path segment)
 - Ask Engineer to confirm PR creation from `change_branch`; inform that the branch will be squash-merged into `{change_branch}--pr` and deleted after PR creation
-- Validate preconditions and merge default branch into change_branch:
+- Merge default branch into change_branch:
   - Run `bash uspecs/u/scripts/uspecs.sh pr mergedef`
-  - If script exits with error (validation failure): report the error and stop
+  - If script exits with error: report the error and stop
   - If merge fails (conflicts): report error and ask Engineer to resolve conflicts and re-run
 - Get specs diff to derive PR title and body:
   - Run `bash uspecs/u/scripts/uspecs.sh diff specs`

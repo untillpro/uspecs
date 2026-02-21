@@ -33,9 +33,11 @@ Validation:
 - git repository present
 - working tree is clean
 - current branch is not the default branch and does not end with `--pr`; it becomes `change_branch`
+- `mergedef --validate` outputs `change_branch=...` and `default_branch=...` without fetching or merging
 
 Flow overview:
 
+- Validate preconditions via `uspecs.sh pr mergedef --validate`; parse `change_branch` and `default_branch` from output; stop on error
 - Ask confirmation to create a PR from `change_branch`; notify that branch will be squash-merged into a new branch and deleted after PR creation
 - Fetch `pr_remote` and merge `pr_remote/default_branch` into `change_branch`
   - Surfaces conflicts in the familiar `change_branch` context rather than during the squash step; merge preferred over rebase because conflict resolution is single-pass and history rewriting does not matter since the branch is deleted after squash
