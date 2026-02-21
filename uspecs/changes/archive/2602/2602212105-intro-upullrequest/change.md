@@ -2,6 +2,7 @@
 registered_at: 2026-02-21T16:31:04Z
 change_id: 2602211631-intro-upullrequest
 baseline: 97c4e5cb605baeec49bddcafdbcb0e6553d23f59
+archived_at: 2026-02-21T21:05:48Z
 ---
 
 # Change request: Introduce upr command
