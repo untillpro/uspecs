@@ -31,6 +31,11 @@ esac
 _TEMP_DIRS=()
 _TEMP_FILES=()
 
+_script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=_lib/utils.sh
+source "$_script_dir/_lib/utils.sh"
+checkcmds curl tar grep sed find awk mktemp date git
+
 error() {
     echo "Error: $1" >&2
     exit 1
