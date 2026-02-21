@@ -301,7 +301,7 @@ cmd_diff() {
     local diff_path
     case "$target" in
         specs)
-            diff_path="$(get_project_dir)/$(read_conf_param "specs_folder")"
+            diff_path=$(read_conf_param "specs_folder")
             ;;
         *)
             error "Unknown diff target: $target. Available: specs"
@@ -312,8 +312,11 @@ cmd_diff() {
     pr_remote=$(determine_pr_remote)
     default_branch=$(default_branch_name)
 
+    local project_dir
+    project_dir=$(get_project_dir)
+
     git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1 || true
-    git diff "$pr_remote/$default_branch" HEAD -- "$diff_path"
+    (cd "$project_dir" && git diff "$pr_remote/$default_branch" HEAD -- "$diff_path")
 }
 
 cmd_changepr() {
