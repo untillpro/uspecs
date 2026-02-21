@@ -2,6 +2,7 @@
 registered_at: 2026-02-20T17:46:41Z
 change_id: 2602201746-script-creates-change-folder
 baseline: 76f2577389bf486bfed25abe971afebf30de80d1
+archived_at: 2026-02-21T15:11:19Z
 ---
 
 # Change request: Script creates change folder
