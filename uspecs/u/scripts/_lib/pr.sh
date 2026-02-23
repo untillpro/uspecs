@@ -392,7 +392,7 @@ cmd_changepr() {
     # Delete change_branch (locally, tracking ref, and remote; skip silently if absent)
     echo "Deleting change branch $change_branch..."
     if git show-ref --verify --quiet "refs/heads/$change_branch"; then
-        if ! git branch -d "$change_branch" 2>/dev/null; then
+        if ! git branch -D "$change_branch" 2>/dev/null; then
             echo "Warning: failed to delete local branch '$change_branch'" >&2
         fi
     fi
