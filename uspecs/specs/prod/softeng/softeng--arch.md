@@ -1,5 +1,9 @@
 # Context architecture: softeng
 
+## Overview
+
+All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, and the `AI Agent` reads the corresponding `actn-u*.md` for workflow steps, fills in templates, reads/creates/updates artifact files, and runs shell commands via uspecs.sh. The result is reported back to the Engineer.
+
 ## Key flows
 
 ### Generic flow
@@ -13,13 +17,17 @@ sequenceDiagram
     participant actn as 🎯actn-u*.md
     participant templates as 📄templates/
     participant artifacts as 📁Artifacts
+    participant uspecs as ⚙️uspecs.sh
 
     engineer->>ai_agent: u-keyword [instructions, parameters]
     activate ai_agent
-    actn -->> ai_agent: workflow steps
-    templates-->>ai_agent: templates
-    ai_agent->>artifacts: read/create/update
-    deactivate ai_agent
+    par aa
+      actn -->> ai_agent: workflow steps
+      templates-->>ai_agent: templates
+      ai_agent->>artifacts: read/create/update
+      ai_agent ->> uspecs: execute commands
+      deactivate ai_agent
+    end
     ai_agent-->>engineer: report result
 ```
 
