@@ -15,7 +15,7 @@ Parameters:
 - Input
   - Change description
   - --branch option (optional): create git branch for the change
-  - Issue reference (optional): URL to a GitLab/GitHub/Jira issue that prompted the change
+  - Issue reference (optional): URL to a GitLab/GitHub/Jira/etc. issue that prompted the change
     - Referenced further as `$issue_url`
 - Output
   - Active Change Folder with Change File
