@@ -357,12 +357,25 @@ replace_uspecs_u() {
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
 
+upgrade_markers() {
+    local file="$1"
+    local temp
+    temp=$(create_temp_file)
+    sed "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g" "$file" > "$temp"
+    mv "$temp" "$file"
+}
+
 inject_instructions() {
     local source_file="$1"
     local target_file="$2"
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
+
+    # Upgrade old markers in target first, so we always work with new markers below
+    if [[ -f "$target_file" ]]; then
+        upgrade_markers "$target_file"
+    fi
 
     if [[ ! -f "$source_file" ]]; then
         echo "Warning: Source file not found: $source_file" >&2
@@ -410,12 +423,10 @@ remove_instructions() {
         return 0
     fi
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
-        return 0
-    fi
+    upgrade_markers "$target_file"
 
     local temp_output
     temp_output=$(create_temp_file)
