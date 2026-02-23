@@ -359,7 +359,7 @@ replace_uspecs_u() {
 
 upgrade_markers() {
     local file="$1"
-    sed -i "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g" "$file"
+    sed_inplace "$file" "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g"
 }
 
 # Check that both begin and end markers are present in a file.
@@ -419,7 +419,7 @@ inject_instructions() {
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
-    mv "$temp_output" "$target_file"
+    cat "$temp_output" > "$target_file"
 }
 
 remove_instructions() {
@@ -438,10 +438,7 @@ remove_instructions() {
         return 0
     fi
 
-    local temp_output
-    temp_output=$(create_temp_file)
-    sed "/$begin_marker/,/$end_marker/d" "$target_file" > "$temp_output"
-    mv "$temp_output" "$target_file"
+    sed_inplace "$target_file" "/$begin_marker/,/$end_marker/d"
 }
 
 write_metadata() {
@@ -912,11 +909,9 @@ cmd_im() {
         local timestamp
         timestamp=$(get_timestamp)
 
-        local temp_metadata
-        temp_metadata=$(create_temp_file)
-        sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
-            sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
-        mv "$temp_metadata" "$metadata_file"
+        sed_inplace "$metadata_file" \
+            -e "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" \
+            -e "s/^modified_at: .*/modified_at: $timestamp/"
 
         echo ""
         echo "Invocation methods updated successfully!"
