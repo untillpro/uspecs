@@ -10,7 +10,7 @@
 | Descriptive text        | Sentence case | `Sends transactional emails`           |
 | Section headers         | Sentence case | `## Specifications impact`             |
 
-<!-- uspecs:triggering_instructions:begin -->
+<!-- uspecs:begin -->
 
 ## Execution instructions
 
@@ -26,4 +26,4 @@ When a request mentions one of the words below, you must read the corresponding 
 
 Use files from `./uspecs/u` as an initial reference when user mentions uspecs
 
-<!-- uspecs:triggering_instructions:end -->
+<!-- uspecs:end -->

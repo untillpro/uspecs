@@ -357,12 +357,31 @@ replace_uspecs_u() {
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
 
+upgrade_markers() {
+    local file="$1"
+    sed_inplace "$file" "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g"
+}
+
+# Check that both begin and end markers are present in a file.
+# Returns 0 if both found, 1 otherwise.
+has_markers() {
+    local file="$1"
+    local begin_marker="$2"
+    local end_marker="$3"
+    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
+}
+
 inject_instructions() {
     local source_file="$1"
     local target_file="$2"
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
+
+    # Upgrade old markers in target first, so we always work with new markers below
+    if [[ -f "$target_file" ]]; then
+        upgrade_markers "$target_file"
+    fi
 
     if [[ ! -f "$source_file" ]]; then
         echo "Warning: Source file not found: $source_file" >&2
@@ -387,7 +406,7 @@ inject_instructions() {
         return 0
     fi
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
         {
             echo ""
             cat "$temp_extract"
@@ -400,7 +419,7 @@ inject_instructions() {
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
-    mv "$temp_output" "$target_file"
+    cat "$temp_output" > "$target_file"
 }
 
 remove_instructions() {
@@ -410,17 +429,16 @@ remove_instructions() {
         return 0
     fi
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+    upgrade_markers "$target_file"
+
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
         return 0
     fi
 
-    local temp_output
-    temp_output=$(create_temp_file)
-    sed "/$begin_marker/,/$end_marker/d" "$target_file" > "$temp_output"
-    mv "$temp_output" "$target_file"
+    sed_inplace "$target_file" "/$begin_marker/,/$end_marker/d"
 }
 
 write_metadata() {
@@ -891,11 +909,9 @@ cmd_im() {
         local timestamp
         timestamp=$(get_timestamp)
 
-        local temp_metadata
-        temp_metadata=$(create_temp_file)
-        sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
-            sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
-        mv "$temp_metadata" "$metadata_file"
+        sed_inplace "$metadata_file" \
+            -e "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" \
+            -e "s/^modified_at: .*/modified_at: $timestamp/"
 
         echo ""
         echo "Invocation methods updated successfully!"

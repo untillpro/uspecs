@@ -88,6 +88,9 @@ get_script_dir() {
     cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
 }
 
+# shellcheck source=_lib/utils.sh
+source "$(get_script_dir)/_lib/utils.sh"
+
 get_project_dir() {
     local script_dir
     script_dir=$(get_script_dir)
@@ -249,10 +252,9 @@ convert_links_to_relative() {
 
         # Add ../../ prefix to paths starting with ../
         # ](../ -> ](../../../
-        if ! sed -i.bak -E 's#\]\(\.\./#](../../../#g' "$file"; then
+        if ! sed_inplace "$file" -E 's#\]\(\.\./#](../../../#g'; then
             error "Failed to convert links in file: $file"
         fi
-        rm -f "${file}.bak"
     done <<< "$md_files"
 
     return 0
@@ -320,10 +322,9 @@ cmd_change_archive() {
         /^archived_at:/ { next }
         { print }
     ' "$change_file" > "$temp_file"
-    if mv "$temp_file" "$change_file"; then
+    if cat "$temp_file" > "$change_file"; then
         :  # Success, continue
     else
-        rm -f "$temp_file"
         return 1
     fi
 

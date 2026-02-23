@@ -12,3 +12,16 @@ checkcmds() {
         fi
     done
 }
+
+# sed_inplace file sed-args...
+# Portable in-place sed. Uses -i.bak for BSD compatibility.
+# Restores the original file on failure.
+sed_inplace() {
+    local file="$1"
+    shift
+    if ! sed -i.bak "$@" "$file"; then
+        mv "${file}.bak" "$file" 2>/dev/null || true
+        return 1
+    fi
+    rm -f "${file}.bak"
+}
