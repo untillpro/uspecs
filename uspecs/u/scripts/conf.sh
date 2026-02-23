@@ -359,10 +359,16 @@ replace_uspecs_u() {
 
 upgrade_markers() {
     local file="$1"
-    local temp
-    temp=$(create_temp_file)
-    sed "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g" "$file" > "$temp"
-    mv "$temp" "$file"
+    sed -i "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g" "$file"
+}
+
+# Check that both begin and end markers are present in a file.
+# Returns 0 if both found, 1 otherwise.
+has_markers() {
+    local file="$1"
+    local begin_marker="$2"
+    local end_marker="$3"
+    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
 }
 
 inject_instructions() {
@@ -400,7 +406,7 @@ inject_instructions() {
         return 0
     fi
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
         {
             echo ""
             cat "$temp_extract"
@@ -427,6 +433,10 @@ remove_instructions() {
     local end_marker="<!-- uspecs:end -->"
 
     upgrade_markers "$target_file"
+
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
+        return 0
+    fi
 
     local temp_output
     temp_output=$(create_temp_file)
