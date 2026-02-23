@@ -2,6 +2,7 @@
 registered_at: 2026-02-23T14:53:38Z
 change_id: 2602231453-shorten-marker-tags
 baseline: 57afe0ebdb3e18f067af09eba61c3516ad598802
+archived_at: 2026-02-23T16:48:51Z
 ---
 
 # Change request: Shorten uspecs marker tags
