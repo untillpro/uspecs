@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -Eeuo pipefail
 
 # checkcmds command1 [command2 ...]
 # Verifies that each listed command is available on PATH.
@@ -32,6 +33,51 @@ get_pr_info() {
 # Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
 is_tty() {
     [ -t 0 ]
+}
+
+# _GREP_BIN caches the resolved grep binary path for _grep.
+_GREP_BIN=""
+
+# _grep [grep-args...]
+# Portable grep wrapper. On Windows (msys/cygwin) resolves grep from the git
+# installation and fails fast if not found. On other platforms uses system grep.
+_grep() {
+    if [[ -z "$_GREP_BIN" ]]; then
+        case "$OSTYPE" in
+            msys*|cygwin*)
+                # Use where.exe to get real Windows paths, then pick the grep
+                # that lives inside the Git for Windows installation.
+                local git_path git_root candidate
+                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' / || true)
+                if [[ -z "$git_path" ]]; then
+                    echo "Error: git not found; cannot locate git's bundled grep" >&2
+                    exit 1
+                fi
+                git_root=$(dirname "$(dirname "$git_path")")
+                # Try direct path first (works even if grep is not on PATH)
+                if [[ -x "$git_root/usr/bin/grep.exe" ]]; then
+                    _GREP_BIN="$git_root/usr/bin/grep.exe"
+                else
+                    # Fall back to where.exe grep, pick the one under git root
+                    while IFS= read -r candidate; do
+                        candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
+                        if [[ "$candidate" == "$git_root/"* ]]; then
+                            _GREP_BIN="$candidate"
+                            break
+                        fi
+                    done < <(where.exe grep 2>/dev/null || true)
+                fi
+                if [[ -z "$_GREP_BIN" ]]; then
+                    echo "Error: grep not found under git root: $git_root" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                _GREP_BIN="grep"
+                ;;
+        esac
+    fi
+    "$_GREP_BIN" "$@"
 }
 
 # sed_inplace file sed-args...

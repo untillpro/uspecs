@@ -98,7 +98,7 @@ load_config() {
 
 get_latest_tag() {
     curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        grep '"name":' | \
+        _grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         head -n 1
 }
@@ -110,9 +110,9 @@ get_latest_minor_tag() {
 
     local result
     result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        grep '"name":' | \
+        _grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
-        grep "^$major\.$minor\." | \
+        _grep "^$major\.$minor\." | \
         head -n 1 || true)
     echo "${result:-$current_version}"
 }
@@ -125,9 +125,9 @@ get_latest_commit_info() {
     local response
     response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
-    sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    sha=$(echo "$response" | _grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
-    commit_date=$(echo "$response" | grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
+    commit_date=$(echo "$response" | _grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
     echo "$sha $commit_date"
 }
 
@@ -367,7 +367,7 @@ has_markers() {
     local file="$1"
     local begin_marker="$2"
     local end_marker="$3"
-    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
+    _grep -q "$begin_marker" "$file" && _grep -q "$end_marker" "$file"
 }
 
 inject_instructions() {
@@ -666,9 +666,9 @@ cmd_apply() {
             --next-branch "$prev_branch" --delete-branch 2> "$pr_info_file"
 
         # Parse PR info from temp file
-        pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
-        pr_branch=$(grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
-        pr_base=$(grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
+        pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
+        pr_branch=$(_grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
+        pr_base=$(_grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
     fi
 
     echo ""
