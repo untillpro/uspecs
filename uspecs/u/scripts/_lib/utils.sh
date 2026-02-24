@@ -48,7 +48,7 @@ xgrep() {
                 # Use where.exe to get real Windows paths, then pick the grep
                 # that lives inside the Git for Windows installation.
                 local git_path git_root candidate
-                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' /)
+                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' / || true)
                 if [[ -z "$git_path" ]]; then
                     echo "Error: git not found; cannot locate git's bundled grep" >&2
                     exit 1
@@ -60,7 +60,7 @@ xgrep() {
                         _GREP_BIN="$candidate"
                         break
                     fi
-                done < <(where.exe grep 2>/dev/null)
+                done < <(where.exe grep 2>/dev/null || true)
                 if [[ -z "$_GREP_BIN" ]]; then
                     echo "Error: grep not found under git root: $git_root" >&2
                     exit 1
