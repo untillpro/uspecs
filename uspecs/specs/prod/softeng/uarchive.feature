@@ -1,24 +1,18 @@
 Feature: Archive change request
   Engineer archives a completed change request
 
-  Scenario Outline: Archive change request
-    Given <condition>
-    When Engineer invokes uarchive action
-    Then <outcome>
-    Examples:
-      | condition                              | outcome                                                     |
-      | Active Change Folder is unambiguous    | Active Change Folder is moved to changes archive            |
-      | Active Change Folder name is ambiguous | AI Agent asks Engineer to specify Active Change Folder name |
-
-  Scenario Outline: Archive change request with -d flag
+  Background:
     Given Active Change Folder is unambiguous
-    And <condition>
-    When Engineer invokes uarchive -d action
-    Then Active Change Folder is moved to changes archive
-    And git commit is made and pushed with message "archive <folder-from> <folder-to>"
-    And <outcome>
-    Examples:
-      | condition                    | outcome                                    |
-      | associated branch exists     | associated branch and its refs are removed |
-      | associated branch is missing | AI Agent warns Engineer and continues      |
 
+  Scenario: Archive change request
+    When Engineer invokes uarchive action
+    Then Active Change Folder is moved to changes archive
+
+  Scenario: Archive change request on PR branch
+    Given current branch ends with "--pr"
+    When Engineer invokes uarchive action
+    Then AI Agent asks Engineer to confirm git cleanup
+    And on confirmation Active Change Folder is moved to changes archive
+    And on confirmation git commit is made and pushed with message "archive <folder-from> <folder-to>"
+    And on confirmation associated branch and its refs are removed
+    And on rejection Active Change Folder is moved to changes archive without git cleanup

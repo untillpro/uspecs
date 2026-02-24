@@ -14,15 +14,16 @@ Parameters:
 
 - Input
   - Active Change Folder path
-  - -d flag (optional): after archiving, commit and push staged changes and remove associated branch and refs
 - Output
   - Folder moved to `$changes_folder/archive`
-  - If -d flag: git commit and push with message `archive <folder-from> <folder-to>`, branch and refs removed
+  - If on PR branch and Engineer confirms: git commit and push with message `archive <folder-from> <folder-to>`, branch and refs removed
 
 Flow:
 
-- Identify Active Change Folder to archive, if unclear, ask user to specify folder name
-- Execute `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name>`
-  - If -d flag provided, add `-d` parameter: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name> -d`
-  - Example: `bash uspecs/u/scripts/uspecs.sh change archive 2602211523-check-cmd-availability -d`
-- Analyze output, show to user and stop
+- Identify Active Change Folder to archive, if unclear, ask Engineer to specify folder name
+- Run `bash uspecs/u/scripts/uspecs.sh status ispr`
+  - If output is `yes`: warn Engineer that current branch ends with `--pr` and ask to confirm git cleanup (commit, push, delete branch and refs)
+    - On confirmation: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name> -d`
+    - On rejection: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name>`
+  - Otherwise: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name>`
+- Analyze output, show to Engineer and stop

@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
-#   uspecs change archive <change-folder-name>
+#   uspecs change archive <change-folder-name> [-d]
 #   uspecs pr mergedef
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
@@ -20,9 +20,11 @@ set -Eeuo pipefail
 #   Creates git branch (if --branch provided and git repository exists)
 #   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
-# change archive:
+# change archive [-d]:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
+#   -d: commit and push staged changes, checkout default branch, delete branch and refs
+#       Requires git repository, clean working tree, PR branch (ending with --pr)
 #
 # pr mergedef:
 #   Validates preconditions and merges pr_remote/default_branch into the current branch.
@@ -104,6 +106,19 @@ get_project_dir() {
     script_dir=$(get_script_dir)
     # scripts/ -> u/ -> uspecs/ -> project root
     cd "$script_dir/../../.." && pwd
+}
+
+cmd_status_ispr() {
+    local project_dir
+    project_dir=$(get_project_dir)
+    if ! is_git_repo "$project_dir"; then
+        return 0
+    fi
+    local branch
+    branch=$(cd "$project_dir" && git branch --show-current 2>&1)
+    if [[ "$branch" == *"--pr" ]]; then
+        echo "yes"
+    fi
 }
 
 read_conf_param() {
@@ -526,6 +541,22 @@ main() {
                     ;;
                 *)
                     error "Unknown diff target: $target. Available: specs"
+                    ;;
+            esac
+            ;;
+        status)
+            if [ $# -lt 1 ]; then
+                error "Usage: uspecs status <subcommand> [args...]"
+            fi
+            local subcommand="$1"
+            shift
+
+            case "$subcommand" in
+                ispr)
+                    cmd_status_ispr "$@"
+                    ;;
+                *)
+                    error "Unknown status subcommand: $subcommand. Available: ispr"
                     ;;
             esac
             ;;
