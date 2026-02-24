@@ -14,6 +14,6 @@ When archiving a completed change on a PR branch, the associated git branch and 
 
 When `uarchive` is invoked on a branch ending with `--pr`, AI Agent detects this automatically and asks for confirmation before performing git cleanup:
 
-- Makes a git commit with message `archive <folder-from> <folder-to>`
+- Makes a git commit with message `archive <folder-from> to <folder-to>`
 - Pushes the commit
 - Removes the associated branch and refs
