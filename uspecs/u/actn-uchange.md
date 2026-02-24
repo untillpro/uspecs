@@ -27,7 +27,7 @@ Flow:
 - Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
 - Run script to create Change Folder:
   - Base command: `bash uspecs/u/scripts/uspecs.sh change new {change_name}`
-  - If issue reference provided add `--issue-url {issue_url}` parameters
+  - If issue reference provided add `--issue-url "{issue_url}"` parameters (quoted to handle shell-special characters such as `&`)
   - If --branch option provided add `--branch` parameter
   - Fail fast if script exits with error
   - Parse Change Folder path from script output, path is relative to project root
