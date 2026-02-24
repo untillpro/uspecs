@@ -4,9 +4,12 @@
 
 - [x] update: [u/scripts/_lib/utils.sh](../../u/scripts/_lib/utils.sh)
   - add: `_GREP_BIN` module-level variable and `_grep` wrapper function that resolves git's bundled grep on Windows (`$OSTYPE` msys*/cygwin*) and fails fast if not found; falls through to system grep on non-Windows
+  - resolve grep via direct path `$git_root/usr/bin/grep.exe` first, fall back to `where.exe grep`
+  - append `|| true` to `where.exe` pipelines to prevent `pipefail` from masking custom error messages
 
 - [x] update: [u/scripts/uspecs.sh](../../u/scripts/uspecs.sh)
   - replace: 3 `grep` calls with `_grep` (lines 70, 134, 349)
+  - replace: `\s` with POSIX `[[:space:]]` in uncompleted-item patterns (lines 70, 349)
 
 - [x] update: [u/scripts/_lib/pr.sh](../../u/scripts/_lib/pr.sh)
   - replace: 3 `grep` calls with `_grep` (lines 78, 96, 142)
