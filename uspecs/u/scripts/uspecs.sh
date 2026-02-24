@@ -441,7 +441,7 @@ cmd_change_archive() {
         (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path")
         (cd "$project_dir" && git push)
 
-        (cd "$project_dir" && git checkout -) 2>/dev/null || true
+        (cd "$project_dir" && git checkout "$default_branch")
 
         if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
             (cd "$project_dir" && git branch -D "$branch_name")
