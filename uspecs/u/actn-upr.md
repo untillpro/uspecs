@@ -29,7 +29,10 @@ Flow:
   - If script exits with error: report the error and stop
   - Parse `change_branch` and `default_branch` from script output
 - Read Active Change Folder (change.md) to determine `issue_url` (may be absent) and derive `issue_id` from the URL (last path segment)
-- Ask Engineer to confirm PR creation from `change_branch`; inform that the branch will be squash-merged into `{change_branch}--pr` and deleted after PR creation
+- Present Engineer with the following options:
+    1. Create PR (squash-merge `change_branch` into `{change_branch}--pr`, delete `change_branch`, create PR on GitHub)
+    2. Cancel
+  - On option 2: stop
 - Merge default branch into change_branch:
   - Run `bash uspecs/u/scripts/uspecs.sh pr mergedef`
   - If script exits with error: report the error and stop
