@@ -54,8 +54,13 @@ _grep() {
                     exit 1
                 fi
                 git_root=$(dirname "$(dirname "$git_path")")
-                # Try direct path first (works even if grep is not on PATH)
+                # Try direct path first (works even if grep is not on PATH).
+                # Also try one level up to handle mingw64/bin/git.exe layout where
+                # two dirnames give .../mingw64 instead of the git installation root.
                 if [[ -x "$git_root/usr/bin/grep.exe" ]]; then
+                    _GREP_BIN="$git_root/usr/bin/grep.exe"
+                elif [[ -x "$(dirname "$git_root")/usr/bin/grep.exe" ]]; then
+                    git_root=$(dirname "$git_root")
                     _GREP_BIN="$git_root/usr/bin/grep.exe"
                 else
                     # Fall back to where.exe grep, pick the one under git root
