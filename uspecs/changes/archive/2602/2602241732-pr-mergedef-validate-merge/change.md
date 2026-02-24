@@ -3,6 +3,7 @@ registered_at: 2026-02-24T17:09:47Z
 change_id: 2602241709-pr-mergedef-validate-merge
 baseline: 6ffb6e458ab2169f9953f4aeebafd046d9933d61
 issue_url: https://untill.atlassian.net/browse/AIR-3067
+archived_at: 2026-02-24T17:32:43Z
 ---
 
 # Change request: pr mergedef --validate should try to merge
