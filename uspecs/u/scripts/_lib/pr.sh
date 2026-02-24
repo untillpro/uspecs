@@ -22,7 +22,11 @@ set -Eeuo pipefail
 #       Fetch pr_remote and create a local branch from its default branch.
 #
 #   pr.sh mergedef
-#       Fetch pr_remote and merge pr_remote/default_branch into the current branch.
+#       Validate preconditions, fetch pr_remote/default_branch, and merge it into the current branch.
+#       On success outputs:
+#           change_branch=<name>
+#           default_branch=<name>
+#           change_branch_head=<sha>  (HEAD before the merge)
 #
 #   pr.sh diff specs
 #       Output git diff of the specs folder between HEAD and pr_remote/default_branch.
@@ -275,14 +279,6 @@ cmd_pr() {
 }
 
 cmd_mergedef() {
-    local validate_only=false
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --validate) validate_only=true; shift ;;
-            *) error "Unknown flag: $1" ;;
-        esac
-    done
-
     check_prerequisites
 
     local pr_remote default_branch current_branch
@@ -298,18 +294,18 @@ cmd_mergedef() {
         error "Current branch '$current_branch' ends with '--pr'; cannot create PR from a PR branch"
     fi
 
-    if [[ "$validate_only" == "true" ]]; then
-        echo "change_branch=$current_branch"
-        echo "default_branch=$default_branch"
-        echo "change_branch_head=$(git rev-parse HEAD)"
-        return 0
-    fi
+    local change_branch_head
+    change_branch_head=$(git rev-parse HEAD)
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
 
     echo "Merging $pr_remote/$default_branch into $current_branch..."
     git merge "$pr_remote/$default_branch" 2>&1
+
+    echo "change_branch=$current_branch"
+    echo "default_branch=$default_branch"
+    echo "change_branch_head=$change_branch_head"
 }
 
 cmd_diff() {
