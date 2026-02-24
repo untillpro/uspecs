@@ -467,12 +467,19 @@ cmd_change_archive() {
 
         (cd "$project_dir" && git checkout "$default_branch" 2>&1)
 
+        local deleted_branch_hash=""
         if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
+            deleted_branch_hash=$(cd "$project_dir" && git rev-parse "refs/heads/$branch_name")
             (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
         else
             echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
         fi
         (cd "$project_dir" && git branch -dr "origin/$branch_name") 2>/dev/null || true
+
+        if [ -n "$deleted_branch_hash" ]; then
+            echo "Deleted branch: $branch_name ($deleted_branch_hash)"
+            echo "To restore: git branch $branch_name $deleted_branch_hash"
+        fi
     fi
 
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"

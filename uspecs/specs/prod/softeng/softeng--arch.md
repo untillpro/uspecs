@@ -43,7 +43,7 @@ Non-exhaustive list of actions and their artifacts:
 - uarchive
   - action file: actn-uarchive.md
   - input: Active Change Folder
-  - output: Active Change Folder moved to changes/archive/
+  - output: Active Change Folder moved to changes/archive/; on git cleanup, deleted branch hash and restore instructions reported to Engineer
 
 - uimpl
   - action file: actn-uimpl.md
