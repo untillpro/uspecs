@@ -19,5 +19,6 @@ Feature: Archive change request
     And on option 1 Active Change Folder is moved to changes archive
     And on option 1 git commit is made and pushed with message "archive <folder-from> to <folder-to>"
     And on option 1 associated branch and its refs are removed
+    And on option 1 deleted branch hash is reported to Engineer together with instructions on how to restore the branch if needed
     And on option 2 Active Change Folder is moved to changes archive without git cleanup
     And on option 3 no action is taken
