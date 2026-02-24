@@ -2,6 +2,7 @@
 registered_at: 2026-02-24T13:19:26Z
 change_id: 2602241319-uarchive-cancel-option
 baseline: 3ed6ebda2d8bd3b332d981208d85189c69e9b861
+archived_at: 2026-02-24T13:32:29Z
 ---
 
 # Change request: Add Cancel option to uarchive prompt
