@@ -2,6 +2,7 @@
 registered_at: 2026-02-23T17:44:50Z
 change_id: 2602231744-uarchive-d-commit
 baseline: 40d3debe97160c060c864b693d2931b24f26a0e3
+archived_at: 2026-02-24T10:34:44Z
 ---
 
 # Change request: uarchive -d flag: commit, remove branch and refs
