@@ -15,7 +15,7 @@ Parameters:
 - Input
   - Active Change Folder path
 - Output
-  - Folder moved to `$changes_folder/archive`
+  - Folder moved to `{changes_folder}/archive`
   - If on PR branch and Engineer confirms: git commit and push with message, branch and refs removed
 
 Flow:
