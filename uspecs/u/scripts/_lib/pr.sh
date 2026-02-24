@@ -178,7 +178,7 @@ cmd_prbranch() {
     default_branch=$(default_branch_name)
 
     echo "Fetching $pr_remote/$default_branch..."
-    git fetch "$pr_remote" "$default_branch"
+    git fetch "$pr_remote" "$default_branch" 2>&1
 
     echo "Creating branch: $name"
     git checkout -b "$name" "$pr_remote/$default_branch"
@@ -199,10 +199,10 @@ cmd_ffdefault() {
     fi
 
     echo "Fetching $pr_remote/$default_branch..."
-    git fetch "$pr_remote" "$default_branch"
+    git fetch "$pr_remote" "$default_branch" 2>&1
 
     echo "Fast-forwarding $current_branch..."
-    if ! git merge --ff-only "$pr_remote/$default_branch"; then
+    if ! git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
         error "Cannot fast-forward '$current_branch' to '$pr_remote/$default_branch'. The branches have diverged."
     fi
 }
@@ -302,10 +302,10 @@ cmd_mergedef() {
     fi
 
     echo "Fetching $pr_remote/$default_branch..."
-    git fetch "$pr_remote" "$default_branch"
+    git fetch "$pr_remote" "$default_branch" 2>&1
 
     echo "Merging $pr_remote/$default_branch into $current_branch..."
-    git merge "$pr_remote/$default_branch"
+    git merge "$pr_remote/$default_branch" 2>&1
 }
 
 cmd_diff() {
