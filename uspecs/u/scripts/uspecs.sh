@@ -7,7 +7,7 @@ set -Eeuo pipefail
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <change-folder-name>
 #   uspecs pr mergedef
-#   uspecs pr create --title <title> --body <body>
+#   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
 #
 # change new:
@@ -29,6 +29,7 @@ set -Eeuo pipefail
 #
 # pr create --title <title> --body <body>:
 #   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
+#   Body can be passed via --body or piped via stdin.
 #
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
@@ -261,10 +262,37 @@ convert_links_to_relative() {
 }
 
 cmd_change_archive() {
-    local folder_name="$1"
+    local folder_name=""
+    local delete_branch=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d)
+                delete_branch="1"
+                shift
+                ;;
+            *)
+                if [ -z "$folder_name" ]; then
+                    folder_name="$1"
+                    shift
+                else
+                    error "Unknown argument: $1"
+                fi
+                ;;
+        esac
+    done
 
     if [ -z "$folder_name" ]; then
         error "change-folder-name is required"
+    fi
+
+    local is_git=""
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        is_git="1"
+    fi
+
+    if [ -n "$delete_branch" ] && [ -z "$is_git" ]; then
+        error "-d requires a git repository"
     fi
 
     local changes_folder_rel
@@ -285,7 +313,7 @@ cmd_change_archive() {
         error "change.md not found in folder: $path_to_change_folder"
     fi
 
-    if [[ "$folder_name" == *archive* ]]; then
+    if [[ "$folder_name" == archive/* ]]; then
         error "Folder is already in archive: $folder_name"
     fi
 
@@ -300,6 +328,54 @@ cmd_change_archive() {
         echo ""
         echo "Complete or cancel todo items before archiving"
         exit 1
+    fi
+
+    local change_name
+    change_name=$(extract_change_name "$folder_name")
+
+    if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
+        local branch_name
+        branch_name=$(cd "$project_dir" && git symbolic-ref --short HEAD 2>/dev/null || echo "")
+        if [ -z "$branch_name" ]; then
+            error "-d requires a named branch (HEAD is detached)"
+        fi
+
+        local -A pr_info
+        local pr_sh
+        pr_sh="$(get_script_dir)/_lib/pr.sh"
+        if ! get_pr_info "$pr_sh" pr_info; then
+            error "-d requires pr.sh info to be available (remote reachable?)"
+        fi
+        local default_branch="${pr_info[default_branch]:-}"
+
+        # a) no uncommitted changes
+        local git_status
+        git_status=$(cd "$project_dir" && git status --porcelain)
+        if [ -n "$git_status" ]; then
+            error "-d requires a clean working tree (uncommitted changes found)"
+        fi
+
+        # b) branch must not be the default branch
+        if [ "$branch_name" = "$default_branch" ]; then
+            error "-d cannot be used on the default branch '$default_branch'"
+        fi
+
+        # c) remote tracking ref must exist
+        if ! (cd "$project_dir" && git rev-parse --verify "refs/remotes/origin/$branch_name" > /dev/null 2>&1); then
+            error "No remote tracking ref found for '$branch_name'. Push the branch first."
+        fi
+
+        # d) no divergence
+        local behind
+        behind=$(cd "$project_dir" && git rev-list --count "HEAD..origin/$branch_name")
+        if [ "$behind" -gt 0 ]; then
+            error "Branch '$branch_name' is behind origin by $behind commit(s). Pull or rebase first."
+        fi
+
+        # e) branch must be a PR branch
+        if [[ "$branch_name" != *--pr ]]; then
+            error "-d can only be used on a PR branch (must end with '--pr'): '$branch_name'"
+        fi
     fi
 
     local timestamp
@@ -344,25 +420,37 @@ cmd_change_archive() {
     local archive_subfolder="$archive_folder/$yymm_prefix"
     mkdir -p "$archive_subfolder"
 
-    local change_name
-    change_name=$(extract_change_name "$folder_name")
-
     local archive_path="$archive_subfolder/${date_prefix}-${change_name}"
 
     if [ -d "$archive_path" ]; then
         error "Archive folder already exists: $archive_path"
     fi
 
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    if [ -n "$is_git" ]; then
         local rel_change_folder="${path_to_change_folder#"$project_dir/"}"
         (cd "$project_dir" && git add "$rel_change_folder")
     fi
 
     move_folder "$path_to_change_folder" "$archive_path" "$project_dir"
 
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    if [ -n "$is_git" ]; then
         local rel_archive_path="${archive_path#"$project_dir/"}"
         (cd "$project_dir" && git add "$rel_archive_path")
+    fi
+
+    if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
+        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path")
+        (cd "$project_dir" && git push)
+
+        (cd "$project_dir" && git checkout "$default_branch")
+
+        if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
+            (cd "$project_dir" && git branch -D "$branch_name")
+        else
+            echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
+        fi
+        (cd "$project_dir" && git branch -dr "origin/$branch_name") 2>/dev/null || true
+        (cd "$project_dir" && git push origin --delete "$branch_name") 2>/dev/null || true
     fi
 
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"

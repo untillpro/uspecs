@@ -98,13 +98,13 @@ determine_pr_remote() {
 }
 
 gh_create_pr() {
-    # Usage: gh_create_pr <pr_remote> <default_branch> <head_branch> <title> <body>
-    # Creates a PR via GitHub CLI and outputs the PR URL.
-    local pr_remote="$1" default_branch="$2" head_branch="$3" title="$4" body="$5"
+    # Usage: printf '%s' "$body" | gh_create_pr <pr_remote> <default_branch> <head_branch> <title>
+    # Creates a PR via GitHub CLI and outputs the PR URL. Reads body from stdin.
+    local pr_remote="$1" default_branch="$2" head_branch="$3" title="$4"
 
     local pr_repo
     pr_repo="$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-    local pr_args=('--repo' "$pr_repo" '--base' "$default_branch" '--title' "$title" '--body' "$body")
+    local pr_args=('--repo' "$pr_repo" '--base' "$default_branch" '--title' "$title" '--body-file' '-')
 
     if [[ "$pr_remote" == "upstream" ]]; then
         local origin_owner
@@ -253,7 +253,7 @@ cmd_pr() {
 
     echo "Creating pull request to $pr_remote..."
     local pr_url
-    pr_url=$(gh_create_pr "$pr_remote" "$default_branch" "$branch_name" "$title" "$body")
+    pr_url=$(printf '%s' "$body" | gh_create_pr "$pr_remote" "$default_branch" "$branch_name" "$title")
     echo "Pull request created successfully!"
 
     echo "Switching to $next_branch..."
@@ -343,7 +343,10 @@ cmd_changepr() {
         esac
     done
     [[ -z "$title" ]] && error "--title is required"
-    [[ -z "$body" ]]  && error "--body is required"
+    if [[ -z "$body" ]]; then
+        body=$(cat)
+    fi
+    [[ -z "$body" ]] && error "--body is required (or pipe body via stdin)"
 
     local pr_remote default_branch change_branch pr_branch
     pr_remote=$(determine_pr_remote)
@@ -384,7 +387,7 @@ cmd_changepr() {
     # Create PR via GitHub CLI
     echo "Creating pull request..."
     local pr_url
-    pr_url=$(gh_create_pr "$pr_remote" "$default_branch" "$pr_branch" "$title" "$body")
+    pr_url=$(printf '%s' "$body" | gh_create_pr "$pr_remote" "$default_branch" "$pr_branch" "$title")
 
     success=true
     trap - ERR

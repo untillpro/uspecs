@@ -15,9 +15,9 @@ Feature: Create pull request from change branch
     Then PR title is <title_format>
     And PR body is <body_format>
     Examples:
-      | issue_condition                | title_format                   | body_format                                                 |
+      | issue_condition                | title_format               | body_format                                             |
       | change has issue_url           | [{issue_id}] {draft_title} | [{issue_id}]({issue_url}) {draft_title}\n\n{draft_body} |
-      | change does not have issue_url | {draft_title}                  | {draft_title}\n\n{draft_body}                               |
+      | change does not have issue_url | {draft_title}              | {draft_title}\n\n{draft_body}                           |
 
   Rule: Edge cases
 
