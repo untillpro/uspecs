@@ -43,9 +43,15 @@ get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
+is_git_repo() {
+    local dir="$1"
+    (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
+}
+
 get_baseline() {
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        git rev-parse HEAD 2>/dev/null || echo ""
+    local project_dir="$1"
+    if is_git_repo "$project_dir"; then
+        (cd "$project_dir" && git rev-parse HEAD 2>/dev/null) || echo ""
     else
         echo ""
     fi
@@ -72,7 +78,8 @@ move_folder() {
     local source="$1"
     local destination="$2"
     local project_dir="${3:-}"
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    local check_dir="${project_dir:-$PWD}"
+    if is_git_repo "$check_dir"; then
         if [[ -n "$project_dir" ]]; then
             local rel_src="${source#"$project_dir/"}"
             local rel_dst="${destination#"$project_dir/"}"
@@ -186,7 +193,7 @@ cmd_change_new() {
 
     local registered_at baseline
     registered_at=$(get_timestamp)
-    baseline=$(get_baseline)
+    baseline=$(get_baseline "$project_dir")
 
     local frontmatter="---"$'\n'
     frontmatter+="registered_at: $registered_at"$'\n'
@@ -205,8 +212,8 @@ cmd_change_new() {
     printf '%s\n' "$frontmatter" > "$change_folder/change.md"
 
     if [ -n "$create_branch" ]; then
-        if git rev-parse --git-dir > /dev/null 2>&1; then
-            if ! git checkout -b "$change_name" 2>/dev/null; then
+        if is_git_repo "$project_dir"; then
+            if ! (cd "$project_dir" && git checkout -b "$change_name" 2>&1); then
                 echo "Warning: Failed to create branch '$change_name'" >&2
             fi
         else
@@ -286,20 +293,20 @@ cmd_change_archive() {
         error "change-folder-name is required"
     fi
 
+    local changes_folder_rel
+    changes_folder_rel=$(read_conf_param "changes_folder")
+
+    local project_dir
+    project_dir=$(get_project_dir)
+
     local is_git=""
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    if is_git_repo "$project_dir"; then
         is_git="1"
     fi
 
     if [ -n "$delete_branch" ] && [ -z "$is_git" ]; then
         error "-d requires a git repository"
     fi
-
-    local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
-
-    local project_dir
-    project_dir=$(get_project_dir)
 
     local changes_folder="$project_dir/$changes_folder_rel"
     local path_to_change_folder="$changes_folder/$folder_name"
@@ -439,13 +446,13 @@ cmd_change_archive() {
     fi
 
     if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
-        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path")
-        (cd "$project_dir" && git push)
+        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path" 2>&1)
+        (cd "$project_dir" && git push 2>&1)
 
-        (cd "$project_dir" && git checkout "$default_branch")
+        (cd "$project_dir" && git checkout "$default_branch" 2>&1)
 
         if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
-            (cd "$project_dir" && git branch -D "$branch_name")
+            (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
         else
             echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
         fi
