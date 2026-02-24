@@ -3,6 +3,7 @@ registered_at: 2026-02-24T14:23:03Z
 change_id: 2602241423-windows-use-git-grep
 baseline: c4732720f507fa263f7f9623ab52175639607a35
 issue_url: https://untill.atlassian.net/browse/AIR-3062
+archived_at: 2026-02-24T16:49:18Z
 ---
 
 # Change request: On Windows use grep from git install
