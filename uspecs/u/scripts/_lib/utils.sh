@@ -35,6 +35,45 @@ is_tty() {
     [ -t 0 ]
 }
 
+# _GREP_BIN caches the resolved grep binary path for xgrep.
+_GREP_BIN=""
+
+# xgrep [grep-args...]
+# Portable grep wrapper. On Windows (msys/cygwin) resolves grep from the git
+# installation and fails fast if not found. On other platforms uses system grep.
+xgrep() {
+    if [[ -z "$_GREP_BIN" ]]; then
+        case "$OSTYPE" in
+            msys*|cygwin*)
+                # Use where.exe to get real Windows paths, then pick the grep
+                # that lives inside the Git for Windows installation.
+                local git_path git_root candidate
+                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' /)
+                if [[ -z "$git_path" ]]; then
+                    echo "Error: git not found; cannot locate git's bundled grep" >&2
+                    exit 1
+                fi
+                git_root=$(dirname "$(dirname "$git_path")")
+                while IFS= read -r candidate; do
+                    candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
+                    if [[ "$candidate" == "$git_root/"* ]]; then
+                        _GREP_BIN="$candidate"
+                        break
+                    fi
+                done < <(where.exe grep 2>/dev/null)
+                if [[ -z "$_GREP_BIN" ]]; then
+                    echo "Error: grep not found under git root: $git_root" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                _GREP_BIN="grep"
+                ;;
+        esac
+    fi
+    "$_GREP_BIN" "$@"
+}
+
 # sed_inplace file sed-args...
 # Portable in-place sed. Uses -i.bak for BSD compatibility.
 # Restores the original file on failure.

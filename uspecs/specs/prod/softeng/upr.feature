@@ -7,7 +7,7 @@ Feature: Create pull request from change branch
     And pull request is created with a single squashed commit
     And change branch is removed
     And Engineer is on the PR branch
-    And AI Agent reports pull request URL to Engineer
+    And AI Agent reports pull request URL and change branch commit hash to Engineer
 
   Scenario Outline: PR title and body include issue reference when available
     Given <issue_condition>

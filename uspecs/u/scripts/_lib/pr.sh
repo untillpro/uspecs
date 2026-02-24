@@ -75,7 +75,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(xgrep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -93,7 +93,7 @@ error() {
 }
 
 determine_pr_remote() {
-    if git remote | grep -q '^upstream$'; then
+    if git remote | xgrep -q '^upstream$'; then
         echo "upstream"
     else
         echo "origin"
@@ -139,7 +139,7 @@ check_prerequisites() {
     fi
 
     # Check if origin remote exists
-    if ! git remote | grep -q '^origin$'; then
+    if ! git remote | xgrep -q '^origin$'; then
         error "'origin' remote does not exist"
     fi
 
@@ -301,6 +301,7 @@ cmd_mergedef() {
     if [[ "$validate_only" == "true" ]]; then
         echo "change_branch=$current_branch"
         echo "default_branch=$default_branch"
+        echo "change_branch_head=$(git rev-parse HEAD)"
         return 0
     fi
 

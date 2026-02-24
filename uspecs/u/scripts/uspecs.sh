@@ -67,7 +67,7 @@ get_folder_name() {
 count_uncompleted_items() {
     local folder="$1"
     local count
-    count=$(grep -r "^\s*-\s*\[ \]" "$folder"/*.md 2>/dev/null | wc -l)
+    count=$(xgrep -r "^\s*-\s*\[ \]" "$folder"/*.md 2>/dev/null | wc -l)
     echo "${count:-0}" | tr -d ' '
 }
 
@@ -131,7 +131,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(xgrep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -346,7 +346,7 @@ cmd_change_archive() {
         echo "Cannot archive: $uncompleted_count uncompleted todo item(s) found"
         echo ""
         echo "Uncompleted items:"
-        grep -rn "^\s*-\s*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
+        xgrep -rn "^\s*-\s*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
         echo ""
         echo "Complete or cancel todo items before archiving"
         exit 1
