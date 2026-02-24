@@ -35,13 +35,13 @@ is_tty() {
     [ -t 0 ]
 }
 
-# _GREP_BIN caches the resolved grep binary path for xgrep.
+# _GREP_BIN caches the resolved grep binary path for _grep.
 _GREP_BIN=""
 
-# xgrep [grep-args...]
+# _grep [grep-args...]
 # Portable grep wrapper. On Windows (msys/cygwin) resolves grep from the git
 # installation and fails fast if not found. On other platforms uses system grep.
-xgrep() {
+_grep() {
     if [[ -z "$_GREP_BIN" ]]; then
         case "$OSTYPE" in
             msys*|cygwin*)

@@ -75,7 +75,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(xgrep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(_grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -93,7 +93,7 @@ error() {
 }
 
 determine_pr_remote() {
-    if git remote | xgrep -q '^upstream$'; then
+    if git remote | _grep -q '^upstream$'; then
         echo "upstream"
     else
         echo "origin"
@@ -139,7 +139,7 @@ check_prerequisites() {
     fi
 
     # Check if origin remote exists
-    if ! git remote | xgrep -q '^origin$'; then
+    if ! git remote | _grep -q '^origin$'; then
         error "'origin' remote does not exist"
     fi
 

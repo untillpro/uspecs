@@ -34,13 +34,13 @@ Alternatives:
 
 ## Where to apply the fix
 
-Add an `xgrep` wrapper function to `utils.sh` that lazily resolves the correct grep binary on first call and caches it in a module-level variable (confidence: high).
+Add an `_grep` wrapper function to `utils.sh` that lazily resolves the correct grep binary on first call and caches it in a module-level variable (confidence: high).
 
-Rationale: All three scripts (`uspecs.sh`, `pr.sh`, `conf.sh`) source `utils.sh`, so one function covers all call sites. A wrapper function is cleaner than a `$GREP` variable -- call sites read as `xgrep -E ...` instead of `"$GREP" -E ...`, and there is no risk of the variable being unset. All existing grep calls are inline pipelines within the same shell process, so no `export -f` is needed.
+Rationale: All three scripts (`uspecs.sh`, `pr.sh`, `conf.sh`) source `utils.sh`, so one function covers all call sites. A wrapper function is cleaner than a `$GREP` variable -- call sites read as `_grep -E ...` instead of `"$GREP" -E ...`, and there is no risk of the variable being unset. All existing grep calls are inline pipelines within the same shell process, so no `export -f` is needed.
 
 ```text
 _GREP_BIN=""
-xgrep() {
+_grep() {
     if [[ -z "$_GREP_BIN" ]]; then
         case "$OSTYPE" in
             msys*|cygwin*)
