@@ -27,7 +27,8 @@ set -Eeuo pipefail
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
 #
 # pr mergedef:
-#   Validates preconditions and merges pr_remote/default_branch into the current branch.
+#   Validates preconditions, fetches pr_remote/default_branch, and merges it into the current branch.
+#   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
 #   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
