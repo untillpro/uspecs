@@ -28,6 +28,12 @@ get_pr_info() {
     done <<< "$output"
 }
 
+# is_tty
+# Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
+is_tty() {
+    [ -t 0 ]
+}
+
 # sed_inplace file sed-args...
 # Portable in-place sed. Uses -i.bak for BSD compatibility.
 # Restores the original file on failure.

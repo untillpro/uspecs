@@ -55,6 +55,9 @@ set -Eeuo pipefail
 # Helpers
 # ---------------------------------------------------------------------------
 
+# shellcheck source=utils.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils.sh"
+
 get_project_dir() {
     local script_dir
     script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -344,6 +347,9 @@ cmd_changepr() {
     done
     [[ -z "$title" ]] && error "--title is required"
     if [[ -z "$body" ]]; then
+        if is_tty; then
+            error "--body is required (or pipe body via stdin)"
+        fi
         body=$(cat)
     fi
     [[ -z "$body" ]] && error "--body is required (or pipe body via stdin)"

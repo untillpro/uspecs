@@ -18,8 +18,11 @@
   - fix: `gh_create_pr` reads body from stdin via `--body-file -` instead of argument
   - fix: `git fetch` and `git merge` calls get `2>&1` to suppress PowerShell stderr errors
   - fix: `cmd_changepr` reads body from stdin when `--body` is not provided
+  - fix: `cmd_changepr` fails fast with error when stdin is a TTY and `--body` is omitted
+  - fix: source `utils.sh` so `is_tty` is available
 - [x] update: [u/scripts/_lib/utils.sh](../../../../u/scripts/_lib/utils.sh)
   - add: `get_pr_info` helper to parse pr.sh info output into associative array
+  - add: `is_tty` helper - returns 0 if stdin is a terminal
 - [x] update: [u/scripts/conf.sh](../../../../u/scripts/conf.sh)
   - refactor: `show_operation_plan` to use `get_pr_info`
 - [x] update: [u/scripts/uspecs.sh](../../../../u/scripts/uspecs.sh)
