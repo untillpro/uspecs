@@ -54,13 +54,19 @@ xgrep() {
                     exit 1
                 fi
                 git_root=$(dirname "$(dirname "$git_path")")
-                while IFS= read -r candidate; do
-                    candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
-                    if [[ "$candidate" == "$git_root/"* ]]; then
-                        _GREP_BIN="$candidate"
-                        break
-                    fi
-                done < <(where.exe grep 2>/dev/null || true)
+                # Try direct path first (works even if grep is not on PATH)
+                if [[ -x "$git_root/usr/bin/grep.exe" ]]; then
+                    _GREP_BIN="$git_root/usr/bin/grep.exe"
+                else
+                    # Fall back to where.exe grep, pick the one under git root
+                    while IFS= read -r candidate; do
+                        candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
+                        if [[ "$candidate" == "$git_root/"* ]]; then
+                            _GREP_BIN="$candidate"
+                            break
+                        fi
+                    done < <(where.exe grep 2>/dev/null || true)
+                fi
                 if [[ -z "$_GREP_BIN" ]]; then
                     echo "Error: grep not found under git root: $git_root" >&2
                     exit 1
