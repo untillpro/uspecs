@@ -299,11 +299,11 @@ show_operation_plan() {
         echo ""
         echo "Pull request:"
 
-        # Get PR info from pr.sh
-        local pr_output pr_remote default_branch target_repo_url pr_branch
-        if pr_output=$(bash "$script_dir/_lib/pr.sh" info 2>&1); then
-            pr_remote=$(echo "$pr_output" | grep '^pr_remote=' | cut -d= -f2)
-            default_branch=$(echo "$pr_output" | grep '^default_branch=' | cut -d= -f2)
+        local -A pr_info
+        local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
+        if get_pr_info "$script_dir/_lib/pr.sh" pr_info 2>/dev/null; then
+            pr_remote="${pr_info[pr_remote]:-}"
+            default_branch="${pr_info[default_branch]:-}"
             target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
 
             # Use branch-safe version string for PR branch name
@@ -316,8 +316,7 @@ show_operation_plan() {
             echo "  Base branch: $default_branch"
             echo "  PR branch: $pr_branch"
         else
-            echo "  Failed to determine PR details:"
-            echo "$pr_output" | sed 's/^/    /'
+            echo "  Failed to determine PR details"
         fi
     fi
     echo "=========================================="
