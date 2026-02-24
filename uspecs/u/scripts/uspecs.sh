@@ -472,7 +472,6 @@ cmd_change_archive() {
             echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
         fi
         (cd "$project_dir" && git branch -dr "origin/$branch_name") 2>/dev/null || true
-        (cd "$project_dir" && git push origin --delete "$branch_name") 2>/dev/null || true
     fi
 
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
