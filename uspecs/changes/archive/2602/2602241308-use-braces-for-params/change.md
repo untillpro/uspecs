@@ -2,6 +2,7 @@
 registered_at: 2026-02-24T12:13:44Z
 change_id: 2602241213-use-braces-for-params
 baseline: d9596c65bdadfe584c994a9bb4c5ad2d0d748d1b
+archived_at: 2026-02-24T13:08:07Z
 ---
 
 # Change request: Use braces for parameter references
