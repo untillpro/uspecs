@@ -603,6 +603,11 @@ cmd_apply() {
         if [[ "${config[version]:-}" != "$current_version" ]]; then
             error "Installed version '${config[version]:-}' does not match expected '$current_version'. Re-run the command to pick up the current installed version."
         fi
+        # After ffdefault the local uspecs.yml may already be at the incoming commit
+        if [[ "$command_name" == "update" && -n "$commit" && "${config[commit]:-}" == "$commit" ]]; then
+            echo "Already up to date (commit: $commit)"
+            return 0
+        fi
     fi
 
     # Determine invocation methods string for plan display
