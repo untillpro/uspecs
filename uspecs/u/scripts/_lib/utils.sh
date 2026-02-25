@@ -14,15 +14,17 @@ checkcmds() {
     done
 }
 
-# get_pr_info <pr_sh_path> <map_nameref>
+# get_pr_info <pr_sh_path> <map_nameref> [project_dir]
 # Calls pr.sh info and parses the key=value output into the given associative array.
 # Keys populated: pr_remote, default_branch
+# project_dir: directory to run pr.sh from (defaults to $PWD)
 # Returns non-zero if pr.sh info fails.
 get_pr_info() {
     local pr_sh="$1"
     local -n _pr_info_map="$2"
+    local project_dir="${3:-$PWD}"
     local output
-    output=$(bash "$pr_sh" info) || return 1
+    output=$(cd "$project_dir" && bash "$pr_sh" info) || return 1
     while IFS='=' read -r key value; do
         [[ -z "$key" ]] && continue
         _pr_info_map["$key"]="$value"

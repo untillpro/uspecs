@@ -301,10 +301,10 @@ show_operation_plan() {
 
         local -A pr_info
         local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
-        if get_pr_info "$script_dir/_lib/pr.sh" pr_info 2>/dev/null; then
+        if get_pr_info "$script_dir/_lib/pr.sh" pr_info "$project_dir" 2>/dev/null; then
             pr_remote="${pr_info[pr_remote]:-}"
             default_branch="${pr_info[default_branch]:-}"
-            target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
+            target_repo_url=$(git -C "$project_dir" remote get-url "$pr_remote" 2>/dev/null)
 
             # Use branch-safe version string for PR branch name
             local version_branch
