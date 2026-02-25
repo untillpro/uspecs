@@ -14,5 +14,5 @@
 
 References:
 
-- [uspecs/u/scripts/_lib/pr.sh](../../u/scripts/_lib/pr.sh)
-- [uspecs/u/scripts/conf.sh](../../u/scripts/conf.sh)
+- [uspecs/u/scripts/_lib/pr.sh](../../../../u/scripts/_lib/pr.sh)
+- [uspecs/u/scripts/conf.sh](../../../../u/scripts/conf.sh)

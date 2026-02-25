@@ -2,6 +2,7 @@
 registered_at: 2026-02-25T11:53:53Z
 change_id: 2602251153-pr-apply-switch-back
 baseline: 3ae1eedce4ac7c85de33e2f621ef820b07b4ea79
+archived_at: 2026-02-25T12:22:03Z
 ---
 
 # Change request: conf.sh cmd_apply should switch back to original branch after sending PR
