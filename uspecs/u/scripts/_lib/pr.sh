@@ -192,16 +192,26 @@ cmd_ffdefault() {
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
 
+    local switched=false
     if [[ "$current_branch" != "$default_branch" ]]; then
-        error "Current branch '$current_branch' is not the default branch '$default_branch'"
+        echo "Switching from '$current_branch' to '$default_branch'..."
+        git checkout "$default_branch"
+        switched=true
+        trap 'git merge --abort 2>/dev/null || true; git checkout "$current_branch"' EXIT
     fi
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
 
-    echo "Fast-forwarding $current_branch..."
+    echo "Fast-forwarding $default_branch..."
     if ! git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
-        error "Cannot fast-forward '$current_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+        error "Cannot fast-forward '$default_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+    fi
+
+    if [[ "$switched" == "true" ]]; then
+        trap - EXIT
+        echo "Switching back to '$current_branch'..."
+        git checkout "$current_branch"
     fi
 }
 
