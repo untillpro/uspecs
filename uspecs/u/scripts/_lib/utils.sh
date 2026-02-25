@@ -94,19 +94,6 @@ _grep() {
     "$_GREP_BIN" "$@"
 }
 
-# native_path <path>
-# Converts a POSIX path to the OS-native format required by non-MSYS2 tools
-# (e.g. git.exe calling Windows chdir). On Windows (msys/cygwin) uses
-# cygpath -m to produce C:/... style paths with forward slashes, which work
-# in both bash string operations and native Windows binaries. On other
-# platforms the path is returned unchanged.
-native_path() {
-    case "$OSTYPE" in
-        msys*|cygwin*) cygpath -m "$1" ;;
-        *)             echo "$1" ;;
-    esac
-}
-
 # sed_inplace file sed-args...
 # Portable in-place sed. Uses -i.bak for BSD compatibility.
 # Restores the original file on failure.

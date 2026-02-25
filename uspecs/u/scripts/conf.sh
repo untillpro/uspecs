@@ -47,6 +47,13 @@ get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
+native_path() {
+    case "$OSTYPE" in
+        msys*|cygwin*) cygpath -m "$1" ;;
+        *)             echo "$1" ;;
+    esac
+}
+
 get_project_dir() {
     local script_path="${BASH_SOURCE[0]}"
     if [[ -z "$script_path" || ! -f "$script_path" ]]; then
