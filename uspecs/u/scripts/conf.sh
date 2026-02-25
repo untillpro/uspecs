@@ -480,6 +480,10 @@ write_metadata() {
 resolve_update_version() {
     local current_version="$1"
     local project_dir="$2"
+    local -n _ruv_target_version="$3"
+    local -n _ruv_target_ref="$4"
+    local -n _ruv_commit="$5"
+    local -n _ruv_commit_timestamp="$6"
 
     if is_alpha_version "$current_version"; then
         echo "Checking for alpha updates..."
@@ -487,21 +491,24 @@ resolve_update_version() {
         load_config "$project_dir" config
         local current_commit="${config[commit]:-}"
         local current_commit_timestamp="${config[commit_timestamp]:-}"
-        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
+        local fetched_commit fetched_timestamp
+        read -r fetched_commit fetched_timestamp <<< "$(get_latest_commit_info)"
 
-        if [[ "$current_commit" == "$commit" ]]; then
+        if [[ "$current_commit" == "$fetched_commit" ]]; then
             echo "Already on the latest alpha version: $current_version"
-            echo "  Commit: $commit"
+            echo "  Commit: $fetched_commit"
             echo "  Timestamp: $current_commit_timestamp"
             return 1
         fi
-        target_version=$(get_alpha_version)
-        target_ref="$commit"
+        _ruv_target_version=$(get_alpha_version)
+        _ruv_target_ref="$fetched_commit"
+        _ruv_commit="$fetched_commit"
+        _ruv_commit_timestamp="$fetched_timestamp"
     else
         echo "Checking for stable updates..."
-        target_version=$(get_latest_minor_tag "$current_version")
+        _ruv_target_version=$(get_latest_minor_tag "$current_version")
 
-        if [[ "$target_version" == "$current_version" ]]; then
+        if [[ "$_ruv_target_version" == "$current_version" ]]; then
             echo "Already on the latest stable minor version: $current_version"
 
             local latest_major
@@ -514,7 +521,7 @@ resolve_update_version() {
             return 1
         fi
 
-        target_ref="v$target_version"
+        _ruv_target_ref="v$_ruv_target_version"
     fi
     return 0
 }
@@ -522,20 +529,22 @@ resolve_update_version() {
 resolve_upgrade_version() {
     local current_version="$1"
     local project_dir="$2"
+    local -n _rugv_target_version="$3"
+    local -n _rugv_target_ref="$4"
 
     if is_alpha_version "$current_version"; then
         error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
     fi
 
     echo "Checking for major upgrades..."
-    target_version=$(get_latest_major_tag)
+    _rugv_target_version=$(get_latest_major_tag)
 
-    if [[ "$target_version" == "$current_version" ]]; then
+    if [[ "$_rugv_target_version" == "$current_version" ]]; then
         echo "Already on the latest major version: $current_version"
         return 1
     fi
 
-    target_ref="v$target_version"
+    _rugv_target_ref="v$_rugv_target_version"
     return 0
 }
 
@@ -579,6 +588,7 @@ cmd_apply() {
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
+    # Safe version to create branches
     local version_string_branch
     version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
 
@@ -588,8 +598,10 @@ cmd_apply() {
         error "uspecs is already installed, use update instead"
     fi
 
-    # PR: fast-forward default branch (may update local uspecs.yml)
+    # PR: remember current branch, fast-forward default branch (may update local uspecs.yml)
+    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
+        prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
     fi
 
@@ -603,9 +615,11 @@ cmd_apply() {
         if [[ "${config[version]:-}" != "$current_version" ]]; then
             error "Installed version '${config[version]:-}' does not match expected '$current_version'. Re-run the command to pick up the current installed version."
         fi
-        # After ffdefault the local uspecs.yml may already be at the incoming commit
-        if [[ "$command_name" == "update" && -n "$commit" && "${config[commit]:-}" == "$commit" ]]; then
-            echo "Already up to date (commit: $commit)"
+        # After ffdefault the local uspecs.yml may already reflect the incoming version
+        if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
+           [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
+            echo "Already up to date"
+            [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
             return 0
         fi
     fi
@@ -620,13 +634,14 @@ cmd_apply() {
 
     # Show operation plan and confirm
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
-    confirm_action "$command_name" || return 0
+    if ! confirm_action "$command_name"; then
+        [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
+        return 0
+    fi
 
-    # PR: capture current branch, then create feature branch
+    # PR: create feature branch from default branch
     local branch_name="${command_name}-uspecs-${version_string_branch}"
-    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
     fi
 
@@ -718,7 +733,7 @@ cmd_install() {
     fi
 
     local project_dir
-    project_dir=$(native_path "$PWD")
+    project_dir=$PWD
 
     check_not_installed "$project_dir"
 
@@ -784,11 +799,11 @@ cmd_update_or_upgrade() {
     load_config "$project_dir" config
     local current_version="${config[version]:-}"
 
-    local target_version target_ref commit commit_timestamp
+    local target_version="" target_ref="" commit="" commit_timestamp=""
     if [[ "$command_name" == "update" ]]; then
-        resolve_update_version "$current_version" "$project_dir" || return 0
+        resolve_update_version "$current_version" "$project_dir" target_version target_ref commit commit_timestamp || return 0
     else
-        resolve_upgrade_version "$current_version" "$project_dir" || return 0
+        resolve_upgrade_version "$current_version" "$project_dir" target_version target_ref || return 0
     fi
 
     local temp_dir
