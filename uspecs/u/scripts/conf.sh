@@ -57,7 +57,7 @@ get_project_dir() {
     # Go up 3 levels: scripts -> u -> uspecs -> project_dir
     local project_dir
     project_dir=$(cd "$script_dir/../../.." && pwd)
-    echo "$project_dir"
+    native_path "$project_dir"
 }
 
 check_not_installed() {
@@ -705,7 +705,8 @@ cmd_install() {
         error "At least one invocation method (--nlia or --nlic) is required"
     fi
 
-    local project_dir="$PWD"
+    local project_dir
+    project_dir=$(native_path "$PWD")
 
     check_not_installed "$project_dir"
 
