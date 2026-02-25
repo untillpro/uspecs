@@ -554,7 +554,7 @@ cmd_apply() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --project-dir) project_dir="$2"; shift 2 ;;
+            --project-dir) project_dir=$(native_path "$2"); shift 2 ;;
             --version) version="$2"; shift 2 ;;
             --commit) commit="$2"; shift 2 ;;
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
