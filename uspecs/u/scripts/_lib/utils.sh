@@ -35,6 +35,13 @@ is_tty() {
     [ -t 0 ]
 }
 
+# is_git_repo <dir>
+# Returns 0 if <dir> is inside a git repository, 1 otherwise.
+is_git_repo() {
+    local dir="$1"
+    (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
+}
+
 # _GREP_BIN caches the resolved grep binary path for _grep.
 _GREP_BIN=""
 

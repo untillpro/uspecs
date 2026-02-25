@@ -124,17 +124,8 @@ gh_create_pr() {
 
 check_prerequisites() {
     # Check if git repository exists
-    local dir="$PWD"
-    local found_git=false
-    while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/.git" ]]; then
-            found_git=true
-            break
-        fi
-        dir=$(dirname "$dir")
-    done
-    if [[ "$found_git" == "false" ]]; then
-        error "No git repository found"
+    if ! is_git_repo "$PWD"; then
+        error "No git repository found at $PWD"
     fi
 
     # Check if GitHub CLI is installed

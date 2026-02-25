@@ -583,7 +583,7 @@ cmd_apply() {
 
     # PR: fast-forward default branch (may update local uspecs.yml)
     if [[ "$pr_flag" == "true" ]]; then
-        bash "$script_dir/_lib/pr.sh" ffdefault
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
     fi
 
     local -A config
@@ -614,8 +614,8 @@ cmd_apply() {
     local branch_name="${command_name}-uspecs-${version_string_branch}"
     local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(git symbolic-ref --short HEAD)
-        bash "$script_dir/_lib/pr.sh" prbranch "$branch_name"
+        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
     fi
 
     # Save existing metadata for update/upgrade
@@ -662,8 +662,8 @@ cmd_apply() {
         pr_info_file=$(create_temp_file)
 
         # Capture PR info from stderr while showing normal output
-        bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
-            --next-branch "$prev_branch" --delete-branch 2> "$pr_info_file"
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
+            --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
 
         # Parse PR info from temp file
         pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)

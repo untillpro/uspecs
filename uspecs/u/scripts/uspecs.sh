@@ -46,11 +46,6 @@ get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
-is_git_repo() {
-    local dir="$1"
-    (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
-}
-
 get_baseline() {
     local project_dir="$1"
     if is_git_repo "$project_dir"; then
