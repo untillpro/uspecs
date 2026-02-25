@@ -581,9 +581,12 @@ cmd_apply() {
         error "uspecs is already installed, use update instead"
     fi
 
-    # PR: fast-forward default branch (may update local uspecs.yml)
+    # PR: remember current branch, then fast-forward default branch (may update local uspecs.yml)
+    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
+        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
+        trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
     fi
 
     local -A config
@@ -610,11 +613,9 @@ cmd_apply() {
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
     confirm_action "$command_name" || return 0
 
-    # PR: capture current branch, then create feature branch
+    # PR: create feature branch
     local branch_name="${command_name}-uspecs-${version_string_branch}"
-    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
     fi
 
@@ -664,6 +665,7 @@ cmd_apply() {
         # Capture PR info from stderr while showing normal output
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
+        trap - ERR
 
         # Parse PR info from temp file
         pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
