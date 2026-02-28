@@ -1,6 +1,15 @@
 Feature: Install uspecs
   Engineer installs uspecs for a project
 
+  Background:
+    Given Engineer is on the "README.md" page
+
+  Scenario: Install alpha version
+    When Engineer choose install with --alpha
+    Then uspecs is installed from the latest commit on main branch
+    And uspecs metadata file is created and describes the alpha version with commit info
+
+
   Scenario Outline: Install stable version
     Given uspecs README.md contains install command that uses <method>, without --alpha flag
     When Engineer runs this install command
@@ -14,11 +23,11 @@ Feature: Install uspecs
       | nlia   | AGENTS.md |
       | nlic   | CLAUDE.md |
 
-  Scenario: Install alpha version
-    When Engineer runs install with --alpha and other flags
-    Then uspecs is installed from the latest commit on main branch
-    And uspecs metadata file is created and describes the alpha version
-    And other flags are respected as in stable install
+  Scenario: Install alpha version from custom branch
+    Given USPECS_ALPHA_BRANCH is set to a custom branch name
+    When Engineer runs install with --alpha
+    Then uspecs is installed from the latest commit on that branch
+    And uspecs metadata file describes the alpha version with that branch's commit
 
   Rule: Edge cases
 
