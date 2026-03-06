@@ -24,8 +24,9 @@ Parameters:
 
 Flow:
 
-- Merge default branch into change_branch:
-  - Run `bash uspecs/u/scripts/uspecs.sh pr mergedef`
+- Determine Active Change Folder path (relative to project root)
+- Preflight and merge default branch into change_branch:
+  - Run `bash uspecs/u/scripts/uspecs.sh pr preflight --change-folder "{active_change_folder}"`
   - If script exits with error: report the error and stop
   - Parse `change_branch`, `default_branch`, and `change_branch_head` from script output
 - Read Active Change Folder (change.md) to determine `issue_url` (may be absent) and derive `issue_id` from the URL (last path segment)

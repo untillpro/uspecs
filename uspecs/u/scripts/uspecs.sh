@@ -6,7 +6,7 @@ set -Eeuo pipefail
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <change-folder-name> [-d]
-#   uspecs pr mergedef
+#   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
 #
@@ -26,8 +26,9 @@ set -Eeuo pipefail
 #   -d: commit and push staged changes, checkout default branch, delete branch and refs
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
 #
-# pr mergedef:
-#   Validates preconditions, fetches pr_remote/default_branch, and merges it into the current branch.
+# pr preflight --change-folder <path>:
+#   Checks for uncompleted todo items in Change Folder, then validates preconditions, fetches
+#   pr_remote/default_branch, and merges it into the current branch.
 #   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
@@ -279,6 +280,37 @@ convert_links_to_relative() {
     return 0
 }
 
+cmd_pr_preflight() {
+    local change_folder_path=""
+    local preflight_args=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --change-folder) change_folder_path="$2"; shift 2 ;;
+            *) preflight_args+=("$1"); shift ;;
+        esac
+    done
+    if [ -z "$change_folder_path" ]; then
+        error "pr preflight requires --change-folder <path>"
+    fi
+    if [ ! -d "$change_folder_path" ]; then
+        error "Change folder not found: $change_folder_path"
+    fi
+    local uncompleted_count
+    uncompleted_count=$(count_uncompleted_items "$change_folder_path")
+    if [ "$uncompleted_count" -gt 0 ]; then
+        echo "Cannot create PR: $uncompleted_count uncompleted todo item(s) found"
+        echo ""
+        echo "Uncompleted items:"
+        _grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$change_folder_path"/*.md 2>/dev/null | sed 's/^/  /'
+        echo ""
+        echo "Complete or cancel todo items before creating a PR"
+        exit 1
+    fi
+    local lib_dir
+    lib_dir="$(get_script_dir)/_lib"
+    "$lib_dir/pr.sh" mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
+}
+
 cmd_change_archive() {
     local folder_name=""
     local delete_branch=""
@@ -519,14 +551,14 @@ main() {
             shift
 
             case "$subcommand" in
-                mergedef)
-                    "$lib_dir/pr.sh" mergedef "$@"
+                preflight)
+                    cmd_pr_preflight "$@"
                     ;;
                 create)
                     "$lib_dir/pr.sh" changepr "$@"
                     ;;
                 *)
-                    error "Unknown pr subcommand: $subcommand. Available: mergedef, create"
+                    error "Unknown pr subcommand: $subcommand. Available: preflight, create"
                     ;;
             esac
             ;;
