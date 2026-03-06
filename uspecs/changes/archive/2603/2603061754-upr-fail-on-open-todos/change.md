@@ -2,6 +2,7 @@
 registered_at: 2026-03-06T17:22:23Z
 change_id: 2603061722-upr-fail-on-open-todos
 baseline: ef926fac77063bb965a9f3ec3c789a6963be4a79
+archived_at: 2026-03-06T17:54:41Z
 ---
 
 # Change request: upr fails on open todo items
