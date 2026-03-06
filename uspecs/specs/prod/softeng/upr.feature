@@ -26,12 +26,13 @@ Feature: Create pull request from change branch
       When Engineer invokes upr action
       Then AI Agent displays error and stops
       Examples:
-        | condition                            |
-        | no git repository                    |
-        | working tree has uncommitted changes |
-        | current branch is the default branch |
-        | current branch ends with --pr        |
-        | PR branch already exists             |
+        | condition                                |
+        | no git repository                        |
+        | working tree has uncommitted changes     |
+        | current branch is the default branch     |
+        | current branch ends with --pr            |
+        | PR branch already exists                 |
+        | change folder has uncompleted todo items |
 
     Scenario: Merge conflicts with default branch
       Given change branch has conflicts with the default branch
