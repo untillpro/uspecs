@@ -11,5 +11,5 @@ set -Eeuo pipefail
 # Prerequisites:
 #   USPECS_GH_TOKEN  GitHub token with access to the test repo
 #
-# Run: bats tests/uspecs.sh-e2e.bats
+# Run: bats tests/e2e/uspecs.sh-e2e.bats
 
