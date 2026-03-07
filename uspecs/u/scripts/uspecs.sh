@@ -6,7 +6,7 @@ set -Eeuo pipefail
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <change-folder-name> [-d]
-#   uspecs pr mergedef
+#   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
 #
@@ -26,8 +26,9 @@ set -Eeuo pipefail
 #   -d: commit and push staged changes, checkout default branch, delete branch and refs
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
 #
-# pr mergedef:
-#   Validates preconditions, fetches pr_remote/default_branch, and merges it into the current branch.
+# pr preflight --change-folder <path>:
+#   Checks for uncompleted todo items in Change Folder, then validates preconditions, fetches
+#   pr_remote/default_branch, and merges it into the current branch.
 #   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
@@ -279,6 +280,37 @@ convert_links_to_relative() {
     return 0
 }
 
+cmd_pr_preflight() {
+    local change_folder_path=""
+    local preflight_args=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --change-folder) change_folder_path="$2"; shift 2 ;;
+            *) preflight_args+=("$1"); shift ;;
+        esac
+    done
+    if [ -z "$change_folder_path" ]; then
+        error "pr preflight requires --change-folder <path>"
+    fi
+    if [ ! -d "$change_folder_path" ]; then
+        error "Change folder not found: $change_folder_path"
+    fi
+    local uncompleted_count
+    uncompleted_count=$(count_uncompleted_items "$change_folder_path")
+    if [ "$uncompleted_count" -gt 0 ]; then
+        echo "Cannot create PR: $uncompleted_count uncompleted todo item(s) found"
+        echo ""
+        echo "Uncompleted items:"
+        _grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$change_folder_path"/*.md 2>/dev/null | sed 's/^/  /'
+        echo ""
+        echo "Complete or cancel todo items before creating a PR"
+        exit 1
+    fi
+    local lib_dir
+    lib_dir="$(get_script_dir)/_lib"
+    "$lib_dir/pr.sh" mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
+}
+
 cmd_change_archive() {
     local folder_name=""
     local delete_branch=""
@@ -365,6 +397,7 @@ cmd_change_archive() {
             error "-d requires pr.sh info to be available (remote reachable?)"
         fi
         local default_branch="${pr_info[default_branch]:-}"
+        local pr_remote="${pr_info[pr_remote]:-}"
 
         # a) no uncommitted changes
         local git_status
@@ -378,16 +411,21 @@ cmd_change_archive() {
             error "-d cannot be used on the default branch '$default_branch'"
         fi
 
-        # c) remote tracking ref must exist
-        if ! (cd "$project_dir" && git rev-parse --verify "refs/remotes/origin/$branch_name" > /dev/null 2>&1); then
-            error "No remote tracking ref found for '$branch_name'. Push the branch first."
+        # c) check whether the remote branch actually exists
+        # exit non-zero means remote unreachable/auth failed -- treat as hard error, not as "branch gone"
+        local remote_exists
+        if ! remote_exists=$(cd "$project_dir" && git ls-remote --heads "${pr_remote:-origin}" "$branch_name"); then
+            error "Cannot reach remote '${pr_remote:-origin}'. Check connectivity and authentication."
         fi
 
-        # d) no divergence
-        local behind
-        behind=$(cd "$project_dir" && git rev-list --count "HEAD..origin/$branch_name")
-        if [ "$behind" -gt 0 ]; then
-            error "Branch '$branch_name' is behind origin by $behind commit(s). Pull or rebase first."
+        # d) no divergence (skip when remote branch is already gone)
+        if [ -n "$remote_exists" ]; then
+            (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$branch_name" 2>&1)
+            local behind
+            behind=$(cd "$project_dir" && git rev-list --count "HEAD..${pr_remote:-origin}/$branch_name")
+            if [ "$behind" -gt 0 ]; then
+                error "Branch '$branch_name' is behind ${pr_remote:-origin} by $behind commit(s). Pull or rebase first."
+            fi
         fi
 
         # e) branch must be a PR branch
@@ -458,7 +496,15 @@ cmd_change_archive() {
 
     if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
         (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path" 2>&1)
-        (cd "$project_dir" && git push 2>&1)
+        if [ -n "$remote_exists" ]; then
+            if ! (cd "$project_dir" && git push 2>&1); then
+                local archive_commit
+                archive_commit=$(cd "$project_dir" && git rev-parse HEAD)
+                error "Push to '${pr_remote:-origin}/$branch_name' failed. Branch '$branch_name' preserved (archive commit: $archive_commit). Resolve the push issue and re-run the archive command."
+            fi
+        else
+            echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping push."
+        fi
 
         (cd "$project_dir" && git checkout "$default_branch" 2>&1)
 
@@ -469,11 +515,17 @@ cmd_change_archive() {
         else
             echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
         fi
-        (cd "$project_dir" && git branch -dr "origin/$branch_name") 2>/dev/null || true
+        (cd "$project_dir" && git branch -dr "${pr_remote:-origin}/$branch_name") 2>/dev/null || true
 
         if [ -n "$deleted_branch_hash" ]; then
             echo "Deleted branch: $branch_name ($deleted_branch_hash)"
             echo "To restore: git branch $branch_name $deleted_branch_hash"
+        fi
+
+        echo "Updating local $default_branch from ${pr_remote:-origin}/$default_branch..."
+        (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$default_branch" 2>&1)
+        if ! (cd "$project_dir" && git merge --ff-only "${pr_remote:-origin}/$default_branch" 2>&1); then
+            error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
         fi
     fi
 
@@ -519,14 +571,14 @@ main() {
             shift
 
             case "$subcommand" in
-                mergedef)
-                    "$lib_dir/pr.sh" mergedef "$@"
+                preflight)
+                    cmd_pr_preflight "$@"
                     ;;
                 create)
                     "$lib_dir/pr.sh" changepr "$@"
                     ;;
                 *)
-                    error "Unknown pr subcommand: $subcommand. Available: mergedef, create"
+                    error "Unknown pr subcommand: $subcommand. Available: preflight, create"
                     ;;
             esac
             ;;

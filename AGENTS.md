@@ -10,19 +10,18 @@
 | Descriptive text        | Sentence case | `Sends transactional emails`           |
 | Section headers         | Sentence case | `## Specifications impact`             |
 
+## bash sources
+
+- Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead.
+
 <!-- uspecs:begin -->
 
 ## Execution instructions
 
-When a request mentions one of the words below, you must read the corresponding file and follow the rules described there:
+When a request starts with one of the keywords below, you must read the corresponding file and follow the rules described there:
 
-- uchange: `uspecs/u/actn-uchange.md`
-- uarchive: `uspecs/u/actn-uarchive.md`
-- uimpl: `uspecs/u/actn-uimpl.md`
-- usync: `uspecs/u/actn-usync.md`
-- udecs: `uspecs/u/actn-udecs.md`
-- uhow: `uspecs/u/actn-uhow.md`
-- upr: `uspecs/u/actn-upr.md`
+- uchange: create a change request following rules from `uspecs/u/actn-uchange.md`
+- uarchive, uimpl, usync, udecs, uhow, upr: perform action described in `uspecs/u/actn-{keyword}.md`
 
 Use files from `./uspecs/u` as an initial reference when user mentions uspecs
 

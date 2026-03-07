@@ -48,10 +48,11 @@ set -Eeuo pipefail
 #       If no changes exist, switch to --next-branch and exit cleanly.
 #
 #   pr.sh ffdefault
-#       Fetch pr_remote/default and fast-forward current branch to it
+#       Fetch pr_remote/default_branch and fast-forward the local default branch to it.
+#       Switches to the default branch if not already on it, and leaves there after completion.
 #       Fail fast if any of the following conditions are true:
-#           current branch is not default
-#           current branch is not clean
+#           working directory is not clean
+#           branches have diverged (fast-forward not possible)
 
 
 
@@ -193,7 +194,7 @@ cmd_ffdefault() {
     current_branch=$(git symbolic-ref --short HEAD)
 
     if [[ "$current_branch" != "$default_branch" ]]; then
-        echo "Switching from '$current_branch' to '$default_branch'..."
+        echo "Switching to '$default_branch'..."
         git checkout "$default_branch"
     fi
 
