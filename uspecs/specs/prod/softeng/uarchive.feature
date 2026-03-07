@@ -35,3 +35,9 @@ Feature: Archive change request
       When Engineer invokes uarchive action and selects git cleanup option
       Then git commit is made without pushing
       And local branch and tracking refs are removed
+
+    Scenario: Archive fails when default branch cannot be fast-forwarded
+      Given current branch ends with "--pr"
+      And local default branch has diverged from pr_remote/default_branch
+      When Engineer invokes uarchive action and selects git cleanup option
+      Then action fails with error indicating default branch cannot be fast-forwarded

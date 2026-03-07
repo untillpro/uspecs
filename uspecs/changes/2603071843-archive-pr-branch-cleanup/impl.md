@@ -7,6 +7,10 @@
   - add: option 1 - Engineer is switched to default branch
   - add: option 1 - local default branch is fast-forwarded to pr_remote/default_branch
   - add: edge case scenario - archive on PR branch when remote branch no longer exists
+  - add: edge case scenario - archive fails when default branch cannot be fast-forwarded
+
+- [x] update: [prod--domain.md](../../specs/prod/prod--domain.md)
+  - add: Git concepts section with pr_remote, default_branch, change branch, PR branch
 
 ## Construction
 
@@ -22,3 +26,7 @@
   - add: `assert_cleanup_complete` helper - asserts PR branch deleted, tracking ref gone, current branch is default, default branch equals remote tip
   - add: test - remote branch exists: commit is pushed; call `assert_cleanup_complete`
   - add: test - remote branch does not exist: push is skipped; call `assert_cleanup_complete`
+  - add: test - default branch cannot be fast-forwarded: action fails with "Cannot fast-forward"
+
+- [x] update: [AGENTS.md](../../../AGENTS.md)
+  - add: bash sources rule - avoid `2>/dev/null` on commands that can fail; provide clear error messages

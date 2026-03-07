@@ -412,13 +412,17 @@ cmd_change_archive() {
         fi
 
         # c) check whether the remote branch actually exists
+        # exit non-zero means remote unreachable/auth failed -- treat as hard error, not as "branch gone"
         local remote_exists
-        remote_exists=$(cd "$project_dir" && git ls-remote --heads "${pr_remote:-origin}" "$branch_name" 2>/dev/null)
+        if ! remote_exists=$(cd "$project_dir" && git ls-remote --heads "${pr_remote:-origin}" "$branch_name"); then
+            error "Cannot reach remote '${pr_remote:-origin}'. Check connectivity and authentication."
+        fi
 
         # d) no divergence (skip when remote branch is already gone)
         if [ -n "$remote_exists" ]; then
+            (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$branch_name" 2>&1)
             local behind
-            behind=$(cd "$project_dir" && git rev-list --count "HEAD..${pr_remote:-origin}/$branch_name" 2>/dev/null || echo 0)
+            behind=$(cd "$project_dir" && git rev-list --count "HEAD..${pr_remote:-origin}/$branch_name")
             if [ "$behind" -gt 0 ]; then
                 error "Branch '$branch_name' is behind ${pr_remote:-origin} by $behind commit(s). Pull or rebase first."
             fi
@@ -493,7 +497,11 @@ cmd_change_archive() {
     if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
         (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path" 2>&1)
         if [ -n "$remote_exists" ]; then
-            (cd "$project_dir" && git push 2>&1)
+            if ! (cd "$project_dir" && git push 2>&1); then
+                local archive_commit
+                archive_commit=$(cd "$project_dir" && git rev-parse HEAD)
+                error "Push to '${pr_remote:-origin}/$branch_name' failed. Branch '$branch_name' preserved (archive commit: $archive_commit). Resolve the push issue and re-run the archive command."
+            fi
         else
             echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping push."
         fi
@@ -517,7 +525,7 @@ cmd_change_archive() {
         echo "Updating local $default_branch from ${pr_remote:-origin}/$default_branch..."
         (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$default_branch" 2>&1)
         if ! (cd "$project_dir" && git merge --ff-only "${pr_remote:-origin}/$default_branch" 2>&1); then
-            echo "Warning: cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged)" >&2
+            error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
         fi
     fi
 
