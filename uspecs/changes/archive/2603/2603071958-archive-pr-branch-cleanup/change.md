@@ -2,6 +2,7 @@
 registered_at: 2026-03-07T18:43:42Z
 change_id: 2603071843-archive-pr-branch-cleanup
 baseline: 61b53f9643412314071f10a8c9db35c8bfc871f3
+archived_at: 2026-03-07T19:58:56Z
 ---
 
 # Change request: Archive pr branch cleanup
