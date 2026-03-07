@@ -1,5 +1,6 @@
 # helpers.bash -- shared setup and helpers for uspecs.sh system tests
 # Loaded by each per-command .bats file via: load 'helpers'
+set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
 STUBS_DIR="$REPO_ROOT/tests/stubs"
