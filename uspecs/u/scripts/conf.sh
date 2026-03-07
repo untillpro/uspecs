@@ -704,6 +704,7 @@ cmd_apply() {
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
+        trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
     fi
 
     local -A config
@@ -792,6 +793,7 @@ cmd_apply() {
         # Capture PR info from stderr while showing normal output
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
+        trap - ERR
 
         # Parse PR info from temp file
         pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
