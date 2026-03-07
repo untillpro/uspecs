@@ -15,7 +15,7 @@
 Developer workflow:
 
 - System tests: `bats tests/uspecs.sh.bats`
-- E2e tests: `bats tests/uspecs.sh-e2e.bats` (requires `USPECS_GH_TOKEN`)
+- E2e tests: `bats tests/e2e/uspecs.sh-e2e.bats` (requires `USPECS_GH_TOKEN`)
 
 References:
 
