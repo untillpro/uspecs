@@ -1,0 +1,11 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+echo "$@" >> "${BATS_TEST_TMPDIR}/gh.calls"
+cat >> "${BATS_TEST_TMPDIR}/gh.body"
+if [[ "${GH_STUB_FAIL:-}" == "1" ]]; then
+    echo "gh: simulated failure" >&2
+    exit 1
+fi
+echo "https://github.com/org/repo/pull/42"
+

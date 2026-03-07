@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(git -c init.defaultBranch=main init -q --bare /tmp/test-bare.git)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}
