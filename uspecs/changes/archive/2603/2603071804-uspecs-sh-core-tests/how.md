@@ -19,6 +19,6 @@ Developer workflow:
 
 References:
 
-- [uspecs/u/scripts/uspecs.sh](../../u/scripts/uspecs.sh)
-- [uspecs/u/scripts/_lib/utils.sh](../../u/scripts/_lib/utils.sh)
-- [uspecs/u/conf.md](../../u/conf.md)
+- [uspecs/u/scripts/uspecs.sh](../../../../u/scripts/uspecs.sh)
+- [uspecs/u/scripts/_lib/utils.sh](../../../../u/scripts/_lib/utils.sh)
+- [uspecs/u/conf.md](../../../../u/conf.md)
