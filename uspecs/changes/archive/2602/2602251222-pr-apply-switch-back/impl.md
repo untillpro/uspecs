@@ -10,3 +10,6 @@
 
 - [x] update: [uspecs/u/scripts/conf.sh](../../../../u/scripts/conf.sh)
   - add: ERR trap in `cmd_apply` after `ffdefault` succeeds to switch back to `prev_branch` on failure; clear trap after `pr.sh pr` succeeds
+
+- [x] create: [tests/conf.sh-apply.bats](../../../../tests/conf.sh-apply.bats)
+  - add: test `apply --pr switches back to original branch after creating PR` - start on a PR branch, call `conf.sh apply update --pr ...`, assert HEAD is back on the original branch after completion

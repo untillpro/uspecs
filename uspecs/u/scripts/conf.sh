@@ -699,17 +699,10 @@ cmd_apply() {
         error "uspecs is already installed, use update instead"
     fi
 
-<<<<<<< HEAD
-    # PR: remember current branch, then fast-forward default branch (may update local uspecs.yml)
-    local prev_branch=""
-    if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
-=======
     # PR: remember current branch, fast-forward default branch (may update local uspecs.yml)
     local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
->>>>>>> 633a952cdeb2ae9dfa23fb09d9c8058fd5c3a71e
         (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
         trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
     fi
