@@ -35,16 +35,21 @@ Related components:
 ```text
 Engineer -> conf.sh (install/update/upgrade)
               |
-              +-- determine version type (stable/alpha)
+              +-- determine version type (stable/alpha/local)
               |
-              +-- GitHub Repository
+              +-- for local (--local flag, install only):
+              |     +-- read version from local repo version.txt
+              |     +-- read commit from local git log
+              |     +-- skip download; use current conf.sh directly
+              |
+              +-- GitHub Repository (stable/alpha only)
               |     |
               |     +-- for stable: list tags, find latest matching version
               |     +-- for alpha: get latest commit from main branch
               |
-              +-- download archive for target ref to temp directory
+              +-- download archive for target ref to temp directory (stable/alpha only)
               |
-              +-- unzip archive
+              +-- unzip archive (stable/alpha only)
 ```
 
 ### Local installation
@@ -56,6 +61,9 @@ conf.sh (after download)
   |     |
   |     +-- git repository exists
   |     +-- uspecs not already installed (install only)
+  |     +-- working directory is clean (--pr only)
+  |
+  +-- show operation plan and request confirmation (skipped with -y flag)
   |
   +-- remove uspecs.yml from archive (prevent overwriting local metadata)
   |

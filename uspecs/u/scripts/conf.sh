@@ -31,17 +31,13 @@ esac
 _TEMP_DIRS=()
 _TEMP_FILES=()
 
-# checkcmds command1 [command2 ...]
-# Verifies that each listed command is available on PATH.
-# Prints an error message and exits with status 1 if any command is missing.
-checkcmds() {
-    local cmd
-    for cmd in "$@"; do
-        if ! command -v "$cmd" > /dev/null 2>&1; then
-            echo "Error: required command not found: $cmd" >&2
-            exit 1
-        fi
-    done
+# git_path
+# Ensures Git's usr/bin is in PATH on Windows (Git Bash / MSYS2 / Cygwin).
+# Call this at the start of main() in every top-level script.
+git_path() {
+    if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+        PATH="/usr/bin:${PATH}"
+    fi
 }
 
 # get_pr_info <pr_sh_path> <map_nameref> [project_dir]
@@ -74,56 +70,6 @@ is_git_repo() {
     (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
 }
 
-# _GREP_BIN caches the resolved grep binary path for _grep.
-_GREP_BIN=""
-
-# _grep [grep-args...]
-# Portable grep wrapper. On Windows (msys/cygwin) resolves grep from the git
-# installation and fails fast if not found. On other platforms uses system grep.
-_grep() {
-    if [[ -z "$_GREP_BIN" ]]; then
-        case "$OSTYPE" in
-            msys*|cygwin*)
-                # Use where.exe to get real Windows paths, then pick the grep
-                # that lives inside the Git for Windows installation.
-                local git_path git_root candidate
-                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' / || true)
-                if [[ -z "$git_path" ]]; then
-                    echo "Error: git not found; cannot locate git's bundled grep" >&2
-                    exit 1
-                fi
-                git_root=$(dirname "$(dirname "$git_path")")
-                # Try direct path first (works even if grep is not on PATH).
-                # Also try one level up to handle mingw64/bin/git.exe layout where
-                # two dirnames give .../mingw64 instead of the git installation root.
-                if [[ -x "$git_root/usr/bin/grep.exe" ]]; then
-                    _GREP_BIN="$git_root/usr/bin/grep.exe"
-                elif [[ -x "$(dirname "$git_root")/usr/bin/grep.exe" ]]; then
-                    git_root=$(dirname "$git_root")
-                    _GREP_BIN="$git_root/usr/bin/grep.exe"
-                else
-                    # Fall back to where.exe grep, pick the one under git root
-                    while IFS= read -r candidate; do
-                        candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
-                        if [[ "$candidate" == "$git_root/"* ]]; then
-                            _GREP_BIN="$candidate"
-                            break
-                        fi
-                    done < <(where.exe grep 2>/dev/null || true)
-                fi
-                if [[ -z "$_GREP_BIN" ]]; then
-                    echo "Error: grep not found under git root: $git_root" >&2
-                    exit 1
-                fi
-                ;;
-            *)
-                _GREP_BIN="grep"
-                ;;
-        esac
-    fi
-    "$_GREP_BIN" "$@"
-}
-
 # sed_inplace file sed-args...
 # Portable in-place sed. Uses -i.bak for BSD compatibility.
 # Restores the original file on failure.
@@ -136,8 +82,6 @@ sed_inplace() {
     fi
     rm -f "${file}.bak"
 }
-
-checkcmds curl
 
 error() {
     echo "Error: $1" >&2
@@ -206,7 +150,7 @@ load_config() {
 
 get_latest_tag() {
     curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        _grep '"name":' | \
+        grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         head -n 1
 }
@@ -218,9 +162,9 @@ get_latest_minor_tag() {
 
     local result
     result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        _grep '"name":' | \
+        grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
-        _grep "^$major\.$minor\." | \
+        grep "^$major\.$minor\." | \
         head -n 1 || true)
     echo "${result:-$current_version}"
 }
@@ -233,14 +177,31 @@ get_latest_commit_info() {
     local response
     response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
-    sha=$(echo "$response" | _grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
-    commit_date=$(echo "$response" | _grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
+    commit_date=$(echo "$response" | grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
     echo "$sha $commit_date"
 }
 
 get_alpha_version() {
     curl -fsSL "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
+}
+
+get_local_version() {
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    tr -d '[:space:]' < "$script_dir/../../../version.txt"
+}
+
+get_local_commit_info() {
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    local repo_root
+    repo_root=$(native_path "$(cd "$script_dir/../../.." && pwd)")
+    local sha timestamp
+    sha=$(git -C "$repo_root" log -1 --format="%H")
+    timestamp=$(git -C "$repo_root" log -1 --format="%cI")
+    echo "$sha $timestamp"
 }
 
 is_alpha_version() {
@@ -432,8 +393,13 @@ show_operation_plan() {
 
 confirm_action() {
     local action="$1"
+    local yes_flag="${2:-false}"
 
     echo ""
+
+    if [[ "$yes_flag" == "true" ]]; then
+        return 0
+    fi
 
     # Try to read from /dev/tty (works even when stdin is piped)
     if [ -e /dev/tty ]; then
@@ -475,7 +441,7 @@ has_markers() {
     local file="$1"
     local begin_marker="$2"
     local end_marker="$3"
-    _grep -q "$begin_marker" "$file" && _grep -q "$end_marker" "$file"
+    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
 }
 
 inject_instructions() {
@@ -662,6 +628,8 @@ cmd_apply() {
     local current_version=""
     local invocation_methods=()
 
+    local yes_flag=false
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --project-dir) project_dir=$(native_path "$2"); shift 2 ;;
@@ -672,9 +640,11 @@ cmd_apply() {
             --pr) pr_flag=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
+            -y) yes_flag=true; shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
+
 
     [[ -z "$project_dir" ]] && error "--project-dir is required"
     [[ -z "$version" ]] && error "--version is required"
@@ -736,7 +706,7 @@ cmd_apply() {
 
     # Show operation plan and confirm
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
-    if ! confirm_action "$command_name"; then
+    if ! confirm_action "$command_name" "$yes_flag"; then
         [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
         return 0
     fi
@@ -796,9 +766,9 @@ cmd_apply() {
         trap - ERR
 
         # Parse PR info from temp file
-        pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
-        pr_branch=$(_grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
-        pr_base=$(_grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
+        pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
+        pr_branch=$(grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
+        pr_base=$(grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
     fi
 
     echo ""
@@ -818,21 +788,28 @@ cmd_apply() {
 
 cmd_install() {
     local alpha=false
+    local local_flag=false
     local pr_flag=false
+    local yes_flag=false
     local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --alpha) alpha=true; shift ;;
+            --local) local_flag=true; shift ;;
             --pr) pr_flag=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
+            -y) yes_flag=true; shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
 
     if [[ ${#invocation_methods[@]} -eq 0 ]]; then
         error "At least one invocation method (--nlia or --nlic) is required"
+    fi
+    if [[ "$alpha" == "true" && "$local_flag" == "true" ]]; then
+        error "--alpha and --local are mutually exclusive"
     fi
 
     local project_dir
@@ -847,18 +824,17 @@ cmd_install() {
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
         echo "Latest alpha version: $version"
+    elif [[ "$local_flag" == "true" ]]; then
+        echo "Using local version..."
+        version=$(get_local_version)
+        read -r commit commit_timestamp <<< "$(get_local_commit_info)"
+        echo "Local version: $version"
     else
         echo "Fetching latest stable version..."
         version=$(get_latest_tag)
         ref="v$version"
         echo "Latest version: $version"
     fi
-
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
 
     local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version")
     for method in "${invocation_methods[@]}"; do
@@ -870,9 +846,20 @@ cmd_install() {
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
     fi
+    if [[ "$yes_flag" == "true" ]]; then
+        apply_args+=("-y")
+    fi
 
     echo "Running install..."
-    bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+    if [[ "$local_flag" == "true" ]]; then
+        bash "${BASH_SOURCE[0]}" apply "${apply_args[@]}"
+    else
+        local temp_dir
+        temp_dir=$(create_temp_dir)
+        echo "Downloading uspecs..."
+        download_archive "$ref" "$temp_dir"
+        bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+    fi
 }
 
 cmd_update_or_upgrade() {
@@ -880,11 +867,16 @@ cmd_update_or_upgrade() {
     shift
 
     local pr_flag=false
+    local yes_flag=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --pr)
                 pr_flag=true
+                shift
+                ;;
+            -y)
+                yes_flag=true
                 shift
                 ;;
             *)
@@ -922,6 +914,9 @@ cmd_update_or_upgrade() {
     fi
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
+    fi
+    if [[ "$yes_flag" == "true" ]]; then
+        apply_args+=("-y")
     fi
 
     echo "Running ${command_name}..."
@@ -1052,6 +1047,8 @@ cmd_im() {
 }
 
 main() {
+    git_path
+
     if [[ $# -lt 1 ]]; then
         error "Usage: conf.sh <command> [args...]"
     fi

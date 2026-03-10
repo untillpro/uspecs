@@ -2,8 +2,8 @@
 # Loaded by each per-command .bats file via: load 'helpers'
 set -Eeuo pipefail
 
-REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-STUBS_DIR="$REPO_ROOT/tests/stubs"
+REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+STUBS_DIR="$BATS_TEST_DIRNAME/stubs"
 
 # ---------------------------------------------------------------------------
 # Setup / teardown

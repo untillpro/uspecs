@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# checkcmds command1 [command2 ...]
-# Verifies that each listed command is available on PATH.
-# Prints an error message and exits with status 1 if any command is missing.
-checkcmds() {
-    local cmd
-    for cmd in "$@"; do
-        if ! command -v "$cmd" > /dev/null 2>&1; then
-            echo "Error: required command not found: $cmd" >&2
-            exit 1
-        fi
-    done
+# git_path
+# Ensures Git's usr/bin is in PATH on Windows (Git Bash / MSYS2 / Cygwin).
+# Call this at the start of main() in every top-level script.
+git_path() {
+    if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+        PATH="/usr/bin:${PATH}"
+    fi
+}
+
+# error <message>
+# Prints an error message to stderr and exits with status 1.
+error() {
+    echo "Error: $1" >&2
+    exit 1
 }
 
 # get_pr_info <pr_sh_path> <map_nameref> [project_dir]
@@ -42,56 +45,6 @@ is_tty() {
 is_git_repo() {
     local dir="$1"
     (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
-}
-
-# _GREP_BIN caches the resolved grep binary path for _grep.
-_GREP_BIN=""
-
-# _grep [grep-args...]
-# Portable grep wrapper. On Windows (msys/cygwin) resolves grep from the git
-# installation and fails fast if not found. On other platforms uses system grep.
-_grep() {
-    if [[ -z "$_GREP_BIN" ]]; then
-        case "$OSTYPE" in
-            msys*|cygwin*)
-                # Use where.exe to get real Windows paths, then pick the grep
-                # that lives inside the Git for Windows installation.
-                local git_path git_root candidate
-                git_path=$(where.exe git 2>/dev/null | head -1 | tr -d $'\r' | tr $'\\\\' / || true)
-                if [[ -z "$git_path" ]]; then
-                    echo "Error: git not found; cannot locate git's bundled grep" >&2
-                    exit 1
-                fi
-                git_root=$(dirname "$(dirname "$git_path")")
-                # Try direct path first (works even if grep is not on PATH).
-                # Also try one level up to handle mingw64/bin/git.exe layout where
-                # two dirnames give .../mingw64 instead of the git installation root.
-                if [[ -x "$git_root/usr/bin/grep.exe" ]]; then
-                    _GREP_BIN="$git_root/usr/bin/grep.exe"
-                elif [[ -x "$(dirname "$git_root")/usr/bin/grep.exe" ]]; then
-                    git_root=$(dirname "$git_root")
-                    _GREP_BIN="$git_root/usr/bin/grep.exe"
-                else
-                    # Fall back to where.exe grep, pick the one under git root
-                    while IFS= read -r candidate; do
-                        candidate=$(echo "$candidate" | tr -d $'\r' | tr $'\\\\' /)
-                        if [[ "$candidate" == "$git_root/"* ]]; then
-                            _GREP_BIN="$candidate"
-                            break
-                        fi
-                    done < <(where.exe grep 2>/dev/null || true)
-                fi
-                if [[ -z "$_GREP_BIN" ]]; then
-                    echo "Error: grep not found under git root: $git_root" >&2
-                    exit 1
-                fi
-                ;;
-            *)
-                _GREP_BIN="grep"
-                ;;
-        esac
-    fi
-    "$_GREP_BIN" "$@"
 }
 
 # sed_inplace file sed-args...
