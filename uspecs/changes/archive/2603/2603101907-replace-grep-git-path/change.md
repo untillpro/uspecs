@@ -2,6 +2,7 @@
 registered_at: 2026-03-10T17:02:48Z
 change_id: 2603101702-replace-grep-git-path
 baseline: fbce1b2c5864e7caf1cd1ea269bcf11db209c3f4
+archived_at: 2026-03-10T19:07:08Z
 ---
 
 # Change request: Replace grep wrapper with git_path() and eliminate duplication

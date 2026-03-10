@@ -4,7 +4,7 @@
 
 ### Shared library
 
-- [x] update: [u/scripts/_lib/utils.sh](../../u/scripts/_lib/utils.sh)
+- [x] update: [u/scripts/_lib/utils.sh](../../../../u/scripts/_lib/utils.sh)
   - add: `git_path()` function
   - add: `error()` function (consolidated from `uspecs.sh` and `pr.sh`)
   - remove: `checkcmds()` function (unused; git_path() fails naturally when git is absent)
@@ -12,7 +12,7 @@
 
 ### Standalone installer
 
-- [x] update: [u/scripts/conf.sh](../../u/scripts/conf.sh)
+- [x] update: [u/scripts/conf.sh](../../../../u/scripts/conf.sh)
   - add: `git_path()` function (intentional duplication -- runs standalone before _lib is available)
   - remove: `checkcmds()` function and its call `checkcmds curl`
   - remove: `_GREP_BIN` variable and `_grep()` function
@@ -25,14 +25,14 @@
 
 ### Main entry point
 
-- [x] update: [u/scripts/uspecs.sh](../../u/scripts/uspecs.sh)
+- [x] update: [u/scripts/uspecs.sh](../../../../u/scripts/uspecs.sh)
   - remove: `error()` function (moves to _lib/utils.sh)
   - replace: all `_grep` calls with plain `grep`
   - add: `git_path` call in `main()` before the command dispatch
 
 ### PR automation
 
-- [x] update: [u/scripts/_lib/pr.sh](../../u/scripts/_lib/pr.sh)
+- [x] update: [u/scripts/_lib/pr.sh](../../../../u/scripts/_lib/pr.sh)
   - remove: `error()` function (moves to _lib/utils.sh)
   - replace: all `_grep` calls with plain `grep`
 
@@ -41,9 +41,9 @@
 - [x] reorganize: tests into `tests/sys/` and `tests/e2e/` subdirectories
   - move: existing system tests and helpers into `tests/sys/`
   - fix: `REPO_ROOT` and `STUBS_DIR` paths in `tests/sys/helpers.bash` after move
-- [x] create: [tests/alltests.sh](../../../tests/alltests.sh)
+- [x] create: [tests/alltests.sh](../../../../../tests/alltests.sh)
   - add: bash runner that calls `bats --recursive` on the tests directory
-- [x] create: [tests/e2e/conf-install.bats](../../../tests/e2e/conf-install.bats)
+- [x] create: [tests/e2e/conf-install.bats](../../../../../tests/e2e/conf-install.bats)
   - add: E2E tests for `conf.sh install` using BATS framework
   - add: alpha install test using `--local` flag (no GitHub download lag)
   - add: `--pr` prerequisite test (dirty working directory)
