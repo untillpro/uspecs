@@ -1,4 +1,4 @@
-Feature: system and e2etests
+Feature: system and e2e tests
   Developer runs automated tests to verify core script behavior
 
   # bats tests/sys
