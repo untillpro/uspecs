@@ -6,6 +6,7 @@ set -Eeuo pipefail
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--branch]
 #   uspecs change archive <change-folder-name> [-d]
+#   uspecs change prompt
 #   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
@@ -311,6 +312,18 @@ cmd_pr_preflight() {
     "$lib_dir/pr.sh" mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
 }
 
+cmd_change_prompt() {
+    local script_dir
+    script_dir=$(get_script_dir)
+    cat "$script_dir/sp/sp-conf.md"
+    echo "---------------------------------"
+    cat "$script_dir/sp/sp-concepts.md"
+    echo "---------------------------------"
+    cat "$script_dir/sp/sp-actn-uchange.md"
+    echo "---------------------------------"
+    cat "$script_dir/sp/sp-actn-uimpl.md"
+}
+
 cmd_change_archive() {
     local folder_name=""
     local delete_branch=""
@@ -557,6 +570,9 @@ main() {
                     ;;
                 archive)
                     cmd_change_archive "$@"
+                    ;;
+                prompt)
+                    cmd_change_prompt "$@"
                     ;;
                 *)
                     error "Unknown change subcommand: $subcommand"

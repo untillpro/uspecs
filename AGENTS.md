@@ -10,6 +10,10 @@
 | Descriptive text        | Sentence case | `Sends transactional emails`           |
 | Section headers         | Sentence case | `## Specifications impact`             |
 
+## prompt from script
+
+- When a request starts with spchange, run `bash uspecs/u/scripts/uspecs.sh change prompt` and follow the instructions provided by the script output
+
 ## bash sources
 
 - Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead.
