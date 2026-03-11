@@ -2,6 +2,7 @@
 registered_at: 2026-03-11T17:37:55Z
 change_id: 2603111737-pr-accept-auto-merge
 baseline: 9fb2490f79442cc5a940a63c6e97d3a6e4e19d5b
+archived_at: 2026-03-11T18:53:14Z
 ---
 
 # Change request: PR accept comment triggers archiveall and squash merge
