@@ -1,9 +1,10 @@
 Feature: Archive change request
   Engineer archives a completed change request
 
+  Background:
+    Given Active Change Folder is unambiguous
 
   Scenario: Archive change request
-    Given Active Change Folder is unambiguous
     When Engineer invokes uarchive action
     Then Active Change Folder is moved to changes archive
 
@@ -25,10 +26,6 @@ Feature: Archive change request
     And on option 2 Active Change Folder is moved to changes archive without git cleanup
     And on option 3 no action is taken
 
-  Scenario: Archive all modified change folders
-    When Engineer invokes uarchive action with --all option
-    Then all change folders that have modifications vs pr_remote/default_branch are archived
-    And count of archived, unchanged, and failed folders is reported
 
   Rule: Edge cases
 
