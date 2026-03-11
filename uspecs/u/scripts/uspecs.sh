@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
-#   uspecs change archive <change-folder-name> [-d]
+#   uspecs change archive <change-folder-name> [-d] | --all
 #   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
@@ -20,11 +20,13 @@ set -Eeuo pipefail
 #   Creates git branch by default (skip with --no-branch; --branch forces creation explicitly)
 #   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
-# change archive [-d]:
+# change archive [-d] [--all]:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
 #   -d: commit and push staged changes, checkout default branch, delete branch and refs
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
+#   --all: archive all change folders with modifications vs pr_remote/default_branch
+#          No change-folder-name needed; mutually exclusive with -d
 #
 # pr preflight --change-folder <path>:
 #   Checks for uncompleted todo items in Change Folder, then validates preconditions, fetches
@@ -323,11 +325,16 @@ cmd_pr_preflight() {
 cmd_change_archive() {
     local folder_name=""
     local delete_branch=""
+    local all_mode=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -d)
                 delete_branch="1"
+                shift
+                ;;
+            --all)
+                all_mode="1"
                 shift
                 ;;
             *)
@@ -341,7 +348,15 @@ cmd_change_archive() {
         esac
     done
 
-    if [ -z "$folder_name" ]; then
+    if [ -n "$all_mode" ] && [ -n "$folder_name" ]; then
+        error "--all and change-folder-name are mutually exclusive"
+    fi
+
+    if [ -n "$all_mode" ] && [ -n "$delete_branch" ]; then
+        error "--all and -d are mutually exclusive"
+    fi
+
+    if [ -z "$all_mode" ] && [ -z "$folder_name" ]; then
         error "change-folder-name is required"
     fi
 
@@ -361,6 +376,58 @@ cmd_change_archive() {
     fi
 
     local changes_folder="$project_dir/$changes_folder_rel"
+
+    if [ -n "$all_mode" ]; then
+        if [ -z "$is_git" ]; then
+            error "--all requires a git repository"
+        fi
+
+        local pr_sh
+        pr_sh="$(get_script_dir)/_lib/pr.sh"
+        local -A pr_info
+        if ! get_pr_info "$pr_sh" pr_info "$project_dir"; then
+            error "--all requires remote info to be available (remote reachable?)"
+        fi
+        local default_branch="${pr_info[default_branch]:-}"
+        local pr_remote="${pr_info[pr_remote]:-}"
+
+        echo "Fetching ${pr_remote}/${default_branch}..."
+        (cd "$project_dir" && git fetch "$pr_remote" "$default_branch" 2>&1)
+
+        if [ ! -d "$changes_folder" ]; then
+            error "Changes folder not found: $changes_folder"
+        fi
+
+        local archived=0 unchanged=0 failed=0
+        local script_path
+        script_path="$(get_script_dir)/uspecs.sh"
+
+        for folder_path in "$changes_folder"/*/; do
+            [ -d "$folder_path" ] || continue
+            local fname
+            fname=$(basename "$folder_path")
+            [ "$fname" = "archive" ] && continue
+
+            local rel_folder="$changes_folder_rel/$fname"
+            local diff_output
+            diff_output=$(cd "$project_dir" && git diff --name-only "${pr_remote}/${default_branch}" HEAD -- "$rel_folder")
+            if [ -z "$diff_output" ]; then
+                unchanged=$((unchanged + 1))
+                continue
+            fi
+
+            if bash "$script_path" change archive "$fname"; then
+                archived=$((archived + 1))
+            else
+                echo "Warning: could not archive $fname" >&2
+                failed=$((failed + 1))
+            fi
+        done
+
+        echo "Done: $archived archived, $unchanged unchanged, $failed failed"
+        return 0
+    fi
+
     local path_to_change_folder="$changes_folder/$folder_name"
 
     if [ ! -d "$path_to_change_folder" ]; then
