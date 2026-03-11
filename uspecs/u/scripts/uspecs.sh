@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # uspecs automation
 #
 # Usage:
-#   uspecs change new <change-name> [--issue-url <url>] [--branch]
+#   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
 #   uspecs change archive <change-folder-name> [-d]
 #   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
@@ -17,7 +17,7 @@ set -Eeuo pipefail
 #     - change_id: ymdHM-<change-name>
 #     - baseline: <commit-hash> (if git repository)
 #     - issue_url: <url> (if --issue-url provided)
-#   Creates git branch (if --branch provided and git repository exists)
+#   Creates git branch by default (skip with --no-branch; --branch forces creation explicitly)
 #   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
 # change archive [-d]:
@@ -140,7 +140,8 @@ read_conf_param() {
 cmd_change_new() {
     local change_name=""
     local issue_url=""
-    local create_branch=""
+    local opt_branch=""
+    local opt_no_branch=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -152,7 +153,11 @@ cmd_change_new() {
                 shift 2
                 ;;
             --branch)
-                create_branch="1"
+                opt_branch="1"
+                shift
+                ;;
+            --no-branch)
+                opt_no_branch="1"
                 shift
                 ;;
             *)
@@ -165,6 +170,15 @@ cmd_change_new() {
                 ;;
         esac
     done
+
+    if [ -n "$opt_branch" ] && [ -n "$opt_no_branch" ]; then
+        error "--branch and --no-branch are mutually exclusive"
+    fi
+
+    local is_new_branch="1"
+    if [ -n "$opt_no_branch" ]; then
+        is_new_branch=""
+    fi
 
     if [ -z "$change_name" ]; then
         error "change-name is required"
@@ -218,7 +232,7 @@ cmd_change_new() {
 
     printf '%s\n' "$frontmatter" > "$change_folder/change.md"
 
-    if [ -n "$create_branch" ]; then
+    if [ -n "$is_new_branch" ]; then
         if is_git_repo "$project_dir"; then
             if ! (cd "$project_dir" && git checkout -b "$change_name" 2>&1); then
                 echo "Warning: Failed to create branch '$change_name'" >&2

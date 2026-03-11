@@ -7,10 +7,13 @@ load 'helpers'
     cd "$PROJECT_ROOT"
     uspecs change new my-change
     [ "$status" -eq 0 ]
-    [[ "$output" == uspecs/changes/[0-9]*-my-change ]]
-    [ -d "$PROJECT_ROOT/$output" ]
-    [ -f "$PROJECT_ROOT/$output/change.md" ]
-    grep -q "change_id:.*my-change" "$PROJECT_ROOT/$output/change.md"
+    local change_folder
+    change_folder=$(echo "$output" | tail -1)
+    [[ "$change_folder" == uspecs/changes/[0-9]*-my-change ]]
+    [ -d "$PROJECT_ROOT/$change_folder" ]
+    [ -f "$PROJECT_ROOT/$change_folder/change.md" ]
+    grep -q "change_id:.*my-change" "$PROJECT_ROOT/$change_folder/change.md"
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-change
 }
 
 @test "change new --branch creates git branch" {
@@ -18,6 +21,21 @@ load 'helpers'
     uspecs change new my-feature --branch
     [ "$status" -eq 0 ]
     git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-feature
+}
+
+@test "change new --no-branch does not create branch" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-change --no-branch
+    [ "$status" -eq 0 ]
+    run git -C "$PROJECT_ROOT" show-ref --verify refs/heads/my-change
+    [ "$status" -ne 0 ]
+}
+
+@test "change new --branch and --no-branch fails with error" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-change --branch --no-branch
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"mutually exclusive"* ]]
 }
 
 @test "change new with unknown flag fails" {
