@@ -17,6 +17,7 @@ Rules:
 - Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
 - Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch, and uimpl invocation
 - If change description is not provided, ask the user for it before proceeding. Do not treat the response as a new command - use it as the change description and continue this flow
+- Never pass any optional parameter (`--no-branch`, `--branch`, `--no-impl`, `--issue-url`) to the script or alter default behavior unless it is explicitly requested
 
 Parameters:
 
