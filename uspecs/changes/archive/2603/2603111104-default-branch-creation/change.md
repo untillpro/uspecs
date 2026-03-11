@@ -2,6 +2,7 @@
 registered_at: 2026-03-11T08:52:25Z
 change_id: 2603110852-default-branch-creation
 baseline: 12f67cb6c33ac7d63a1590d22f6612443904d6ad
+archived_at: 2026-03-11T11:04:02Z
 ---
 
 # Change request: Default branch creation for uchange
