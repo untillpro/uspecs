@@ -7,5 +7,5 @@ load 'helpers'
     cd "$PROJECT_ROOT"
     uspecs foobar
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Unknown"* ]]
+    [[ "${stderr:-}" == *"Unknown"* ]]
 }

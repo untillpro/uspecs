@@ -2,6 +2,8 @@
 # Loaded by each per-command .bats file via: load 'helpers'
 set -Eeuo pipefail
 
+bats_require_minimum_version 1.5.0
+
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 STUBS_DIR="$BATS_TEST_DIRNAME/stubs"
 
@@ -51,10 +53,10 @@ setup() {
 # Helpers
 # ---------------------------------------------------------------------------
 
-# uspecs <args>: runs uspecs.sh, merging stderr into stdout so $output covers
-# both normal output and error messages.
+# uspecs <args>: runs uspecs.sh with stderr captured separately.
+# $output holds stdout; $stderr holds stderr (error messages, git notices, etc.).
 uspecs() {
-    run bash -c 'bash "$1" "${@:2}" 2>&1' -- "$PROJECT_ROOT/uspecs/u/scripts/uspecs.sh" "$@"
+    run --separate-stderr bash "$PROJECT_ROOT/uspecs/u/scripts/uspecs.sh" "$@"
 }
 
 # _make_change_folder <folder-name>: creates a minimal change folder with no

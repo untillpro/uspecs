@@ -42,7 +42,7 @@ load 'helpers'
     uspecs pr preflight --change-folder "$PROJECT_ROOT/uspecs/changes/2601010000-nogit"
     [ "$status" -ne 0 ]
     local want="No git repository found"
-    [[ "$output" =~ $want ]]
+    [[ "${stderr:-}" =~ $want ]]
 }
 
 @test "pr preflight fails with uncommitted changes" {
@@ -56,7 +56,7 @@ load 'helpers'
     uspecs pr preflight --change-folder "$PROJECT_ROOT/uspecs/changes/2601010000-uncommitted"
     [ "$status" -ne 0 ]
     local want="uncommitted changes"
-    [[ "$output" =~ $want ]]
+    [[ "${stderr:-}" =~ $want ]]
 }
 
 @test "pr preflight fails when on default branch" {
@@ -67,7 +67,7 @@ load 'helpers'
     uspecs pr preflight --change-folder "$PROJECT_ROOT/uspecs/changes/2601010000-defaultbranch"
     [ "$status" -ne 0 ]
     local want="is the default branch"
-    [[ "$output" =~ $want ]]
+    [[ "${stderr:-}" =~ $want ]]
 }
 
 @test "pr preflight fails when branch ends with --pr" {
@@ -78,7 +78,7 @@ load 'helpers'
     uspecs pr preflight --change-folder "$PROJECT_ROOT/uspecs/changes/2601010000-prbase"
     [ "$status" -ne 0 ]
     local want="ends with '--pr'"
-    [[ "$output" =~ $want ]]
+    [[ "${stderr:-}" =~ $want ]]
 }
 
 @test "pr preflight fails with uncompleted todo items" {

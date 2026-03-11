@@ -11,6 +11,7 @@ load 'helpers'
     [ -d "$PROJECT_ROOT/$output" ]
     [ -f "$PROJECT_ROOT/$output/change.md" ]
     grep -q "change_id:.*my-change" "$PROJECT_ROOT/$output/change.md"
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-change
 }
 
 @test "change new --branch creates git branch" {
@@ -20,24 +21,39 @@ load 'helpers'
     git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-feature
 }
 
+@test "change new --no-branch does not create branch" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-change --no-branch
+    [ "$status" -eq 0 ]
+    run git -C "$PROJECT_ROOT" show-ref --verify refs/heads/my-change
+    [ "$status" -ne 0 ]
+}
+
+@test "change new --branch and --no-branch fails with error" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-change --branch --no-branch
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"mutually exclusive"* ]]
+}
+
 @test "change new with unknown flag fails" {
     cd "$PROJECT_ROOT"
     uspecs change new my-change --unknown-flag
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Unknown"* ]]
+    [[ "${stderr:-}" == *"Unknown"* ]]
 }
 
 @test "change new with missing change-name fails" {
     cd "$PROJECT_ROOT"
     uspecs change new
     [ "$status" -ne 0 ]
-    [[ "$output" == *"change-name is required"* ]]
+    [[ "${stderr:-}" == *"change-name is required"* ]]
 }
 
 @test "change new with invalid change-name format fails" {
     cd "$PROJECT_ROOT"
     uspecs change new "Invalid_Name"
     [ "$status" -ne 0 ]
-    [[ "$output" == *"kebab-case"* ]]
+    [[ "${stderr:-}" == *"kebab-case"* ]]
 }
 

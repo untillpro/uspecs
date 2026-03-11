@@ -39,7 +39,7 @@ load 'helpers'
 
     uspecs change archive "2601010000-no-change-md"
     [ "$status" -ne 0 ]
-    [[ "$output" == *"change.md not found"* ]]
+    [[ "${stderr:-}" == *"change.md not found"* ]]
 }
 
 _assert_cleanup_complete() {
@@ -140,6 +140,6 @@ _assert_cleanup_complete() {
 
     uspecs change archive "2601010000-archive-ff-fail" -d
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Cannot fast-forward"* ]]
+    [[ "${stderr:-}" == *"Cannot fast-forward"* ]]
 }
 
