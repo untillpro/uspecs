@@ -2,6 +2,7 @@
 registered_at: 2026-03-11T14:58:38Z
 change_id: 2603111458-uarchive-all-option
 baseline: 94763247cd777b84839face89d4daaa63491ba96
+archived_at: 2026-03-11T15:51:31Z
 ---
 
 # Change request: uarchive --all option
