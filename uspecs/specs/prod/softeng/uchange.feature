@@ -5,6 +5,7 @@ Feature: Create change request
     When Engineer invokes uchange action
     Then base change request is created
     And Git branch is created with name following branch naming rules
+    And uimpl action is invoked automatically
 
   Scenario Outline: Create change request with issue reference
     Given AI Agent <configured> to fetch issue content from the referenced issue URL
@@ -28,19 +29,10 @@ Feature: Create change request
     Then base change request is created
     And Git branch is created with name following branch naming rules
 
-  Scenario: Create change request, default uimpl invocation
-    When Engineer invokes uchange action
-    Then base change request is created
-    And uimpl action is invoked automatically
-
   Scenario: Create change request with --no-impl option
     When Engineer invokes uchange action with --no-impl option
     Then base change request is created
-    And uimpl action is not invoked
-
-  Scenario: All options are independently composable
-    When Engineer invokes uchange action with --no-branch option and issue reference
-    Then all options are applied
+    But uimpl action is not invoked
 
   Rule: Edge cases
 

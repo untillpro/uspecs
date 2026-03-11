@@ -1,8 +1,14 @@
-# Action: Create change
+# Action: Create change request
 
 ## Overview
 
-Create a new change request folder with a structured Change File. Optionally fetch issue content from an issue URL (GitLab, GitHub, Jira) and create a git branch.
+Create a new change request folder with a structured Change File and automatically invoke uimpl action after change creation.
+
+Optionally:
+
+- Fetch issue content from an issue URL (GitLab, GitHub, Jira)
+- Create a git branch
+- Avoid uimpl invocation after change creation
 
 ## Instructions
 
@@ -25,6 +31,7 @@ Parameters:
   - Active Change Folder with Change File
   - Issue File (if issue reference provided)
   - Git branch (created by default unless --no-branch; git repository must exist)
+  - uimpl invocation (executed by default unless --no-impl)
 
 Flow:
 
