@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 # Usage:
 #   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
-#   uspecs change archive <change-folder-name> [-d]
+#   uspecs change archive <change-folder-name> [-d] | --all
 #   uspecs pr preflight
 #   uspecs pr create --title <title> [--body <body>]
 #   uspecs diff specs
@@ -393,6 +393,10 @@ cmd_change_archive() {
 
         echo "Fetching ${pr_remote}/${default_branch}..."
         (cd "$project_dir" && git fetch "$pr_remote" "$default_branch" 2>&1)
+
+        if [ ! -d "$changes_folder" ]; then
+            error "Changes folder not found: $changes_folder"
+        fi
 
         local archived=0 unchanged=0 failed=0
         local script_path
