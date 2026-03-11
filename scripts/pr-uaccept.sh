@@ -79,7 +79,7 @@ echo ""
 
 echo "=== Step 3: Merge pull request #$PR_NUMBER with squash ==="
 gh pr merge "$PR_NUMBER" --squash --auto --delete-branch
-echo "Pull request #$PR_NUMBER merged successfully"
+echo "Pull request #$PR_NUMBER queued for auto-merge"
 echo ""
 
 echo "=== Step 4: Post summary comment ==="

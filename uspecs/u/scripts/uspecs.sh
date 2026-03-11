@@ -511,7 +511,9 @@ cmd_change_archive() {
         if [ -z "$remote_exists" ]; then
             echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping archive."
             echo "Switching to $default_branch..."
-            (cd "$project_dir" && git checkout "$default_branch" 2>&1)
+            if ! (cd "$project_dir" && git checkout "$default_branch" 2>&1); then
+                error "Failed to checkout '$default_branch'. Resolve manually."
+            fi
 
             local deleted_branch_hash=""
             if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
@@ -608,7 +610,9 @@ cmd_change_archive() {
             echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping push."
         fi
 
-        (cd "$project_dir" && git checkout "$default_branch" 2>&1)
+        if ! (cd "$project_dir" && git checkout "$default_branch" 2>&1); then
+            error "Failed to checkout '$default_branch'. Resolve manually."
+        fi
 
         local deleted_branch_hash=""
         if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
