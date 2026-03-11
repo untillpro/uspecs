@@ -94,7 +94,7 @@ _assert_cleanup_complete() {
     _assert_cleanup_complete "my-feature--pr"
 }
 
-@test "change archive -d when remote branch gone: skips push and cleans up" {
+@test "change archive -d when remote branch gone: skips archive and cleans up" {
     cd "$PROJECT_ROOT"
 
     git checkout -b my-feature--pr
@@ -108,10 +108,15 @@ _assert_cleanup_complete() {
     uspecs change archive "2601010000-archive-remote-gone" -d
     [ "$status" -eq 0 ]
 
-    # push was skipped: origin does not have the PR branch
-    local remote_ref
-    remote_ref=$(git -C "$PROJECT_ROOT" ls-remote origin "refs/heads/my-feature--pr")
-    [ -z "$remote_ref" ]
+    # Archive was skipped: no archive folder was created for this change
+    if [ -d "$PROJECT_ROOT/uspecs/changes/archive" ]; then
+        local archived
+        archived=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*archive-remote-gone" | head -1)
+        [ -z "$archived" ]
+    fi
+
+    # Output confirms archive was skipped
+    [[ "$output" == *"skipping archive"* ]]
 
     _assert_cleanup_complete "my-feature--pr"
 }

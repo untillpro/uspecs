@@ -506,6 +506,34 @@ cmd_change_archive() {
         if [[ "$branch_name" != *--pr ]]; then
             error "-d can only be used on a PR branch (must end with '--pr'): '$branch_name'"
         fi
+
+        # f) PR branch with remote gone: skip archive, just refresh default and switch
+        if [ -z "$remote_exists" ]; then
+            echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping archive."
+            echo "Switching to $default_branch..."
+            (cd "$project_dir" && git checkout "$default_branch" 2>&1)
+
+            local deleted_branch_hash=""
+            if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
+                deleted_branch_hash=$(cd "$project_dir" && git rev-parse "refs/heads/$branch_name")
+                (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
+            fi
+            (cd "$project_dir" && git branch -dr "${pr_remote:-origin}/$branch_name") 2>/dev/null || true
+
+            if [ -n "$deleted_branch_hash" ]; then
+                echo "Deleted branch: $branch_name ($deleted_branch_hash)"
+                echo "To restore: git branch $branch_name $deleted_branch_hash"
+            fi
+
+            echo "Updating local $default_branch from ${pr_remote:-origin}/$default_branch..."
+            (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$default_branch" 2>&1)
+            if ! (cd "$project_dir" && git merge --ff-only "${pr_remote:-origin}/$default_branch" 2>&1); then
+                error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
+            fi
+
+            echo "Done: skipped archive (remote branch gone), switched to $default_branch"
+            return 0
+        fi
     fi
 
     local timestamp
