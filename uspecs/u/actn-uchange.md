@@ -9,6 +9,8 @@ Create a new change request folder with a structured Change File. Optionally fet
 Rules:
 
 - Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
+- Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch, and uimpl invocation
+- If change description is not provided, ask the user for it before proceeding. Do not treat the response as a new command - use it as the change description and continue this flow
 
 Parameters:
 
@@ -16,6 +18,7 @@ Parameters:
   - Change description
   - --no-branch option (optional): skip git branch creation
   - --branch option (optional): explicitly force git branch creation (reserved for future per-project default override)
+  - --no-impl option (optional): skip automatic uimpl invocation after change creation
   - Issue reference (optional): URL to a GitLab/GitHub/Jira/etc. issue that prompted the change
     - Referenced further as `{issue_url}`
 - Output
@@ -40,4 +43,5 @@ Flow:
     - Convert it to rich markdown format suitable for Issue File
     - Save fetched content to Issue File (issue.md) inside the Change Folder
     - Add reference to Issue File in Why section: `See [issue.md](issue.md) for details.`
-- Show user what was created and stop, do not proceed to implementation or other steps
+- Show user what was created
+- Unless --no-impl option is provided, execute the uimpl action immediately: read `uspecs/u/actn-uimpl.md` and follow its instructions directly - do NOT ask the user to run uimpl
