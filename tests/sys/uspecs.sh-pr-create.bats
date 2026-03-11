@@ -51,7 +51,7 @@ load 'helpers'
     uspecs pr create --title "Test PR" --body "Test body"
     [ "$status" -ne 0 ]
     local want="PR branch"
-    [[ "$output" =~ $want ]]
+    [[ "${stderr:-}" =~ $want ]]
 }
 
 @test "pr create rolls back pr branch and preserves change branch on failure" {

@@ -234,7 +234,7 @@ cmd_change_new() {
 
     if [ -n "$is_new_branch" ]; then
         if is_git_repo "$project_dir"; then
-            if ! (cd "$project_dir" && git checkout -b "$change_name" 2>&1); then
+            if ! (cd "$project_dir" && git checkout -b "$change_name"); then
                 echo "Warning: Failed to create branch '$change_name'" >&2
             fi
         else

@@ -7,12 +7,10 @@ load 'helpers'
     cd "$PROJECT_ROOT"
     uspecs change new my-change
     [ "$status" -eq 0 ]
-    local change_folder
-    change_folder=$(echo "$output" | tail -1)
-    [[ "$change_folder" == uspecs/changes/[0-9]*-my-change ]]
-    [ -d "$PROJECT_ROOT/$change_folder" ]
-    [ -f "$PROJECT_ROOT/$change_folder/change.md" ]
-    grep -q "change_id:.*my-change" "$PROJECT_ROOT/$change_folder/change.md"
+    [[ "$output" == uspecs/changes/[0-9]*-my-change ]]
+    [ -d "$PROJECT_ROOT/$output" ]
+    [ -f "$PROJECT_ROOT/$output/change.md" ]
+    grep -q "change_id:.*my-change" "$PROJECT_ROOT/$output/change.md"
     git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-change
 }
 
@@ -35,27 +33,27 @@ load 'helpers'
     cd "$PROJECT_ROOT"
     uspecs change new my-change --branch --no-branch
     [ "$status" -ne 0 ]
-    [[ "$output" == *"mutually exclusive"* ]]
+    [[ "${stderr:-}" == *"mutually exclusive"* ]]
 }
 
 @test "change new with unknown flag fails" {
     cd "$PROJECT_ROOT"
     uspecs change new my-change --unknown-flag
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Unknown"* ]]
+    [[ "${stderr:-}" == *"Unknown"* ]]
 }
 
 @test "change new with missing change-name fails" {
     cd "$PROJECT_ROOT"
     uspecs change new
     [ "$status" -ne 0 ]
-    [[ "$output" == *"change-name is required"* ]]
+    [[ "${stderr:-}" == *"change-name is required"* ]]
 }
 
 @test "change new with invalid change-name format fails" {
     cd "$PROJECT_ROOT"
     uspecs change new "Invalid_Name"
     [ "$status" -ne 0 ]
-    [[ "$output" == *"kebab-case"* ]]
+    [[ "${stderr:-}" == *"kebab-case"* ]]
 }
 
