@@ -36,6 +36,7 @@ set -Eeuo pipefail
 # pr create --title <title> --body <body>:
 #   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
 #   Body can be passed via --body or piped via stdin.
+#   Literal \n sequences in --body are decoded to actual newlines.
 #
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
