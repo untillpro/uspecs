@@ -12,7 +12,9 @@ Agent uses PowerShell to execute shell commands. Piping `pr_body` via stdin from
 
 ## What
 
-Update upr action to pass `pr_body` via `--body` parameter:
+Update upr action and scripts to pass `pr_body` via `--body` parameter with `\n` encoding:
 
-- Change `actn-upr.md` instruction from stdin piping to `--body "{pr_body}"` CLI parameter
-- Add note about escaping shell-special characters in `pr_body` (same as `pr_title`)
+- Change `actn-upr.md` instruction from stdin piping to `--body "{pr_body}"` CLI parameter with newline encoding as literal `\n` sequences
+- Add `\n` decoding in `pr.sh` for both `cmd_changepr` and `cmd_pr`
+- Add shell-special characters note for `pr_title` and `pr_body`
+- Add test for `\n` decoding in PR body

@@ -54,6 +54,23 @@ load 'helpers'
     [[ "${stderr:-}" =~ $want ]]
 }
 
+@test "pr create decodes literal backslash-n in body to newlines" {
+    cd "$PROJECT_ROOT"
+
+    git checkout -b pr-newline-change
+    echo "content" > "$PROJECT_ROOT/newline-file.txt"
+    git add .
+    git commit -q -m "newline commit"
+
+    uspecs pr create --title "Newline PR" --body 'first line\nsecond line'
+    [ "$status" -eq 0 ]
+
+    local body
+    body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$body" == *$'\n'* ]]
+    [[ "$body" == "first line"*"second line" ]]
+}
+
 @test "pr create rolls back pr branch and preserves change branch on failure" {
     cd "$PROJECT_ROOT"
     _make_change_folder "2601010000-rollback"

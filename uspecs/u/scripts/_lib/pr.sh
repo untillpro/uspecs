@@ -32,6 +32,7 @@ set -Eeuo pipefail
 #       Output git diff of the specs folder between HEAD and pr_remote/default_branch.
 #
 #   pr.sh changepr --title <title> --body <body>
+#       Literal \n sequences in --body are decoded to actual newlines.
 #       Create a PR from the current change_branch:
 #         - Fail fast if pr_branch ({change_branch}--pr) already exists.
 #         - Create pr_branch from pr_remote/default_branch.
@@ -42,6 +43,7 @@ set -Eeuo pipefail
 #         - On failure after pr_branch creation: roll back pr_branch, preserve change_branch.
 #
 #   pr.sh pr --title <title> --body <body> --next-branch <branch> [--delete-branch]
+#       Literal \n sequences in --body are decoded to actual newlines.
 #       Stage all changes, commit, push to origin, and open a PR against
 #       pr_remote's default branch. Switch to --next-branch afterwards.
 #       If --delete-branch is set, delete the current branch after switching.
@@ -217,6 +219,9 @@ cmd_pr() {
     [[ -z "$body" ]]        && error "--body is required"
     [[ -z "$next_branch" ]] && error "--next-branch is required"
 
+    # Decode literal \n sequences to actual newlines
+    body="${body//\\n/$'\n'}"
+
     local default_branch branch_name
     default_branch=$(default_branch_name)
     branch_name=$(git symbolic-ref --short HEAD)
@@ -338,6 +343,9 @@ cmd_changepr() {
         body=$(cat)
     fi
     [[ -z "$body" ]] && error "--body is required (or pipe body via stdin)"
+
+    # Decode literal \n sequences to actual newlines
+    body="${body//\\n/$'\n'}"
 
     local pr_remote default_branch change_branch pr_branch
     pr_remote=$(determine_pr_remote)

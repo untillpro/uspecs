@@ -39,7 +39,7 @@ Flow:
   - From the diff output identify `draft_title` and `draft_body`; construct `pr_title` and `pr_body` per `{templates_folder}/tmpl-pr.md`
 - Create PR:
   - Run `bash uspecs/u/scripts/uspecs.sh pr create --title "{pr_title}" --body "{pr_body}"`
-  - Note: `pr_title` and `pr_body` are passed on the command line; ensure they contain no shell-special characters (`"`, `$`, backticks, `\`, `!` etc.)
+  - Encode newlines in `pr_body` as literal `\n` sequences (the script decodes them back); ensure `pr_title` and `pr_body` contain no shell-special characters (`"`, `$`, backticks, `\`, `!` etc.)
   - If script exits with error: report the error and stop
   - Parse `pr_url` from script output
 - Report `pr_url` and `change_branch_head` to Engineer; inform that Engineer is now on `pr_branch` to address review comments and that the deleted change branch can be restored with `git branch {change_branch} {change_branch_head}`
