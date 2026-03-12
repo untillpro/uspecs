@@ -2,6 +2,7 @@
 registered_at: 2026-03-12T11:59:53Z
 change_id: 2603121159-pr-body-via-parameter
 baseline: c9614d33d1f10184c96e64781e1fe3b439938e6f
+archived_at: 2026-03-12T12:27:21Z
 ---
 
 # Change request: Pass PR body via --body parameter instead of stdin
