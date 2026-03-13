@@ -142,22 +142,13 @@ read_conf_param() {
 
 extract_issue_id() {
     # Extract issue ID from the last segment of an issue URL
-    # Takes the last path or fragment segment and strips non-alphanumeric
-    # characters (keeping hyphens and underscores)
+    # Takes the last /-separated segment, finds the first contiguous
+    # run of valid characters (alphanumeric, hyphens, underscores)
     local url="$1"
-
-    # Use fragment if present, otherwise last path segment
-    local segment
-    if [[ "$url" == *"#"* ]]; then
-        segment="${url##*#}"
-    else
-        segment="${url##*/}"
+    local segment="${url##*/}"
+    if [[ "$segment" =~ ^[^a-zA-Z0-9_-]*([a-zA-Z0-9_-]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
     fi
-
-    # Strip everything except alphanumeric, hyphens, underscores
-    segment="${segment//[^a-zA-Z0-9_-]/}"
-
-    echo "$segment"
 }
 
 cmd_change_new() {

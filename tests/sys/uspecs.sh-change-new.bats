@@ -93,3 +93,17 @@ load 'helpers'
     run git -C "$PROJECT_ROOT" show-ref --verify refs/heads/99-my-change
     [ "$status" -ne 0 ]
 }
+
+@test "change new with GitHub issue URL with comment anchor extracts issue ID not comment" {
+    cd "$PROJECT_ROOT"
+    uspecs change new fix-typo --issue-url "https://github.com/owner/repo/issues/42#issuecomment-123456"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/42-fix-typo
+}
+
+@test "change new with issue URL with no valid issue ID falls back to change name only" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-feature --issue-url "https://example.com/###"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-feature
+}
