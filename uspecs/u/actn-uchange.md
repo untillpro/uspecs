@@ -1,100 +1,55 @@
-# Action: Create change
+# Action: Create change request
 
 ## Overview
 
-Create a new change request folder with a structured Change File. Optionally fetch issue content from an issue URL (GitLab, GitHub, Jira) and create a git branch.
+Create a new change request folder with a structured Change File and automatically invoke uimpl action after change creation.
+
+Optionally:
+
+- Fetch issue content from an issue URL (GitLab, GitHub, Jira)
+- Create a git branch
+- Avoid uimpl invocation after change creation
 
 ## Instructions
 
 Rules:
 
 - Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
-- Strictly use definitions from the Definitions section
-- When you fetch issue content
-  - Convert it to rich markdown format suitable for Issue File
+- Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch, and uimpl invocation
+- If change description is not provided, ask the user for it before proceeding. Do not treat the response as a new command - use it as the change description and continue this flow
+- Never pass any optional parameter (`--no-branch`, `--branch`, `--no-impl`, `--issue-url`) to the script or alter default behavior unless it is explicitly requested
 
 Parameters:
 
 - Input
   - Change description
-  - --branch option (optional): create git branch for the change
+  - --no-branch option (optional): skip git branch creation
+  - --branch option (optional): explicitly force git branch creation (reserved for future per-project default override)
+  - --no-impl option (optional): skip automatic uimpl invocation after change creation
+  - Issue reference (optional): URL to a GitLab/GitHub/Jira/etc. issue that prompted the change
+    - Referenced further as `{issue_url}`
 - Output
   - Active Change Folder with Change File
   - Issue File (if issue reference provided)
-  - Git branch (if --branch option provided and git repository exists)
+  - Git branch (created by default unless --no-branch; git repository must exist)
+  - uimpl invocation (executed by default unless --no-impl)
 
 Flow:
 
-- Follow instructions from Scenarios section
-- Fail fast if Active Change Folder cannot be created or already exists
-- Create Active Change Folder with Change File:
-  - If issue reference provided:
-    - Try to fetch issue content
-    - If fetch succeeds:
-      - Save fetched content to Issue File (issue.md)
-      - Create Change File following Change File Template 1
-      - In Why section, reference Issue File: `See [issue.md](issue.md) for details.`
-    - If fetch fails:
-      - Create Change File following Change File Template 1 (no Issue File, no reference)
-  - If no issue reference: create Change File following Change File Template 1
-- Add frontmatter metadata:
-  - If issue reference was provided: `bash uspecs/u/scripts/uspecs.sh change frontmatter <absolute-path-to-change-file> --issue-url <issue-url>`
-  - If no issue reference: `bash uspecs/u/scripts/uspecs.sh change frontmatter <absolute-path-to-change-file>`
-- If --branch option provided:
-  - Extract change name from Change Folder name (remove timestamp prefix)
-  - Determine branch name following branch naming rules from conf.md:
-    - Without issue reference: `{change-name}`
-    - With Jira-style issue URL: `{project}-{issue-number}-{change-name}`
-    - With GitHub-style issue URL: `{issue-number}-{change-name}`
-  - Create git branch: `git checkout -b <branch-name>`
-  - If branch creation fails (no git repository, branch exists, etc.):
-    - Report error to user
-    - Continue (do not fail the change creation)
-  - If branch creation succeeds:
-    - Report success to user
-- STOP after creating the Change File with frontmatter (and optionally branch)
+- Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
+- Run script to create Change Folder:
+  - Base command: `bash uspecs/u/scripts/uspecs.sh change new {change_name}`
+  - If issue reference provided add `--issue-url "{issue_url}"` parameters (quoted to handle shell-special characters such as `&`)
+  - If --no-branch option provided add `--no-branch` parameter
+  - If --branch option provided add `--branch` parameter
+  - Fail fast if script exits with error
+  - Parse Change Folder path from script output, path is relative to project root
+- Write Change File body (`{templates_folder}/tmpl-change.md`) appended to Change File created by the script
+- If issue reference provided:
+  - Try to fetch issue content
+  - If fetch succeeds:
+    - Convert it to rich markdown format suitable for Issue File
+    - Save fetched content to Issue File (issue.md) inside the Change Folder
+    - Add reference to Issue File in Why section: `See [issue.md](issue.md) for details.`
 - Show user what was created
-
-## Definitions
-
-- Change File Template 1: ref. `$templates_folder/tmpl-change.md`
-
-## Scenarios
-
-```gherkin
-Feature: Create change request
-  Engineer asks AI Agent to create change request
-
-  All scenarios create Active Change Folder with Change File following Change File Template 1.
-
-  Scenario: Create change request without issue reference
-    When Engineer asks AI Agent to create change request without issue reference
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
-    And Frontmatter does not have issue_url value
-
-  Scenario Outline: Create change request with issue reference
-    Given AI Agent <ability> to fetch issue content from the referenced issue URL
-    When Engineer asks AI Agent to create change request with issue reference
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
-    And Frontmatter has issue_url value set to the referenced issue URL
-    And Issue File <issue-file-created-and-contains> the fetched issue contents in markdown format
-    And Change File <references> Issue File in the Why section
-    Examples:
-      | ability                        | references                    | issue-file-created-and-contains |
-      | has ability to fetch content   | references Issue File         | contains fetched issue content  |
-      | does not have ability to fetch | does not reference Issue File | is not created                  |
-
-  Scenario Outline: Create change request with --branch option
-    When Engineer asks AI Agent to create change request with --branch option
-    Then Active Change Folder is created with Change File
-    And Change File follows Change File Template 1
-    And Git branch is created with name following branch naming rules
-    And Branch creation <result> <reason>
-    Examples:
-      | result   | reason                                    |
-      | succeeds | when git repository exists                |
-      | fails    | when git repository does not exist        |
-      | fails    | when branch with same name already exists |
-```
+- Unless --no-impl option is provided, execute the uimpl action immediately: read `uspecs/u/actn-uimpl.md` and follow its instructions directly - do NOT ask the user to run uimpl

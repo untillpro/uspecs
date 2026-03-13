@@ -20,6 +20,12 @@ Feature: Install uspecs
     And uspecs metadata file is created and describes the alpha version
     And other flags are respected as in stable install
 
+  Scenario: Install local version
+    When Engineer runs install with --local and other flags
+    Then uspecs is installed from the local repository without downloading from GitHub
+    And uspecs metadata file is created with local version and commit info
+    And other flags are respected as in stable install
+
   Rule: Edge cases
 
     Scenario Outline: Installation failure
@@ -28,7 +34,8 @@ Feature: Install uspecs
       Then installation fails with "<message>"
 
       Examples:
-        | condition                   | message                                         |
-        | no git repository exists    | No git repository found                         |
-        | uspecs is already installed | uspecs is already installed, use update instead |
+        | condition                             | message                                         |
+        | no git repository exists              | No git repository found                         |
+        | uspecs is already installed           | uspecs is already installed, use update instead |
+        | working directory is not clean (--pr) | Working directory has uncommitted changes       |
 
