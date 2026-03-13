@@ -140,6 +140,17 @@ read_conf_param() {
     echo "$value"
 }
 
+extract_issue_id() {
+    # Extract issue ID from the last segment of an issue URL
+    # Takes the last /-separated segment, finds the first contiguous
+    # run of valid characters (alphanumeric, hyphens, underscores)
+    local url="$1"
+    local segment="${url##*/}"
+    if [[ "$segment" =~ ^[^a-zA-Z0-9_-]*([a-zA-Z0-9_-]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+    fi
+}
+
 cmd_change_new() {
     local change_name=""
     local issue_url=""
@@ -237,8 +248,16 @@ cmd_change_new() {
 
     if [ -n "$is_new_branch" ]; then
         if is_git_repo "$project_dir"; then
-            if ! (cd "$project_dir" && git checkout -b "$change_name"); then
-                echo "Warning: Failed to create branch '$change_name'" >&2
+            local branch_name="$change_name"
+            if [ -n "$issue_url" ]; then
+                local issue_id
+                issue_id=$(extract_issue_id "$issue_url")
+                if [ -n "$issue_id" ]; then
+                    branch_name="${issue_id}-${change_name}"
+                fi
+            fi
+            if ! (cd "$project_dir" && git checkout -b "$branch_name"); then
+                echo "Warning: Failed to create branch '$branch_name'" >&2
             fi
         else
             echo "Warning: Not a git repository, cannot create branch" >&2

@@ -21,8 +21,14 @@ All paths are relative to the project root:
   - Can be either Active (in `{changes_folder}`) or Archived (in `{changes_archive}`)
   - Active Change Folder files describe Active Change Request and its implementation
   - Branch naming for Change Folder (when --branch option used):
-    - Format: `{change-name}` (without timestamp prefix)
-    - Example: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
+    - Format: `{issue-id}-{change-name}` when issue URL provided, otherwise `{change-name}` (without timestamp prefix)
+    - Issue ID extraction:
+      - GitHub: numeric ID from URL (e.g., `42` from `https://github.com/owner/repo/issues/42`)
+      - GitLab: numeric ID from URL (e.g., `7` from `https://gitlab.com/group/project/-/issues/7`)
+      - Jira: project key and issue number (e.g., `PROJ-123` from `https://jira.example.com/browse/PROJ-123`)
+    - Examples:
+      - With issue URL: For Change Folder `2602141423-branch-option-uchange` and GitHub issue #42, branch name is `42-branch-option-uchange`
+      - Without issue URL: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
     - Branch is created from current HEAD after Change Folder and Change File are created
     - If branch creation fails, error is reported but change creation continues
   - PR branch naming (created by upr):

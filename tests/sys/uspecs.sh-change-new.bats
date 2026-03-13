@@ -57,3 +57,53 @@ load 'helpers'
     [[ "${stderr:-}" == *"kebab-case"* ]]
 }
 
+@test "change new with GitHub issue URL creates branch with issue-id prefix" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-feature --issue-url "https://github.com/owner/repo/issues/42"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/42-my-feature
+    grep -q "issue_url: https://github.com/owner/repo/issues/42" "$PROJECT_ROOT/$output/change.md"
+}
+
+@test "change new with GitLab issue URL creates branch with issue-id prefix" {
+    cd "$PROJECT_ROOT"
+    uspecs change new add-validation --issue-url "https://gitlab.com/group/project/-/issues/7"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/7-add-validation
+}
+
+@test "change new with Jira issue URL creates branch with issue-id prefix" {
+    cd "$PROJECT_ROOT"
+    uspecs change new fix-bug --issue-url "https://jira.example.com/browse/PROJ-123"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/PROJ-123-fix-bug
+}
+
+@test "change new with hash-fragment issue URL creates branch with issue-id prefix" {
+    cd "$PROJECT_ROOT"
+    uspecs change new fix-crash --issue-url "https://example.com/projects/#!766766"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/766766-fix-crash
+}
+
+@test "change new with issue URL and --no-branch does not create branch" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-change --issue-url "https://github.com/owner/repo/issues/99" --no-branch
+    [ "$status" -eq 0 ]
+    run git -C "$PROJECT_ROOT" show-ref --verify refs/heads/99-my-change
+    [ "$status" -ne 0 ]
+}
+
+@test "change new with GitHub issue URL with comment anchor extracts issue ID not comment" {
+    cd "$PROJECT_ROOT"
+    uspecs change new fix-typo --issue-url "https://github.com/owner/repo/issues/42#issuecomment-123456"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/42-fix-typo
+}
+
+@test "change new with issue URL with no valid issue ID falls back to change name only" {
+    cd "$PROJECT_ROOT"
+    uspecs change new my-feature --issue-url "https://example.com/###"
+    [ "$status" -eq 0 ]
+    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-feature
+}
