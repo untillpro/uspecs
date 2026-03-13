@@ -2,6 +2,7 @@
 registered_at: 2026-03-12T17:17:37Z
 change_id: 2603121717-branch-issue-id-prefix
 baseline: 705d383d5a3ecfbfe0f588430de2f1da98096a9c
+archived_at: 2026-03-13T08:29:58Z
 ---
 
 # Change request: Branch name should start with issue ID
