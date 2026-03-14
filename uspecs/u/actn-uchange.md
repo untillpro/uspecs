@@ -36,6 +36,13 @@ Parameters:
 
 Flow:
 
+- Pre-flight checklist (verify before proceeding):
+  - [ ] I have read `uspecs/u/concepts.md` and `uspecs/u/conf.md`
+  - [ ] User has NOT explicitly requested `--no-branch` -> I will NOT pass this flag
+  - [ ] User has NOT explicitly requested `--branch` -> I will NOT pass this flag
+  - [ ] User has NOT explicitly requested `--no-impl` -> I will NOT pass this flag
+  - [ ] User has NOT provided an issue URL -> I will NOT pass `--issue-url`
+  - [ ] If any of the above are explicitly requested, I will pass ONLY those flags
 - Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
 - Run script to create Change Folder:
   - Base command: `bash uspecs/u/scripts/uspecs.sh change new {change_name}`
