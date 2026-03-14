@@ -24,3 +24,11 @@ Feature: unit, system and e2e tests
     When Developer runs all tests
     Then unit, system and e2e tests are executed
     And results are reported per test with pass/fail status
+
+  # python scripts/run-tests.py tests/unit "shell metacharacters"
+  Scenario: Developer runs tests in parallel using Python runner with pattern
+    When Developer runs tests from folder "tests/unit" with filter "shell metacharacters"
+    Then tests are discovered recursively from the folder
+    And all tests whose names match "shell metacharacters" are executed in parallel
+    And each test result is reported as it completes with file path and test name
+    And summary reports total tests, failures, and elapsed time

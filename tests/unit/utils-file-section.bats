@@ -57,6 +57,9 @@ EOF
     run file_section "$TEST_TMPDIR/sample.md" "last-section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Final content."* ]]
+    local last_line
+    last_line=$(printf '%s\n' "$output" | tail -1)
+    [ "$last_line" = "Final content." ]
 }
 
 @test "stops at next heading - subsections excluded" {
@@ -142,7 +145,7 @@ EOF
     [ "$output" = "## empty-sec: Empty" ]
 }
 
-@test "output starts with heading and preserves blank line after it" {
+@test "outputs heading followed by blank line and body" {
     run file_section "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
     local first_line second_line
@@ -150,6 +153,8 @@ EOF
     second_line=$(printf '%s\n' "$output" | sed -n '2p')
     [ "$first_line" = "## first_section: First section" ]
     [ "$second_line" = "" ]
+    [[ "$output" == *"First content line."* ]]
+    [[ "$output" == *"Second content line."* ]]
 }
 
 @test "substitutes values containing backslashes" {

@@ -49,10 +49,11 @@ is_git_repo() {
 }
 
 # file_section <file> <section_id> [vars_map]
-# Outputs the body of a markdown section whose heading matches "## section_id: ...".
+# Outputs the heading and body of a markdown section whose heading matches
+# "## section_id: ...". The output includes the heading line itself.
 # section_id may contain alphanumerics, hyphens and underscores.
-# The section starts after the heading line and ends before the next heading
-# (any level) or EOF. Subsections are NOT included.
+# The section ends before the next heading (any level) or EOF.
+# Subsections are NOT included.
 # vars_map is the name of an associative array; every {KEY} in the body is
 # replaced with the corresponding value. Omit when no placeholders exist.
 # Fails if the file is missing, the section is not found, or unsubstituted
@@ -63,8 +64,8 @@ file_section() {
 
     [[ -f "$file" ]] || error "file not found: $file"
 
-    # Extract heading + body up to next heading, then strip the heading line.
-    # Keeping the heading in the initial output lets us distinguish
+    # Extract heading + body up to next heading.
+    # The heading is kept in the output and also lets us distinguish
     # "section found but empty" (heading present) from "not found" (no output).
     local raw
     raw=$(sed -n "/^#\\{1,\\} ${section_id}:/,/^#/{/^#\\{1,\\} ${section_id}:/p;/^#\\{1,\\} ${section_id}:/!{/^#/!p}}" "$file")
