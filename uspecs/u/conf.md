@@ -50,7 +50,7 @@ All paths are relative to the project root:
     - zero or many `Scenarios File`, `Requirements File`, `Technical Design File`
     - zero or one `Architecture File`
 - Functional Design Specifications
-  - Domain File: `{specs_folder}/{domain}/{domain}--domain.md`
+  - Domain File: `{specs_folder}/{domain}/domain.md`
   - Feature Files
     - Scenarios File: `{context-folder}/{feature}.feature`
     - Requirements File: `{context-folder}/{feature}--reqs.md`
@@ -59,16 +59,16 @@ All paths are relative to the project root:
   - Files like `go.mod`, `go.work`, `package.json`, `requirements.txt`, `pubspec.yaml` etc. that define project dependencies and configuration
 - Technical Design Specifications
   - Domain Technology
-    - Per domain: `{specs_folder}/{domain}/{domain}--tech.md`
+    - Per domain: `{specs_folder}/{domain}/tech.md`
     - Defines tech stack, architecture patterns etc., UI/UX guidelines etc.
   - Domain Architecture
-    - `{specs_folder}/{domain}/{domain}--arch.md`
+    - `{specs_folder}/{domain}/arch.md`
   - Domain Subsystem Architecture
-     or `{specs_folder}/{domain}/{subsystem}--arch.md`
+     or `{specs_folder}/{domain}/arch-{subsystem}.md`
   - Context Architecture
-    - `{context-folder}/{context}--arch.md`
+    - `{context-folder}/arch.md`
   - Context Subsystem Architecture
-     or `{context-folder}/{subsystem}--arch.md`
+     or `{context-folder}/arch-{subsystem}.md`
   - Feature Technical Design
     - Per feature: `{context-folder}/{feature}--td.md`
 
