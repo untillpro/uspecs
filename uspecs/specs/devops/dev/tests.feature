@@ -1,5 +1,11 @@
-Feature: system and e2e tests
+Feature: unit, system and e2e tests
   Developer runs automated tests to verify core script behavior
+
+  # bats tests/unit
+  Scenario: Developer runs unit tests
+    When Developer runs unit tests
+    Then tests exercise individual shell functions in isolation
+    And results are reported per test with pass/fail status
 
   # bats tests/sys
   Scenario: Developer runs system tests
@@ -16,5 +22,5 @@ Feature: system and e2e tests
   # bats --recursive tests
   Scenario: Developer runs all tests
     When Developer runs all tests
-    Then system and e2e tests are executed
+    Then unit, system and e2e tests are executed
     And results are reported per test with pass/fail status
