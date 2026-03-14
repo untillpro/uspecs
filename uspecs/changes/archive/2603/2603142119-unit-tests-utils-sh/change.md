@@ -2,6 +2,7 @@
 registered_at: 2026-03-14T19:07:39Z
 change_id: 2603141907-unit-tests-utils-sh
 baseline: 2f0386a6071c51c77eadb1fa5e00930c5fd2ee29
+archived_at: 2026-03-14T21:19:18Z
 ---
 
 # Change request: Unit tests and utils.sh file section output
