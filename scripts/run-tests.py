@@ -25,8 +25,8 @@ from pathlib import Path
 def discover_bats_files(folder):
     """Recursively discover all .bats files in the given folder."""
     folder_path = Path(folder)
-    if not folder_path.exists():
-        print(f"Error: Folder '{folder}' does not exist", file=sys.stderr)
+    if not folder_path.is_dir():
+        print(f"Error: '{folder}' is not a directory", file=sys.stderr)
         sys.exit(1)
 
     bats_files = list(folder_path.rglob("*.bats"))
