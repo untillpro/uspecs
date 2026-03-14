@@ -12,6 +12,15 @@ After a PR is reviewed and approved, finalizing it requires several manual steps
 
 ## What
 
+Requirements:
+
+### upr
+
+
+
+
+## Misc
+
 Introduce a new `uaccept` action and supporting script command:
 
 New action file `uspecs/u/actn-uaccept.md`:
