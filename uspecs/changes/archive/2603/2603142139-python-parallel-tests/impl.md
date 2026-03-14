@@ -2,7 +2,7 @@
 
 ## Functional design
 
-- [x] update: [dev/tests.feature](../../specs/devops/dev/tests.feature)
+- [x] update: [dev/tests.feature](../../../../specs/devops/dev/tests.feature)
   - add: Scenario "Developer runs tests in parallel using Python runner with pattern"
   - add: streaming results and elapsed time in Then clauses
 
@@ -12,7 +12,7 @@
 
 ## Construction
 
-- [x] create: [scripts/run-tests.py](../../../scripts/run-tests.py)
+- [x] create: [scripts/run-tests.py](../../../../../scripts/run-tests.py)
   - add: CLI argument parsing (folder, optional pattern, --workers flag)
   - add: Recursive .bats file discovery via pathlib.rglob
   - add: @test name extraction and per-test execution via `bats -f`

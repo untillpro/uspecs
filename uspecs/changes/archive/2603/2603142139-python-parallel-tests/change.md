@@ -2,6 +2,7 @@
 registered_at: 2026-03-14T20:28:03Z
 change_id: 2603142028-python-parallel-tests
 baseline: 6d5fddfe0d26fb9c60df90cd3d115025edbb0024
+archived_at: 2026-03-14T21:39:06Z
 ---
 
 # Change request: Python parallel test runner
