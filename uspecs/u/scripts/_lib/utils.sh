@@ -71,12 +71,7 @@ file_section() {
 
     [[ -n "$raw" ]] || error "section not found: $section_id in $file"
 
-    # Drop the heading line
-    local body
-    body=$(echo "$raw" | sed '1d')
-
-    # Strip leading and trailing blank lines
-    body=$(echo "$body" | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')
+    local body="$raw"
 
     # Apply substitutions from associative array (nameref)
     if [[ -n "${3:-}" ]]; then
@@ -93,7 +88,7 @@ file_section() {
 
     # Fail if unsubstituted placeholders remain
     local leftover
-    leftover=$(echo "$body" | grep -oE '\{[A-Za-z_][A-Za-z0-9_-]*\}' | head -1) || true
+    leftover=$(printf '%s\n' "$body" | grep -oE '\{[A-Za-z_][A-Za-z0-9_-]*\}' | head -1) || true
     [[ -z "$leftover" ]] || error "unsubstituted variable $leftover in $file"
 
     printf '%s\n' "$body"
