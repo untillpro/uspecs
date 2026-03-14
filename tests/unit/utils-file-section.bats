@@ -57,6 +57,9 @@ EOF
     run file_section "$TEST_TMPDIR/sample.md" "last-section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Final content."* ]]
+    local last_line
+    last_line=$(printf '%s\n' "$output" | tail -1)
+    [ "$last_line" = "Final content." ]
 }
 
 @test "stops at next heading - subsections excluded" {
@@ -139,15 +142,19 @@ EOF
 EOF
     run file_section "$TEST_TMPDIR/empty-section.md" "empty-sec"
     [ "$status" -eq 0 ]
-    [ -z "$output" ]
+    [ "$output" = "## empty-sec: Empty" ]
 }
 
-@test "strips leading and trailing blank lines" {
+@test "outputs heading followed by blank line and body" {
     run file_section "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
-    local first_line
-    first_line=$(echo "$output" | head -1)
-    [ "$first_line" = "First content line." ]
+    local first_line second_line
+    first_line=$(printf '%s\n' "$output" | sed -n '1p')
+    second_line=$(printf '%s\n' "$output" | sed -n '2p')
+    [ "$first_line" = "## first_section: First section" ]
+    [ "$second_line" = "" ]
+    [[ "$output" == *"First content line."* ]]
+    [[ "$output" == *"Second content line."* ]]
 }
 
 @test "substitutes values containing backslashes" {
@@ -162,6 +169,22 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *'C:\Users\me\dir'* ]]
     [[ "$output" == *'hello\nworld'* ]]
+}
+
+@test "preserves content lines starting with -n and -e" {
+    cat > "$TEST_TMPDIR/echo-flags.md" <<'EOF'
+## echo-sec: Echo flags test
+
+-n no newline flag
+-e escape flag
+-ne combined flags
+normal line
+EOF
+    run file_section "$TEST_TMPDIR/echo-flags.md" "echo-sec"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"-n no newline flag"* ]]
+    [[ "$output" == *"-e escape flag"* ]]
+    [[ "$output" == *"-ne combined flags"* ]]
 }
 
 @test "handles unsafe values with shell metacharacters" {
