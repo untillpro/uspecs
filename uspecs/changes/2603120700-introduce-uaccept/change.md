@@ -10,18 +10,51 @@ baseline: c9614d33d1f10184c96e64781e1fe3b439938e6f
 
 After a PR is reviewed and approved, finalizing it requires several manual steps: archiving all active changes, merging the PR with squash, and cleaning up local branches. Automating this via a dedicated `uaccept` action ensures the process is always executed consistently and reduces friction for the Engineer.
 
+## Background
+
+- https://claude.ai/chat/3b6882d3-33dc-4e17-8146-7cee7769ad91
+
 ## What
 
-Requirements:
+### utils
+
+- prompt_block file, block_id
+  - Dumps the content of the specified block to stdout
 
 ### upr
 
-- Prechecks
-  - Clean working tree (must be cleaned)
-  - Current branch is not default branch
-  - There is only one Active Change Folder with changes (vs pr-target/branch)
-- pr_title: If url exists then pr title is taken from change.md name
-- if more than one commit then new branch --pr is created and will be used as pr_branch, otherwise the current branch is used as pr_branch
+Prerequisites:
+
+- Clean working tree (must be cleaned)
+- Current branch is not default branch
+- There is only one Active Change Folder with changes (vs pr_remote/default_branch)
+  - pr_change_folder
+  - Message: "Expected exactly one modified Active Change Folder, found {n}" followed by a list of the relative (project root) paths of the modified Active Change Folders
+
+Data:
+
+- pr_title: Taken from the change.md title
+- pr_body: Prepared by Agent from pr_change_folder
+
+Flow:
+
+- Agent runs uspecs.sh pr precheks
+- uspecs.sh
+  - calls pr.sh changepr prechecks
+    - Perform the prechecks; if any check fails, exits with a non-zero code and a clear error message
+    - Return prompt to construct `draft_body` and rerun `uspecs.sh pr create --body "{draft_pr_body}"`
+      - Taken from prompts.md `## pr_precheks: Construct draft_body and return uspecs.sh with pr create command`
+        - utils `prompt_block(prompts.md, pr_precheks)`
+- Agent constructs `draft_body` and runs `uspecs.sh pr create`
+- uspecs.sh
+  - calls pr.sh changepr create
+    - Determine pr_change_folder
+    - Determine draft_title from pr_change_folder
+    - If branch has more than one commit ahead of pr_remote/default_branch
+      - git reset --soft pr_remote/default_branch
+    - commit with
+- pr.sh mergedef -> pr.sh changepr prechecks
+  - No merge
 
 
 ## Misc
