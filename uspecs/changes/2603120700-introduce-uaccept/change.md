@@ -16,7 +16,12 @@ Requirements:
 
 ### upr
 
-
+- Prechecks
+  - Clean working tree (must be cleaned)
+  - Current branch is not default branch
+  - There is only one Active Change Folder with changes (vs pr-target/branch)
+- pr_title: If url exists then pr title is taken from change.md name
+- if more than one commit then new branch --pr is created and will be used as pr_branch, otherwise the current branch is used as pr_branch
 
 
 ## Misc
