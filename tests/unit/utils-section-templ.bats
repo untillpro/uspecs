@@ -26,7 +26,7 @@ Second content line.
 
 ## second-section: Second section
 
-Some {color} text with {size} values.
+Some ${color} text with ${size} values.
 
 ## sub_parent: Parent with subsection
 
@@ -47,14 +47,14 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "extracts section by id" {
-    run file_section "$TEST_TMPDIR/sample.md" "first_section"
+    run section_templ "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"First content line."* ]]
     [[ "$output" == *"Second content line."* ]]
 }
 
 @test "extracts last section up to EOF" {
-    run file_section "$TEST_TMPDIR/sample.md" "last-section"
+    run section_templ "$TEST_TMPDIR/sample.md" "last-section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Final content."* ]]
     local last_line
@@ -63,7 +63,7 @@ EOF
 }
 
 @test "stops at next heading - subsections excluded" {
-    run file_section "$TEST_TMPDIR/sample.md" "sub_parent"
+    run section_templ "$TEST_TMPDIR/sample.md" "sub_parent"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Parent content."* ]]
     [[ "$output" != *"Child content."* ]]
@@ -72,13 +72,13 @@ EOF
 @test "matches section id with hyphens" {
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A vars=([color]="red" [size]="big")
-    run file_section "$TEST_TMPDIR/sample.md" "second-section" vars
+    run section_templ "$TEST_TMPDIR/sample.md" "second-section" vars
     [ "$status" -eq 0 ]
     [[ "$output" == *"Some red text with big values."* ]]
 }
 
 @test "matches section id with underscores" {
-    run file_section "$TEST_TMPDIR/sample.md" "first_section"
+    run section_templ "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"First content line."* ]]
 }
@@ -90,7 +90,7 @@ EOF
 @test "substitutes all variables" {
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A vars=([color]="blue" [size]="large")
-    run file_section "$TEST_TMPDIR/sample.md" "second-section" vars
+    run section_templ "$TEST_TMPDIR/sample.md" "second-section" vars
     [ "$status" -eq 0 ]
     [[ "$output" == *"Some blue text with large values."* ]]
 }
@@ -98,23 +98,36 @@ EOF
 @test "fails when variable is not substituted" {
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A vars=([color]="red")
-    run file_section "$TEST_TMPDIR/sample.md" "second-section" vars
+    run section_templ "$TEST_TMPDIR/sample.md" "second-section" vars
     [ "$status" -eq 1 ]
-    [[ "$output" == *"unsubstituted variable"* ]]
-    [[ "$output" == *"{size}"* ]]
+    [[ "$output" == *"unbound variable"* ]]
+    [[ "$output" == *"second-section"* ]]
     [[ "$output" == *"sample.md"* ]]
 }
 
 @test "fails when no vars provided but placeholders exist" {
-    run file_section "$TEST_TMPDIR/sample.md" "second-section"
+    run section_templ "$TEST_TMPDIR/sample.md" "second-section"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"unsubstituted variable"* ]]
+    [[ "$output" == *"unbound variable"* ]]
 }
 
 @test "succeeds with no vars when section has no placeholders" {
-    run file_section "$TEST_TMPDIR/sample.md" "first_section"
+    run section_templ "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
     [[ "$output" == *"First content line."* ]]
+}
+
+@test "substitutes shell environment variables" {
+    # shellcheck disable=SC2030  # subshell modification intentional
+    export TEMPL_TEST_VAR="env_value_123"
+    cat > "$TEST_TMPDIR/envvar.md" <<'EOF'
+## env-sec: Env var test
+
+value is ${TEMPL_TEST_VAR} here
+EOF
+    run section_templ "$TEST_TMPDIR/envvar.md" "env-sec"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"value is env_value_123 here"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -122,31 +135,20 @@ EOF
 # ---------------------------------------------------------------------------
 
 @test "returns error for missing file" {
-    run file_section "$TEST_TMPDIR/nonexistent.md" "first_section"
+    run section_templ "$TEST_TMPDIR/nonexistent.md" "first_section"
     [ "$status" -eq 1 ]
     [[ "$output" == *"file not found"* ]]
 }
 
 @test "returns error for missing section" {
-    run file_section "$TEST_TMPDIR/sample.md" "nonexistent"
+    run section_templ "$TEST_TMPDIR/sample.md" "nonexistent"
     [ "$status" -eq 1 ]
     [[ "$output" == *"section not found"* ]]
     [[ "$output" == *"sample.md"* ]]
 }
 
-@test "handles empty section" {
-    cat > "$TEST_TMPDIR/empty-section.md" <<'EOF'
-## empty-sec: Empty
-
-## next-sec: Next
-EOF
-    run file_section "$TEST_TMPDIR/empty-section.md" "empty-sec"
-    [ "$status" -eq 0 ]
-    [ "$output" = "## empty-sec: Empty" ]
-}
-
 @test "outputs heading followed by blank line and body" {
-    run file_section "$TEST_TMPDIR/sample.md" "first_section"
+    run section_templ "$TEST_TMPDIR/sample.md" "first_section"
     [ "$status" -eq 0 ]
     local first_line second_line
     first_line=$(printf '%s\n' "$output" | sed -n '1p')
@@ -161,11 +163,11 @@ EOF
     cat > "$TEST_TMPDIR/backslash.md" <<'EOF'
 ## bs-sec: Backslash test
 
-path is {path} and esc is {esc}
+path is ${bspath} and esc is ${bsesc}
 EOF
     # shellcheck disable=SC2034  # vars used via nameref
-    declare -A vars=([path]='C:\Users\me\dir' [esc]='hello\nworld')
-    run file_section "$TEST_TMPDIR/backslash.md" "bs-sec" vars
+    declare -A vars=([bspath]='C:\Users\me\dir' [bsesc]='hello\nworld')
+    run section_templ "$TEST_TMPDIR/backslash.md" "bs-sec" vars
     [ "$status" -eq 0 ]
     [[ "$output" == *'C:\Users\me\dir'* ]]
     [[ "$output" == *'hello\nworld'* ]]
@@ -180,7 +182,7 @@ EOF
 -ne combined flags
 normal line
 EOF
-    run file_section "$TEST_TMPDIR/echo-flags.md" "echo-sec"
+    run section_templ "$TEST_TMPDIR/echo-flags.md" "echo-sec"
     [ "$status" -eq 0 ]
     [[ "$output" == *"-n no newline flag"* ]]
     [[ "$output" == *"-e escape flag"* ]]
@@ -191,7 +193,7 @@ EOF
     cat > "$TEST_TMPDIR/unsafe.md" <<'EOF'
 ## unsafe-sec: Unsafe test
 
-cmd is {cmd} and text is {text}
+cmd is ${cmd} and text is ${text}
 EOF
     # Hostile values with shell metacharacters that would execute if not handled properly
     # shellcheck disable=SC2016  # Intentionally using literal $() and backticks
@@ -202,7 +204,7 @@ EOF
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A vars=([cmd]="$unsafe_cmd" [text]="$unsafe_text")
 
-    run file_section "$TEST_TMPDIR/unsafe.md" "unsafe-sec" vars
+    run section_templ "$TEST_TMPDIR/unsafe.md" "unsafe-sec" vars
     [ "$status" -eq 0 ]
     # Verify the hostile strings are treated as literal text, not executed
     # shellcheck disable=SC2016  # Intentionally checking for literal $()
@@ -210,5 +212,16 @@ EOF
     [[ "$output" == *'& echo pwned'* ]]
     # shellcheck disable=SC2016  # Intentionally checking for literal backticks
     [[ "$output" == *'`date`'* ]]
+}
+
+@test "handles empty section" {
+    cat > "$TEST_TMPDIR/empty-section.md" <<'EOF'
+## empty-sec: Empty
+
+## next-sec: Next
+EOF
+    run section_templ "$TEST_TMPDIR/empty-section.md" "empty-sec"
+    [ "$status" -eq 0 ]
+    [ "$output" = "## empty-sec: Empty" ]
 }
 

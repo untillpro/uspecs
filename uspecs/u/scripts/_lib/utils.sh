@@ -48,49 +48,46 @@ is_git_repo() {
     (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
 }
 
-# file_section <file> <section_id> [vars_map]
+# section_templ <file> <section_id> [vars_map]
 # Outputs the heading and body of a markdown section whose heading matches
 # "## section_id: ...". The output includes the heading line itself.
 # section_id may contain alphanumerics, hyphens and underscores.
 # The section ends before the next heading (any level) or EOF.
 # Subsections are NOT included.
-# vars_map is the name of an associative array; every {KEY} in the body is
-# replaced with the corresponding value. Omit when no placeholders exist.
-# Fails if the file is missing, the section is not found, or unsubstituted
-# {VAR} placeholders remain in the output.
-file_section() {
+# Uses shell parameter expansion (eval) to substitute ${VAR} placeholders.
+# vars_map is the name of an associative array; its keys are set as local
+# variables before expansion. Any existing shell/environment variables are
+# also available in templates.
+# Fails if the file is missing, the section is not found, or an unbound
+# variable is referenced (via set -u).
+section_templ() {
     local file="$1"
     local section_id="$2"
 
     [[ -f "$file" ]] || error "file not found: $file"
 
-    # Extract heading + body up to next heading.
-    # The heading is kept in the output and also lets us distinguish
-    # "section found but empty" (heading present) from "not found" (no output).
     local raw
     raw=$(sed -n "/^#\\{1,\\} ${section_id}:/,/^#/{/^#\\{1,\\} ${section_id}:/p;/^#\\{1,\\} ${section_id}:/!{/^#/!p}}" "$file")
 
     [[ -n "$raw" ]] || error "section not found: $section_id in $file"
 
-    local body="$raw"
-
-    # Apply substitutions from associative array (nameref)
+    # Set local variables from associative array (nameref)
     if [[ -n "${3:-}" ]]; then
-        local -n _fs_vars="$3"
-        local key value
-        for key in "${!_fs_vars[@]}"; do
-            value="${_fs_vars[$key]}"
-            # Escape special chars: bash 4.4+ treats \ as escape, & as matched pattern
-            value="${value//\\/\\\\}"  # Escape backslashes
-            value="${value//&/\\&}"     # Escape ampersands
-            body="${body//\{$key\}/$value}"
+        local -n _st_vars="$3"
+        local _st_key
+        for _st_key in "${!_st_vars[@]}"; do
+            local "$_st_key"="${_st_vars[$_st_key]}"
         done
     fi
 
-    # Fail if unsubstituted placeholders remain
-    local leftover
-    leftover=$(printf '%s\n' "$body" | grep -oE '\{[A-Za-z_][A-Za-z0-9_-]*\}' | head -1) || true
-    [[ -z "$leftover" ]] || error "unsubstituted variable $leftover in $file"
+    # Use eval to expand ${VAR} placeholders in the body.
+    # Variable values are safe: they expand through parameter expansion,
+    # whose results are not subject to further command substitution.
+    # Unbound variables trigger set -u error; catch and report with context.
+    local body
+    if ! body=$(eval "printf '%s\n' \"$raw\"" 2>&1); then
+        error "unbound variable in section $section_id of $file: $body"
+    fi
 
     printf '%s\n' "$body"
 }
