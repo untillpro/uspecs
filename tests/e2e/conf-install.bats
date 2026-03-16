@@ -71,6 +71,42 @@ make_git_tmpdir_with_origin() {
     echo "$output" | grep -q "uncommitted changes"
 }
 
+# Scenario: Install alpha version with nlic
+# Uses --local so the current workspace code is installed (no GitHub download lag).
+# Verifies uspecs.yml written with commit field and CLAUDE.md created.
+@test "Alpha install (local, nlic)" {
+    local tmpdir
+    tmpdir=$(make_git_tmpdir)
+    # shellcheck disable=SC2064
+    trap 'rm -rf "$tmpdir"' EXIT
+    cd "$tmpdir"
+    run bash "$CONF_SH" install -y --local --nlic
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/CLAUDE.md" ]
+    grep -q "invocation_methods:.*nlic" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+}
+
+# Scenario: Install alpha version with both nlia and nlic
+# Uses --local so the current workspace code is installed (no GitHub download lag).
+# Verifies both AGENTS.md and CLAUDE.md created and metadata lists both methods.
+@test "Alpha install (local, nlia + nlic)" {
+    local tmpdir
+    tmpdir=$(make_git_tmpdir)
+    # shellcheck disable=SC2064
+    trap 'rm -rf "$tmpdir"' EXIT
+    cd "$tmpdir"
+    run bash "$CONF_SH" install -y --local --nlia --nlic
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/AGENTS.md" ]
+    [ -f "$tmpdir/CLAUDE.md" ]
+    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlic" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+}
+
 # Scenario: Installation failure - uspecs already installed
 # Verifies exit non-zero and correct error message
 @test "Already installed failure" {
