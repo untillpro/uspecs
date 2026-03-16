@@ -17,24 +17,6 @@ error() {
     exit 1
 }
 
-# get_pr_info <pr_sh_path> <map_nameref> [project_dir]
-# Calls pr.sh info and parses the key=value output into the given associative array.
-# Keys populated: pr_remote, default_branch
-# project_dir: directory to run pr.sh from (defaults to $PWD)
-# Returns non-zero if pr.sh info fails.
-# // TODO circular dependency: pr.sh depends on utils.sh for error(), but utils.sh depends on pr.sh for get_pr_info()
-get_pr_info() {
-    local pr_sh="$1"
-    local -n _pr_info_map="$2"
-    local project_dir="${3:-$PWD}"
-    local output
-    output=$(cd "$project_dir" && bash "$pr_sh" info) || return 1
-    while IFS='=' read -r key value; do
-        [[ -z "$key" ]] && continue
-        _pr_info_map["$key"]="$value"
-    done <<< "$output"
-}
-
 # is_tty
 # Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
 is_tty() {

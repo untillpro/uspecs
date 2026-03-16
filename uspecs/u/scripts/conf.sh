@@ -31,62 +31,8 @@ esac
 _TEMP_DIRS=()
 _TEMP_FILES=()
 
-# git_path
-# Ensures Git's usr/bin is in PATH on Windows (Git Bash / MSYS2 / Cygwin).
-# Call this at the start of main() in every top-level script.
-git_path() {
-    if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
-        PATH="/usr/bin:${PATH}"
-    fi
-}
-
-# get_pr_info <pr_sh_path> <map_nameref> [project_dir]
-# Calls pr.sh info and parses the key=value output into the given associative array.
-# Keys populated: pr_remote, default_branch
-# project_dir: directory to run pr.sh from (defaults to $PWD)
-# Returns non-zero if pr.sh info fails.
-get_pr_info() {
-    local pr_sh="$1"
-    local -n _pr_info_map="$2"
-    local project_dir="${3:-$PWD}"
-    local output
-    output=$(cd "$project_dir" && bash "$pr_sh" info) || return 1
-    while IFS='=' read -r key value; do
-        [[ -z "$key" ]] && continue
-        _pr_info_map["$key"]="$value"
-    done <<< "$output"
-}
-
-# is_tty
-# Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
-is_tty() {
-    [ -t 0 ]
-}
-
-# is_git_repo <dir>
-# Returns 0 if <dir> is inside a git repository, 1 otherwise.
-is_git_repo() {
-    local dir="$1"
-    (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
-}
-
-# sed_inplace file sed-args...
-# Portable in-place sed. Uses -i.bak for BSD compatibility.
-# Restores the original file on failure.
-sed_inplace() {
-    local file="$1"
-    shift
-    if ! sed -i.bak "$@" "$file"; then
-        mv "${file}.bak" "$file" 2>/dev/null || true
-        return 1
-    fi
-    rm -f "${file}.bak"
-}
-
-error() {
-    echo "Error: $1" >&2
-    exit 1
-}
+# shellcheck source=_lib/git.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
 
 get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
@@ -370,7 +316,7 @@ show_operation_plan() {
 
         local -A pr_info
         local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
-        if get_pr_info "$script_dir/_lib/pr.sh" pr_info "$project_dir" 2>/dev/null; then
+        if git_pr_info pr_info "$project_dir" 2>/dev/null; then
             pr_remote="${pr_info[pr_remote]:-}"
             default_branch="${pr_info[default_branch]:-}"
             target_repo_url=$(git -C "$project_dir" remote get-url "$pr_remote" 2>/dev/null)
@@ -673,7 +619,7 @@ cmd_apply() {
     local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
+        (cd "$project_dir" && git_ffdefault)
         trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
     fi
 
@@ -714,7 +660,7 @@ cmd_apply() {
     # PR: create feature branch from default branch
     local branch_name="${command_name}-uspecs-${version_string_branch}"
     if [[ "$pr_flag" == "true" ]]; then
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
+        (cd "$project_dir" && git_prbranch "$branch_name")
     fi
 
     # Save existing metadata for update/upgrade
@@ -761,7 +707,7 @@ cmd_apply() {
         pr_info_file=$(create_temp_file)
 
         # Capture PR info from stderr while showing normal output
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
+        (cd "$project_dir" && git_pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
         trap - ERR
 

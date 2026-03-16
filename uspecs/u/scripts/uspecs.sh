@@ -34,7 +34,7 @@ set -Eeuo pipefail
 #   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
-#   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
+#   Creates a PR from the current change branch (delegates to _lib/git.sh git_changepr).
 #   Body can be passed via --body or piped via stdin.
 #   Literal \n sequences in --body are decoded to actual newlines.
 #
@@ -95,6 +95,8 @@ get_script_dir() {
 
 # shellcheck source=_lib/utils.sh
 source "$(get_script_dir)/_lib/utils.sh"
+# shellcheck source=_lib/git.sh
+source "$(get_script_dir)/_lib/git.sh"
 
 get_project_dir() {
     local script_dir
@@ -339,7 +341,7 @@ cmd_pr_preflight() {
     fi
     local lib_dir
     lib_dir="$(get_script_dir)/_lib"
-    "$lib_dir/pr.sh" mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
+    git_mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
 }
 
 cmd_change_archiveall() {
@@ -357,10 +359,8 @@ cmd_change_archiveall() {
         error "change archiveall requires a git repository"
     fi
 
-    local pr_sh
-    pr_sh="$(get_script_dir)/_lib/pr.sh"
     local -A pr_info
-    if ! get_pr_info "$pr_sh" pr_info "$project_dir"; then
+    if ! git_pr_info pr_info "$project_dir"; then
         error "change archiveall requires remote info to be available (remote reachable?)"
     fi
     local default_branch="${pr_info[default_branch]:-}"
@@ -485,10 +485,8 @@ cmd_change_archive() {
         fi
 
         local -A pr_info
-        local pr_sh
-        pr_sh="$(get_script_dir)/_lib/pr.sh"
-        if ! get_pr_info "$pr_sh" pr_info; then
-            error "-d requires pr.sh info to be available (remote reachable?)"
+        if ! git_pr_info pr_info; then
+            error "-d requires git remote info to be available (remote reachable?)"
         fi
         local default_branch="${pr_info[default_branch]:-}"
         local pr_remote="${pr_info[pr_remote]:-}"
@@ -706,7 +704,7 @@ main() {
                     cmd_pr_preflight "$@"
                     ;;
                 create)
-                    "$lib_dir/pr.sh" changepr "$@"
+                    git_changepr "$@"
                     ;;
                 *)
                     error "Unknown pr subcommand: $subcommand. Available: preflight, create"
@@ -722,7 +720,7 @@ main() {
 
             case "$target" in
                 specs)
-                    "$lib_dir/pr.sh" diff specs "$@"
+                    git_diff specs "$@"
                     ;;
                 *)
                     error "Unknown diff target: $target. Available: specs"

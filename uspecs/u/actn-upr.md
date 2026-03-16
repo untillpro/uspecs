@@ -9,7 +9,7 @@ Create a pull request from the current change branch by squash-merging it into a
 Rules:
 
 - Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
-- Always call `uspecs.sh` for git/PR operations — never call `_lib/pr.sh` directly
+- Always call `uspecs.sh` for git/PR operations — never invoke scripts from the `_lib` folder directly
 - Read `change.md` frontmatter to determine `issue_url` and `issue_id`
 
 Parameters:
