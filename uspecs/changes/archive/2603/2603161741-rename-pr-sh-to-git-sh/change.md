@@ -2,6 +2,7 @@
 registered_at: 2026-03-16T17:00:10Z
 change_id: 2603161700-rename-pr-sh-to-git-sh
 baseline: dbe2f52ce7562d845e2ecda5111f9b9fff4c6056
+archived_at: 2026-03-16T17:41:07Z
 ---
 
 ## Summary

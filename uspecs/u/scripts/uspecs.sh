@@ -315,11 +315,10 @@ convert_links_to_relative() {
 
 cmd_pr_preflight() {
     local change_folder_path=""
-    local preflight_args=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --change-folder) change_folder_path="$2"; shift 2 ;;
-            *) preflight_args+=("$1"); shift ;;
+            *) error "Unknown flag: $1" ;;
         esac
     done
     if [ -z "$change_folder_path" ]; then
@@ -339,9 +338,7 @@ cmd_pr_preflight() {
         echo "Complete or cancel todo items before creating a PR"
         exit 1
     fi
-    local lib_dir
-    lib_dir="$(get_script_dir)/_lib"
-    git_mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
+    git_mergedef
 }
 
 cmd_change_archiveall() {
@@ -665,9 +662,6 @@ main() {
 
     local command="$1"
     shift
-
-    local lib_dir
-    lib_dir="$(get_script_dir)/_lib"
 
     case "$command" in
         change)
