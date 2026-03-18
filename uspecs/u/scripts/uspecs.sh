@@ -34,7 +34,7 @@ set -Eeuo pipefail
 #   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
-#   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
+#   Creates a PR from the current change branch (delegates to _lib/git.sh git_changepr).
 #   Body can be passed via --body or piped via stdin.
 #   Literal \n sequences in --body are decoded to actual newlines.
 #
@@ -95,6 +95,8 @@ get_script_dir() {
 
 # shellcheck source=_lib/utils.sh
 source "$(get_script_dir)/_lib/utils.sh"
+# shellcheck source=_lib/git.sh
+source "$(get_script_dir)/_lib/git.sh"
 
 get_project_dir() {
     local script_dir
@@ -313,11 +315,10 @@ convert_links_to_relative() {
 
 cmd_pr_preflight() {
     local change_folder_path=""
-    local preflight_args=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --change-folder) change_folder_path="$2"; shift 2 ;;
-            *) preflight_args+=("$1"); shift ;;
+            *) error "Unknown flag: $1" ;;
         esac
     done
     if [ -z "$change_folder_path" ]; then
@@ -337,9 +338,7 @@ cmd_pr_preflight() {
         echo "Complete or cancel todo items before creating a PR"
         exit 1
     fi
-    local lib_dir
-    lib_dir="$(get_script_dir)/_lib"
-    "$lib_dir/pr.sh" mergedef "${preflight_args[@]+"${preflight_args[@]}"}"
+    git_mergedef
 }
 
 cmd_change_archiveall() {
@@ -357,10 +356,8 @@ cmd_change_archiveall() {
         error "change archiveall requires a git repository"
     fi
 
-    local pr_sh
-    pr_sh="$(get_script_dir)/_lib/pr.sh"
     local -A pr_info
-    if ! get_pr_info "$pr_sh" pr_info "$project_dir"; then
+    if ! git_pr_info pr_info "$project_dir"; then
         error "change archiveall requires remote info to be available (remote reachable?)"
     fi
     local default_branch="${pr_info[default_branch]:-}"
@@ -485,10 +482,8 @@ cmd_change_archive() {
         fi
 
         local -A pr_info
-        local pr_sh
-        pr_sh="$(get_script_dir)/_lib/pr.sh"
-        if ! get_pr_info "$pr_sh" pr_info; then
-            error "-d requires pr.sh info to be available (remote reachable?)"
+        if ! git_pr_info pr_info; then
+            error "-d requires git remote info to be available (remote reachable?)"
         fi
         local default_branch="${pr_info[default_branch]:-}"
         local pr_remote="${pr_info[pr_remote]:-}"
@@ -668,9 +663,6 @@ main() {
     local command="$1"
     shift
 
-    local lib_dir
-    lib_dir="$(get_script_dir)/_lib"
-
     case "$command" in
         change)
             if [ $# -lt 1 ]; then
@@ -706,7 +698,7 @@ main() {
                     cmd_pr_preflight "$@"
                     ;;
                 create)
-                    "$lib_dir/pr.sh" changepr "$@"
+                    git_changepr "$@"
                     ;;
                 *)
                     error "Unknown pr subcommand: $subcommand. Available: preflight, create"
@@ -722,7 +714,7 @@ main() {
 
             case "$target" in
                 specs)
-                    "$lib_dir/pr.sh" diff specs "$@"
+                    git_diff specs "$@"
                     ;;
                 *)
                     error "Unknown diff target: $target. Available: specs"
