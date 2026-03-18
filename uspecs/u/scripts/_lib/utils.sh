@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+# Well, we do not neeed it, since it is sourced, just for consistency with other scripts
 set -Eeuo pipefail
 
 # git_path

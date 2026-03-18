@@ -5,7 +5,7 @@ baseline: dbe2f52ce7562d845e2ecda5111f9b9fff4c6056
 archived_at: 2026-03-16T17:41:07Z
 ---
 
-## Summary
+# Summary
 
 Rename `_lib/pr.sh` to `_lib/git.sh` and change usage from execution (`bash pr.sh command`) to sourcing (`source git.sh`) with direct function calls.
 
@@ -18,7 +18,7 @@ Rename `_lib/pr.sh` to `_lib/git.sh` and change usage from execution (`bash pr.s
 ## Changes
 
 - Rename `_lib/pr.sh` to `_lib/git.sh`, update header comments, remove dispatch block
-- Update `_lib/utils.sh`: simplify `get_pr_info` to call `cmd_info` directly (no path param)
+- Update `_lib/utils.sh`: remove `get_pr_info` (moved to `git.sh` as `git_pr_info`; circular dependency resolved)
 - Update `uspecs.sh`: source `git.sh`, call functions directly instead of executing
 - Update `conf.sh`: source `git.sh`, call functions directly instead of executing
 - Update `actn-upr.md`: reference `_lib/git.sh` instead of `_lib/pr.sh`
