@@ -2,6 +2,7 @@
 registered_at: 2026-03-16T16:49:10Z
 change_id: 2603161649-e2e-tests-conf-alpha
 baseline: 379b7a843f880ac62e546b851a42d43dffe36ec0
+archived_at: 2026-03-18T17:37:51Z
 ---
 
 # Change request: E2E tests for conf install alpha scenarios
