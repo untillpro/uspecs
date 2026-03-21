@@ -1,18 +1,9 @@
 # Agents instructions
 
-## Naming conventions
-
-| Category                | Convention    | Example                                |
-|-------------------------|---------------|----------------------------------------|
-| Specs file/folder names | kebab-case    | `spec-impact.md`, `init-project/`      |
-| Entity names in specs   | Title Case    | `Human`, `External System`, `AI Agent` |
-| Gherkin scenarious      | Sentence case | `User registration`, `Email delivery`  |
-| Descriptive text        | Sentence case | `Sends transactional emails`           |
-| Section headers         | Sentence case | `## Specifications impact`             |
-
-## bash sources
+## General guidelines
 
 - Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead.
+- Use `tests/run-tests.py [test-folder] [<pattern>]` for tests
 
 <!-- uspecs:begin -->
 

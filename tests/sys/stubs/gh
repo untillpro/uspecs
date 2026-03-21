@@ -10,6 +10,18 @@ if [[ "${1:-}" == "pr" ]]; then
             if [[ "${GH_STUB_PR_EXISTS:-}" == "1" ]]; then
                 if [[ " $* " == *" --web "* ]]; then
                     echo "Opening github.com/org/repo/pull/42 in your browser."
+                elif [[ " $* " == *" -q "* ]]; then
+                    # Handle -q flag for jq-style queries
+                    json="${GH_STUB_PR_JSON:-{\"number\":42,\"state\":\"OPEN\",\"url\":\"https://github.com/org/repo/pull/42\"}}"
+                    if [[ " $* " == *" .state"* ]]; then
+                        echo "$json" | grep -o '"state":"[^"]*"' | sed 's/"state":"//;s/"$//'
+                    elif [[ " $* " == *" .number"* ]]; then
+                        echo "$json" | grep -o '"number":[0-9]*' | sed 's/"number"://'
+                    elif [[ " $* " == *" .url"* ]]; then
+                        echo "$json" | grep -o '"url":"[^"]*"' | sed 's/"url":"//;s/"$//'
+                    else
+                        echo "$json"
+                    fi
                 else
                     echo "${GH_STUB_PR_JSON:-{\"number\":42,\"state\":\"OPEN\",\"url\":\"https://github.com/org/repo/pull/42\"}}"
                 fi

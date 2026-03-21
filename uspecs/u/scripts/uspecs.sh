@@ -776,12 +776,10 @@ cmd_prompt_upr() {
     fi
 
     # Check if PR already exists for this branch
-    local pr_json
-    if pr_json=$(gh pr view --json number,url,state 2>/dev/null); then
+    local pr_state pr_number
+    if pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # PR exists -- check its state
-        local pr_state pr_number
-        pr_state=$(printf '%s' "$pr_json" | grep -o '"state":"[^"]*"' | head -1 | sed 's/"state":"//;s/"$//')
-        pr_number=$(printf '%s' "$pr_json" | grep -o '"number":[0-9]*' | head -1 | sed 's/"number"://')
+        pr_number=$(gh pr view --json number -q ".number" 2>/dev/null)
 
         if [[ "$pr_state" == "OPEN" ]]; then
             # PR exists and is OPEN -- open in browser and show message
@@ -911,17 +909,14 @@ cmd_prompt_uaccept() {
     prompts_file="$(get_script_dir)/prompts.md"
 
     # Check PR state
-    local pr_json
-    if ! pr_json=$(gh pr view --json number,state,url 2>/dev/null); then
+    local pr_state pr_number
+    if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
         section_templ "$prompts_file" "uaccept_no_pr"
         return 0
     fi
 
-    local pr_number pr_state pr_url
-    pr_number=$(printf '%s' "$pr_json" | grep -o '"number":[0-9]*' | head -1 | sed 's/"number"://')
-    pr_state=$(printf '%s' "$pr_json" | grep -o '"state":"[^"]*"' | head -1 | sed 's/"state":"//;s/"$//')
-    pr_url=$(printf '%s' "$pr_json" | grep -o '"url":"[^"]*"' | head -1 | sed 's/"url":"//;s/"$//')
+    pr_number=$(gh pr view --json number -q ".number" 2>/dev/null)
 
     if [[ "$pr_state" != "OPEN" ]]; then
         # PR is not in OPEN state
