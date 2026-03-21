@@ -24,7 +24,7 @@ _make_uaccept_change() {
     git -C "$PROJECT_ROOT" commit -q -m "add $folder_name"
 }
 
-# Helper: set up a feature branch with a WCF and upstream ready for prompt uaccept.
+# Helper: set up a feature branch with a WCF and upstream ready for action uaccept.
 # Returns with CWD in $PROJECT_ROOT on the feature branch.
 # shellcheck disable=SC2120  # Arguments are optional with defaults
 _setup_uaccept_branch() {
@@ -41,20 +41,20 @@ _setup_uaccept_branch() {
 }
 
 # Scenario: PR not found
-@test "prompt uaccept: PR not found" {
+@test "action uaccept: PR not found" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=0
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -eq 0 ]
     [[ "$output" == *"## uaccept_no_pr"* ]]
     [[ "$output" == *"No open PR found"* ]]
 }
 
 # Scenario: PR in OPEN state
-@test "prompt uaccept: PR in OPEN state - merge succeeds" {
+@test "action uaccept: PR in OPEN state - merge succeeds" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -62,7 +62,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"OPEN","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -eq 0 ]
 
     # Verify success message
@@ -77,7 +77,7 @@ _setup_uaccept_branch() {
 }
 
 # Scenario: PR in OPEN state: Attempt to merge PR fails
-@test "prompt uaccept: PR in OPEN state - merge fails" {
+@test "action uaccept: PR in OPEN state - merge fails" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -87,7 +87,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_MERGE_FAIL=1
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -eq 0 ]
     
     # Verify merge failed message
@@ -102,7 +102,7 @@ _setup_uaccept_branch() {
 }
 
 # Scenario: PR in OPEN state: Active Working Change Folder exists
-@test "prompt uaccept: PR in OPEN state - active WCF is archived" {
+@test "action uaccept: PR in OPEN state - active WCF is archived" {
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
 
@@ -119,7 +119,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"OPEN","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -eq 0 ]
 
     # After squash merge, we're on default branch and feature branch is deleted
@@ -137,7 +137,7 @@ _setup_uaccept_branch() {
 }
 
 # Scenario: PR is not in OPEN state
-@test "prompt uaccept: PR is not in OPEN state" {
+@test "action uaccept: PR is not in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -145,7 +145,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"MERGED","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -eq 0 ]
     
     # Verify not_open message
@@ -161,54 +161,54 @@ _setup_uaccept_branch() {
 
 # Scenario Outline: Validation rejects invalid state
 # Example: no git repository
-@test "prompt uaccept: Validation rejects, no git repository" {
+@test "action uaccept: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
     cd "$PROJECT_ROOT"
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"No git repository"* ]]
 }
 
 # Scenario Outline: Validation rejects invalid state
 # Example: working tree has uncommitted changes
-@test "prompt uaccept: Validation rejects, working tree has uncommitted changes" {
+@test "action uaccept: Validation rejects, working tree has uncommitted changes" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     echo "uncommitted" > "$PROJECT_ROOT/dirty.txt"
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"uncommitted changes"* ]]
 }
 
 # Scenario Outline: Validation rejects invalid state
 # Example: current branch is the default branch
-@test "prompt uaccept: Validation rejects, current branch is the default branch" {
+@test "action uaccept: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
     git checkout -q main
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Current branch is the default branch"* ]]
 }
 
 # Scenario Outline: Validation rejects invalid state
 # Example: current branch has no upstream
-@test "prompt uaccept: Validation rejects, current branch has no upstream" {
+@test "action uaccept: Validation rejects, current branch has no upstream" {
     cd "$PROJECT_ROOT"
     git checkout -q -b no-upstream-branch
     _make_uaccept_change "2601010000-no-upstream" "No upstream"
     # Do NOT set upstream
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"has no upstream"* ]]
 }
 
 # Scenario Outline: Validation rejects invalid state
 # Example: not exactly one Working Change Folder exists
-@test "prompt uaccept: Validation rejects, No Working Change Folder exists" {
+@test "action uaccept: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b empty-branch
     # Create a commit without any change folder
@@ -218,14 +218,14 @@ _setup_uaccept_branch() {
     git push -q origin empty-branch
     git branch --set-upstream-to=origin/empty-branch
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"No Working Change Folder"* ]]
 }
 
 # Scenario Outline: Validation rejects invalid state
 # Example: Multiple Working Change Folders exist
-@test "prompt uaccept: Validation rejects, Multiple Working Change Folder exists" {
+@test "action uaccept: Validation rejects, Multiple Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b multi-wcf-branch
     _make_uaccept_change "2601010000-first-change" "First change"
@@ -233,7 +233,7 @@ _setup_uaccept_branch() {
     git push -q origin multi-wcf-branch
     git branch --set-upstream-to=origin/multi-wcf-branch
 
-    uspecs prompt uaccept
+    uspecs action uaccept
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Multiple Working Change Folders"* ]]
 }
