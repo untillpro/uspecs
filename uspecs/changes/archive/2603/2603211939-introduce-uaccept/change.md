@@ -59,5 +59,6 @@ Add system tests covering the full flow of `prompt upr` and `prompt uaccept`, in
 - 260321, before deep rethink
   - https://github.com/untillpro/uspecs/blob/59ae5fec30f2368e13be898ab0861e6f3cdae70f/uspecs/changes/2603120700-introduce-uaccept/change.md
   - https://github.com/untillpro/uspecs/blob/1f15a2b741ad56905f43f9ac4b65446983e6e255/uspecs/changes/2603120700-introduce-uaccept/impl.md
-- https://app.augmentcode.com/share/dYtLzgvNR98
+- Development: https://app.augmentcode.com/share/dYtLzgvNR98
 - 7dabdab
+- Review: https://app.augmentcode.com/share/2s5r_WbLT-k
