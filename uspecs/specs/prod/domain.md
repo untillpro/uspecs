@@ -36,7 +36,6 @@ Systems:
 - pr_remote: git remote used for pull request operations; "upstream" if it exists, otherwise "origin"
 - default_branch: primary branch of the repository that pull requests target (e.g., "main")
 - change branch: git branch associated with a change request; named after change-name without the timestamp prefix
-- PR branch: git branch with suffix "--pr" created by upr from pr_remote/default_branch; contains a single squashed commit ready for pull request submission
 
 ### uspecs concepts
 
@@ -55,6 +54,8 @@ Systems:
   - The functional design specifies how a program will behave to outside agents and the technical design describes how that functionality is to be implemented ([stanford](https://web.archive.org/web/20241111203113/https://uit.stanford.edu/pmo/technical-design))
 - Construction
   - Software construction refers to the detailed creation and maintenance of software through coding, verification, unit testing, integration testing and debugging (SWEBOK, 2025, chapter 4)
+
+See also: [u/conf.md](../../u/conf.md)
 
 ## Contexts
 
