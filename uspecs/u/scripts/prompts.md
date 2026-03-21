@@ -2,7 +2,7 @@
 
 ## upr_already_exists: PR already exists for current branch
 
-A PR already exists for the current branch. It has been opened in your browser.
+Inform Engineer that PR already exists for the current branch. It has been opened in your browser.
 
 ## upr_success: Next steps after PR creation
 
