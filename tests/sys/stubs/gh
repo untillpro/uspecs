@@ -46,6 +46,24 @@ if [[ "${1:-}" == "pr" ]]; then
                 echo "gh: merge failed" >&2
                 exit 1
             fi
+            # Mimic gh pr merge --delete-branch behavior
+            # Real gh merges the PR (squash or regular), switches to default branch, then deletes the local branch
+            if [[ " $* " == *" --delete-branch"* ]]; then
+                current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+                default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+                if [[ -n "$current_branch" && "$current_branch" != "$default_branch" ]]; then
+                    # Switch to default branch
+                    (git checkout -q "$default_branch" 2>/dev/null || git checkout -q main 2>/dev/null) || true
+                    # Merge the feature branch (squash if --squash flag is present)
+                    if [[ " $* " == *" --squash"* ]]; then
+                        (git merge --squash "$current_branch" 2>/dev/null && git commit --no-edit -m "Merge PR" 2>/dev/null) || true
+                    else
+                        (git merge --no-edit "$current_branch" 2>/dev/null) || true
+                    fi
+                    # Delete the feature branch
+                    (git branch -D "$current_branch" 2>/dev/null) || true
+                fi
+            fi
             exit 0
             ;;
     esac

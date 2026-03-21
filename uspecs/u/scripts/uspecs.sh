@@ -969,6 +969,10 @@ cmd_prompt_uaccept() {
     fi
 
     # Merge succeeded -- cleanup
+    # gh pr merge --delete-branch already switched to default branch and deleted local branch
+    # Clean up remote tracking ref (errors ignored)
+    git branch -dr "origin/$current_branch" 2>/dev/null || true
+
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A success_vars=(
         [pr_number]="$pr_number"

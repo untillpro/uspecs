@@ -64,7 +64,7 @@ _setup_uaccept_branch() {
 
     uspecs prompt uaccept
     [ "$status" -eq 0 ]
-    
+
     # Verify success message
     [[ "$output" == *"## uaccept_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
@@ -113,7 +113,7 @@ _setup_uaccept_branch() {
     # Push to origin and set upstream
     git push -q origin my-feature
     git branch --set-upstream-to=origin/my-feature
-    
+
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
     # shellcheck disable=SC2030,SC2031
@@ -122,17 +122,15 @@ _setup_uaccept_branch() {
     uspecs prompt uaccept
     [ "$status" -eq 0 ]
 
-    # Verify WCF was archived (moved from original location)
-    [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
-    # Archive folder should exist somewhere under archive/
+    # After squash merge, we're on default branch and feature branch is deleted
+    # The squash merge combines all commits, so individual commit messages are lost
+    # Verify WCF was archived by checking the working tree after merge
     local archive_count
     archive_count=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-change" 2>/dev/null | wc -l)
     [ "$archive_count" -eq 1 ]
 
-    # Verify archive commit was made
-    local last_commit
-    last_commit=$(git log -1 --pretty=%s)
-    [[ "$last_commit" == *"Archive $folder_name"* ]]
+    # Verify original folder was removed
+    [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
 
     # Verify success message
     [[ "$output" == *"## uaccept_success"* ]]
