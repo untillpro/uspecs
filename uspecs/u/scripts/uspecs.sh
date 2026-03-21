@@ -4,8 +4,8 @@ set -Eeuo pipefail
 # uspecs automation
 #
 # Usage:
-#   uspecs prompt upr
-#   uspecs prompt uaccept
+#   uspecs action upr
+#   uspecs action uaccept
 #   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
 #   uspecs change archive <change-folder-name> [-d] | --all
 #   uspecs pr preflight
@@ -708,11 +708,11 @@ changes_detect_wcf() {
     printf '%s\n' "${!folders[@]}"
 }
 
-# cmd_prompt_upr
+# cmd_action_upr
 # Full upr flow: validate, detect WCF, check no existing PR, read change.md,
 # compute pr_title/commit_message/see_details_line, archive WCF if active,
 # set upstream, squash, force-push, open PR creation in browser, output prompt.
-cmd_prompt_upr() {
+cmd_action_upr() {
     local project_dir
     project_dir=$(get_project_dir)
     cd "$project_dir"
@@ -869,10 +869,10 @@ cmd_prompt_upr() {
     section_templ "$prompts_file" "upr_success" vars
 }
 
-# cmd_prompt_uaccept
+# cmd_action_uaccept
 # Full uaccept flow: validate, detect WCF, check PR state, handle branches,
 # archive WCF if active, attempt merge, handle failure, branch cleanup.
-cmd_prompt_uaccept() {
+cmd_action_uaccept() {
     local project_dir
     project_dir=$(get_project_dir)
     cd "$project_dir"
@@ -992,21 +992,21 @@ main() {
     shift
 
     case "$command" in
-        prompt)
+        action)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs prompt <keyword>"
+                error "Usage: uspecs action <keyword>"
             fi
             local keyword="$1"
             shift
             case "$keyword" in
                 upr)
-                    cmd_prompt_upr "$@"
+                    cmd_action_upr "$@"
                     ;;
                 uaccept)
-                    cmd_prompt_uaccept "$@"
+                    cmd_action_uaccept "$@"
                     ;;
                 *)
-                    error "Unknown prompt keyword: $keyword. Available: upr, uaccept"
+                    error "Unknown action keyword: $keyword. Available: upr, uaccept"
                     ;;
             esac
             ;;
