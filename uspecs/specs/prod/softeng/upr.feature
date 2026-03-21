@@ -1,47 +1,52 @@
-Feature: Create pull request from change branch
-  Engineer asks AI Agent to create a pull request from the current change branch
+Feature: Create pull request from current branch
+  Engineer asks AI Agent to create a pull request from the current branch
 
-  Scenario: Create pull request
+  Scenario Outline: Create pull request, current branch has a PR associated with it
+    Given a PR in <pr_state> state is associated with the current branch
     When Engineer invokes upr action
-    Then AI Agent asks confirmation before proceeding
-    And pull request is created with a single squashed commit
-    And change branch is removed
-    And Engineer is on the PR branch
-    And AI Agent reports pull request URL to Engineer
+    Then <action> is performed
+    Examples:
+      | pr_state | action                                                                                |
+      | OPEN     | message "A PR already exists for the current branch" is displayed and PR is opened    |
+      | CLOSED   | new PR creation proceeds normally (archive, squash, force-push, open browser)         |
+      | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally |
 
-  Scenario Outline: PR title and body include issue reference when available
+  Scenario: Create pull request, current branch does not have a PR associated with it
+    When Engineer invokes upr action
+    Then pr_remote/default_branch is fetched
+    And Working Change Folder is archived if active
+    And local branch is set to track origin/current_branch if not already
+    And branch is squashed into a single commit with commit_message
+    And branch is force-pushed
+    And PR creation is opened in the browser with pr_title and commit_message
+    And Engineer is prompted with next steps
+
+  Scenario Outline: pr_title and commit_message include issue reference when available
     Given <issue_condition>
     When Engineer invokes upr action
     Then PR title is <title_format>
-    And PR body is <body_format>
+    And see_details_line is "See {path-from-prj-root-to-change.md} for details"
+    And commit message is <message_format>
+    And change_title is text after ":" in the first `#` heading of change.md, trimmed
     Examples:
-      | issue_condition                | title_format               | body_format                                             |
-      | change has issue_url           | [{issue_id}] {draft_title} | [{issue_id}]({issue_url}) {draft_title}\n\n{draft_body} |
-      | change does not have issue_url | {draft_title}              | {draft_title}\n\n{draft_body}                           |
+      | issue_condition                | title_format                | message_format                                         |
+      | change has issue_url           | [{issue_id}] {change_title} | Closes #{issue_id}: {change_title}\n{see_details_line} |
+      | change does not have issue_url | {change_title}              | {change_title}\n{see_details_line}                     |
 
   Rule: Edge cases
 
     Scenario Outline: Validation rejects invalid state
       Given <condition>
       When Engineer invokes upr action
-      Then AI Agent displays error and stops
+      Then AI Agent displays error <message> and stops
       Examples:
-        | condition                                |
-        | no git repository                        |
-        | working tree has uncommitted changes     |
-        | current branch is the default branch     |
-        | current branch ends with --pr            |
-        | PR branch already exists                 |
-        | change folder has uncompleted todo items |
+        | condition                                                                     | message                                                                                     |
+        | no changes detected in the current branch since branching from default branch | same as condition                                                                           |
+        | no git repository                                                             | same as condition                                                                           |
+        | working tree has uncommitted changes                                          | same as condition                                                                           |
+        | current branch is the default branch                                          | PR should not be created from the default branch                                            |
+        | Multiple Working Change Folder exists                                         | Multiple Working Change Folder exists with the list of folders                              |
+        | No Working Change Folder exists                                               | same as condition                                                                           |
+        | change folder has uncompleted todo items                                      | listing files and line numbers with uncompleted items, prompting to complete them before PR |
 
-    Scenario: Merge conflicts with default branch
-      Given change branch has conflicts with the default branch
-      When Engineer invokes upr action
-      Then AI Agent reports merge conflict and asks Engineer to resolve and re-run
-
-    Scenario: Failure during PR creation preserves change branch
-      Given PR creation fails after PR branch was created
-      When error is handled
-      Then PR branch is cleaned up
-      And change branch is preserved
-
+  # uncompleted - AI👍

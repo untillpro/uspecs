@@ -117,7 +117,7 @@ EOF
     [[ "$output" == *"First content line."* ]]
 }
 
-@test "substitutes shell environment variables" {
+@test "does not substitute shell environment variables (safe)" {
     # shellcheck disable=SC2030  # subshell modification intentional
     export TEMPL_TEST_VAR="env_value_123"
     cat > "$TEST_TMPDIR/envvar.md" <<'EOF'
@@ -126,8 +126,9 @@ EOF
 value is ${TEMPL_TEST_VAR} here
 EOF
     run section_templ "$TEST_TMPDIR/envvar.md" "env-sec"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"value is env_value_123 here"* ]]
+    # Env vars are NOT expanded -- treated as unbound placeholders
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"unbound variable"* ]]
 }
 
 # ---------------------------------------------------------------------------

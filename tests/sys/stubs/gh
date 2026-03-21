@@ -2,6 +2,74 @@
 set -Eeuo pipefail
 
 echo "$@" >> "${BATS_TEST_TMPDIR}/gh.calls"
+
+# Dispatch on subcommand
+if [[ "${1:-}" == "pr" ]]; then
+    case "${2:-}" in
+        view)
+            if [[ "${GH_STUB_PR_EXISTS:-}" == "1" ]]; then
+                if [[ " $* " == *" --web "* ]]; then
+                    echo "Opening github.com/org/repo/pull/42 in your browser."
+                elif [[ " $* " == *" -q "* ]]; then
+                    # Handle -q flag for jq-style queries
+                    json="${GH_STUB_PR_JSON:-{\"number\":42,\"state\":\"OPEN\",\"url\":\"https://github.com/org/repo/pull/42\"}}"
+                    if [[ " $* " == *" .state"* ]]; then
+                        echo "$json" | grep -o '"state":"[^"]*"' | sed 's/"state":"//;s/"$//'
+                    elif [[ " $* " == *" .number"* ]]; then
+                        echo "$json" | grep -o '"number":[0-9]*' | sed 's/"number"://'
+                    elif [[ " $* " == *" .url"* ]]; then
+                        echo "$json" | grep -o '"url":"[^"]*"' | sed 's/"url":"//;s/"$//'
+                    else
+                        echo "$json"
+                    fi
+                else
+                    echo "${GH_STUB_PR_JSON:-{\"number\":42,\"state\":\"OPEN\",\"url\":\"https://github.com/org/repo/pull/42\"}}"
+                fi
+                exit 0
+            fi
+            echo "no pull requests found for branch" >&2
+            exit 1
+            ;;
+        create)
+            if [[ " $* " == *" --body-file "* ]]; then
+                cat >> "${BATS_TEST_TMPDIR}/gh.body"
+            fi
+            if [[ "${GH_STUB_FAIL:-}" == "1" ]]; then
+                echo "gh: simulated failure" >&2
+                exit 1
+            fi
+            echo "https://github.com/org/repo/pull/42"
+            exit 0
+            ;;
+        merge)
+            if [[ "${GH_STUB_MERGE_FAIL:-}" == "1" ]]; then
+                echo "gh: merge failed" >&2
+                exit 1
+            fi
+            # Mimic gh pr merge --delete-branch behavior
+            # Real gh merges the PR (squash or regular), switches to default branch, then deletes the local branch
+            if [[ " $* " == *" --delete-branch"* ]]; then
+                current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+                default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+                if [[ -n "$current_branch" && "$current_branch" != "$default_branch" ]]; then
+                    # Switch to default branch
+                    (git checkout -q "$default_branch" 2>/dev/null || git checkout -q main 2>/dev/null) || true
+                    # Merge the feature branch (squash if --squash flag is present)
+                    if [[ " $* " == *" --squash"* ]]; then
+                        (git merge --squash "$current_branch" 2>/dev/null && git commit --no-edit -m "Merge PR" 2>/dev/null) || true
+                    else
+                        (git merge --no-edit "$current_branch" 2>/dev/null) || true
+                    fi
+                    # Delete the feature branch
+                    (git branch -D "$current_branch" 2>/dev/null) || true
+                fi
+            fi
+            exit 0
+            ;;
+    esac
+fi
+
+# Fallback: original behavior for non-pr commands
 cat >> "${BATS_TEST_TMPDIR}/gh.body"
 if [[ "${GH_STUB_FAIL:-}" == "1" ]]; then
     echo "gh: simulated failure" >&2

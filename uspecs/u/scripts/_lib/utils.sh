@@ -38,12 +38,11 @@ is_git_repo() {
 # section_id may contain alphanumerics, hyphens and underscores.
 # The section ends before the next heading (any level) or EOF.
 # Subsections are NOT included.
-# Uses shell parameter expansion (eval) to substitute ${VAR} placeholders.
-# vars_map is the name of an associative array; its keys are set as local
-# variables before expansion. Any existing shell/environment variables are
-# also available in templates.
-# Fails if the file is missing, the section is not found, or an unbound
-# variable is referenced (via set -u).
+# Substitutes ${VAR} placeholders using the provided associative array.
+# Only variables from vars_map are substituted; shell/environment variables
+# are NOT expanded (safe against command injection via backticks or $()).
+# Fails if the file is missing, the section is not found, or an unsubstituted
+# ${VAR} placeholder remains.
 section_templ() {
     local file="$1"
     local section_id="$2"
@@ -55,25 +54,75 @@ section_templ() {
 
     [[ -n "$raw" ]] || error "section not found: $section_id in $file"
 
-    # Set local variables from associative array (nameref)
+    # Substitute ${KEY} patterns using awk (safe: no shell expansion of values)
+    local body="$raw"
     if [[ -n "${3:-}" ]]; then
         local -n _st_vars="$3"
         local _st_key
         for _st_key in "${!_st_vars[@]}"; do
-            local "$_st_key"="${_st_vars[$_st_key]}"
+            export "_ST_VAL=${_st_vars[$_st_key]}"
+            body=$(printf '%s\n' "$body" | awk -v "pat=\${${_st_key}}" \
+                '{ val=ENVIRON["_ST_VAL"]
+                   idx=index($0,pat)
+                   while(idx>0){ $0=substr($0,1,idx-1) val substr($0,idx+length(pat)); idx=index($0,pat) }
+                   print }')
         done
+        unset _ST_VAL
     fi
 
-    # Use eval to expand ${VAR} placeholders in the body.
-    # Variable values are safe: they expand through parameter expansion,
-    # whose results are not subject to further command substitution.
-    # Unbound variables trigger set -u error; catch and report with context.
-    local body
-    if ! body=$(eval "printf '%s\n' \"$raw\"" 2>&1); then
-        error "unbound variable in section $section_id of $file: $body"
+    # Check for remaining unsubstituted ${...} placeholders
+    if [[ "$body" =~ \$\{[a-zA-Z_][a-zA-Z0-9_]*\} ]]; then
+        error "unbound variable in section $section_id of $file: ${BASH_REMATCH[0]}"
     fi
 
     printf '%s\n' "$body"
+}
+
+# md_read_frontmatter_field <file> <field_name>
+# Extracts the value of a named field from YAML frontmatter (between --- delimiters).
+# Returns the trimmed value. Fails if the file is missing or the field is not found.
+md_read_frontmatter_field() {
+    local file="$1"
+    local field_name="$2"
+
+    [[ -f "$file" ]] || error "file not found: $file"
+
+    local value
+    value=$(awk -v field="$field_name" '
+        /^---$/ { block++; next }
+        block == 1 {
+            # Match "field_name: value"
+            if ($0 ~ "^" field ":") {
+                sub("^" field ":[[:space:]]*", "")
+                print
+                exit
+            }
+        }
+        block >= 2 { exit }
+    ' "$file")
+
+    [[ -n "$value" ]] || error "frontmatter field not found: $field_name in $file"
+    printf '%s\n' "$value"
+}
+
+# md_read_title <file>
+# Extracts the text of the first top-level heading (# ...) from a markdown file.
+# Skips YAML frontmatter if present. Fails if the file is missing or has no heading.
+md_read_title() {
+    local file="$1"
+
+    [[ -f "$file" ]] || error "file not found: $file"
+
+    local title
+    title=$(awk '
+        /^---$/ && !past_fm { in_fm = !in_fm; next }
+        in_fm { next }
+        !in_fm { past_fm = 1 }
+        /^# / { sub(/^# /, ""); print; exit }
+    ' "$file")
+
+    [[ -n "$title" ]] || error "no title heading found in $file"
+    printf '%s\n' "$title"
 }
 
 # sed_inplace file sed-args...
