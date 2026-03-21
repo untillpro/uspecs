@@ -31,10 +31,8 @@ All paths are relative to the project root:
       - Without issue URL: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
     - Branch is created from current HEAD after Change Folder and Change File are created
     - If branch creation fails, error is reported but change creation continues
-  - PR branch naming (created by upr):
-    - Format: `{change-name}--pr`
-    - Example: For change branch `branch-option-uchange`, PR branch is `branch-option-uchange--pr`
-    - Created from pr_remote/default_branch; contains a single squashed commit
+- Working Change Folder: a Change Folder whose files have been modified since merge-base with pr_remote/default_branch
+  - Can be active or archived
 - Change Folder System Artifacts
   - Change File: `change.md`
   - Issue File: `issue.md`

@@ -2,6 +2,44 @@
 set -Eeuo pipefail
 
 echo "$@" >> "${BATS_TEST_TMPDIR}/gh.calls"
+
+# Dispatch on subcommand
+if [[ "${1:-}" == "pr" ]]; then
+    case "${2:-}" in
+        view)
+            if [[ "${GH_STUB_PR_EXISTS:-}" == "1" ]]; then
+                if [[ " $* " == *" --web "* ]]; then
+                    echo "Opening github.com/org/repo/pull/42 in your browser."
+                else
+                    echo "${GH_STUB_PR_JSON:-{\"number\":42,\"state\":\"OPEN\",\"url\":\"https://github.com/org/repo/pull/42\"}}"
+                fi
+                exit 0
+            fi
+            echo "no pull requests found for branch" >&2
+            exit 1
+            ;;
+        create)
+            if [[ " $* " == *" --body-file "* ]]; then
+                cat >> "${BATS_TEST_TMPDIR}/gh.body"
+            fi
+            if [[ "${GH_STUB_FAIL:-}" == "1" ]]; then
+                echo "gh: simulated failure" >&2
+                exit 1
+            fi
+            echo "https://github.com/org/repo/pull/42"
+            exit 0
+            ;;
+        merge)
+            if [[ "${GH_STUB_MERGE_FAIL:-}" == "1" ]]; then
+                echo "gh: merge failed" >&2
+                exit 1
+            fi
+            exit 0
+            ;;
+    esac
+fi
+
+# Fallback: original behavior for non-pr commands
 cat >> "${BATS_TEST_TMPDIR}/gh.body"
 if [[ "${GH_STUB_FAIL:-}" == "1" ]]; then
     echo "gh: simulated failure" >&2

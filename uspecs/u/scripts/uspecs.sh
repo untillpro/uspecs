@@ -4,6 +4,8 @@ set -Eeuo pipefail
 # uspecs automation
 #
 # Usage:
+#   uspecs prompt upr
+#   uspecs prompt uaccept
 #   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
 #   uspecs change archive <change-folder-name> [-d] | --all
 #   uspecs pr preflight
@@ -653,6 +655,321 @@ cmd_change_archive() {
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
 }
 
+# changes_detect_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
+# Detects the Working Change Folder (WCF) -- a change folder whose files have been
+# modified since merge-base with pr_remote/default_branch.
+# Outputs the relative path from changes_folder (e.g. "my-change" for active,
+# "archive/yymm/timestamp-name" for archived). Fails if not exactly one WCF is found.
+changes_detect_wcf() {
+    local project_dir="$1"
+    local changes_folder_rel="$2"
+    local pr_remote="$3"
+    local default_branch="$4"
+
+    local merge_base
+    merge_base=$(cd "$project_dir" && git merge-base HEAD "${pr_remote}/${default_branch}")
+
+    local diff_output
+    diff_output=$(cd "$project_dir" && git diff --name-only "$merge_base" HEAD -- "$changes_folder_rel")
+
+    # Collect unique change folder paths.
+    # Active folders: first path component (e.g. "my-change")
+    # Archived folders: archive/yymm/<name> (3 components)
+    local -A folders=()
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        # Strip changes_folder_rel/ prefix
+        local rel="${line#"${changes_folder_rel}/"}"
+        local top="${rel%%/*}"
+        [[ -z "$top" ]] && continue
+        if [[ "$top" == "archive" ]]; then
+            # Extract archive/yymm/<name> (3 path components)
+            local rest="${rel#archive/}"
+            local yymm="${rest%%/*}"
+            rest="${rest#"$yymm"/}"
+            local name="${rest%%/*}"
+            if [[ -n "$yymm" && -n "$name" ]]; then
+                folders["archive/$yymm/$name"]=1
+            fi
+        else
+            folders["$top"]=1
+        fi
+    done <<< "$diff_output"
+
+    local count=${#folders[@]}
+    if [[ "$count" -eq 0 ]]; then
+        error "No Working Change Folder found (no changes in $changes_folder_rel since merge-base)"
+    elif [[ "$count" -gt 1 ]]; then
+        local names
+        names=$(printf '%s\n' "${!folders[@]}" | sort)
+        error "Multiple Working Change Folders found (expected exactly one):\n$names"
+    fi
+
+    printf '%s\n' "${!folders[@]}"
+}
+
+# cmd_prompt_upr
+# Full upr flow: validate, detect WCF, check no existing PR, read change.md,
+# compute pr_title/commit_message/see_details_line, archive WCF if active,
+# set upstream, squash, force-push, open PR creation in browser, output prompt.
+cmd_prompt_upr() {
+    local project_dir
+    project_dir=$(get_project_dir)
+    cd "$project_dir"
+
+    # Validate preconditions
+    check_prerequisites
+
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    local pr_remote default_branch
+    pr_remote=$(determine_pr_remote)
+    default_branch=$(default_branch_name)
+
+    if [[ "$current_branch" == "$default_branch" ]]; then
+        error "Current branch is the default branch '$default_branch'"
+    fi
+
+    # Fetch remote default branch
+    git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1
+
+    # Check for changes since branching
+    local merge_base
+    merge_base=$(git merge-base HEAD "${pr_remote}/${default_branch}")
+    local diff_stat
+    diff_stat=$(git diff --name-only "$merge_base" HEAD)
+    if [[ -z "$diff_stat" ]]; then
+        error "No changes detected in the current branch since branching from $default_branch"
+    fi
+
+    # Detect Working Change Folder
+    local changes_folder_rel
+    changes_folder_rel=$(read_conf_param "changes_folder")
+    local wcf_name
+    wcf_name=$(changes_detect_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+
+    local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
+    local change_file="$wcf_path/change.md"
+
+    if [[ ! -f "$change_file" ]]; then
+        error "change.md not found in Working Change Folder: $wcf_path"
+    fi
+
+    # Check for uncompleted todo items
+    local uncompleted_count
+    uncompleted_count=$(count_uncompleted_items "$wcf_path")
+    if [[ "$uncompleted_count" -gt 0 ]]; then
+        local uncompleted_files
+        uncompleted_files=$(grep -rl "^[[:space:]]*-[[:space:]]*\[ \]" "$wcf_path"/*.md 2>/dev/null | sed "s|^$project_dir/||")
+
+        local prompts_file
+        prompts_file="$(get_script_dir)/prompts.md"
+
+        # shellcheck disable=SC2034  # vars used via nameref
+        declare -A uncompleted_vars=(
+            [uncompleted_count]="$uncompleted_count"
+            [uncompleted_files]="$uncompleted_files"
+        )
+        section_templ "$prompts_file" "upr_uncompleted_todos" uncompleted_vars
+        exit 1
+    fi
+
+    # Check if PR already exists for this branch
+    local pr_json
+    if pr_json=$(gh pr view --json number,url 2>/dev/null); then
+        # PR exists -- open in browser and show message
+        local pr_url
+        pr_url=$(printf '%s' "$pr_json" | grep -o '"url":"[^"]*"' | head -1 | sed 's/"url":"//;s/"$//')
+        if [[ -n "$pr_url" ]]; then
+            gh pr view --web >/dev/null 2>&1 || true
+        fi
+        local prompts_file
+        prompts_file="$(get_script_dir)/prompts.md"
+        section_templ "$prompts_file" "upr_already_exists"
+        return 0
+    fi
+
+    # Read change.md: title and optional issue_url
+    local full_title
+    full_title=$(md_read_title "$change_file")
+    # change_title is text after ":" in the heading, trimmed
+    local change_title
+    if [[ "$full_title" == *:* ]]; then
+        change_title="${full_title#*:}"
+        change_title="${change_title#"${change_title%%[![:space:]]*}"}"
+    else
+        change_title="$full_title"
+    fi
+
+    local issue_url pr_title commit_message see_details_line
+    issue_url=$(md_read_frontmatter_field "$change_file" "issue_url" 2>/dev/null) || true
+
+    local rel_change_file="${changes_folder_rel}/${wcf_name}/change.md"
+    see_details_line="See ${rel_change_file} for details"
+
+    if [[ -n "$issue_url" ]]; then
+        local issue_id
+        issue_id=$(extract_issue_id "$issue_url")
+        pr_title="[${issue_id}] ${change_title}"
+        commit_message="Closes #${issue_id}: ${change_title}"$'\n'"${see_details_line}"
+    else
+        pr_title="${change_title}"
+        commit_message="${change_title}"$'\n'"${see_details_line}"
+    fi
+
+    # Archive WCF if active (not already archived)
+    if [[ -d "$wcf_path" && ! "$wcf_path" == */archive/* ]]; then
+        local script_path
+        script_path="$(get_script_dir)/uspecs.sh"
+        bash "$script_path" change archiveall
+    fi
+
+    # Set upstream if not already set
+    if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
+        git push -u origin "$current_branch" >/dev/null 2>&1
+    fi
+
+    # Record pre-push HEAD for undo instructions
+    local pre_push_head
+    pre_push_head=$(git rev-parse --short HEAD)
+
+    # Emit restore instructions before destructive operations
+    local prompts_file
+    prompts_file="$(get_script_dir)/prompts.md"
+    declare -A restore_vars=([pre_push_head]="$pre_push_head")
+    section_templ "$prompts_file" "upr_restore" restore_vars
+
+    # Squash branch into single commit
+    git reset --soft "$merge_base"
+    git commit -m "$commit_message"
+
+    # Force-push
+    git push --force
+
+    # Open PR creation in browser
+    local pr_repo
+    pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
+    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body "$commit_message" >/dev/null 2>&1 || true
+
+    # Output success prompt
+    local prompts_file
+    prompts_file="$(get_script_dir)/prompts.md"
+    declare -A vars=([pre_push_head]="$pre_push_head")
+    section_templ "$prompts_file" "upr_success" vars
+}
+
+# cmd_prompt_uaccept
+# Full uaccept flow: validate, detect WCF, check PR state, handle branches,
+# archive WCF if active, attempt merge, handle failure, branch cleanup.
+cmd_prompt_uaccept() {
+    local project_dir
+    project_dir=$(get_project_dir)
+    cd "$project_dir"
+
+    # Validate preconditions
+    check_prerequisites
+
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    local pr_remote default_branch
+    pr_remote=$(determine_pr_remote)
+    default_branch=$(default_branch_name)
+
+    if [[ "$current_branch" == "$default_branch" ]]; then
+        error "Current branch is the default branch '$default_branch'"
+    fi
+
+    # Check upstream
+    if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
+        error "Current branch '$current_branch' has no upstream"
+    fi
+
+    # Fetch remote default branch
+    git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1
+
+    # Detect Working Change Folder
+    local changes_folder_rel
+    changes_folder_rel=$(read_conf_param "changes_folder")
+    local wcf_name
+    wcf_name=$(changes_detect_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+
+    local prompts_file
+    prompts_file="$(get_script_dir)/prompts.md"
+
+    # Check PR state
+    local pr_json
+    if ! pr_json=$(gh pr view --json number,state,url 2>/dev/null); then
+        # No PR found
+        section_templ "$prompts_file" "uaccept_no_pr"
+        return 0
+    fi
+
+    local pr_number pr_state pr_url
+    pr_number=$(printf '%s' "$pr_json" | grep -o '"number":[0-9]*' | head -1 | sed 's/"number"://')
+    pr_state=$(printf '%s' "$pr_json" | grep -o '"state":"[^"]*"' | head -1 | sed 's/"state":"//;s/"$//')
+    pr_url=$(printf '%s' "$pr_json" | grep -o '"url":"[^"]*"' | head -1 | sed 's/"url":"//;s/"$//')
+
+    if [[ "$pr_state" != "OPEN" ]]; then
+        # PR is not in OPEN state
+        gh pr view --web >/dev/null 2>&1 || true
+
+        local branch_head
+        branch_head=$(git rev-parse HEAD)
+
+        # Delete local branch, upstream and remote tracking ref (errors ignored)
+        git checkout "$default_branch" 2>/dev/null || true
+        git branch -D "$current_branch" 2>/dev/null || true
+        git branch -dr "origin/$current_branch" 2>/dev/null || true
+
+        # shellcheck disable=SC2034  # vars used via nameref
+        declare -A vars=(
+            [pr_number]="$pr_number"
+            [pr_state]="$pr_state"
+            [branch_name]="$current_branch"
+            [branch_head]="$branch_head"
+        )
+        section_templ "$prompts_file" "uaccept_not_open" vars
+        return 0
+    fi
+
+    # PR is in OPEN state
+    # Archive WCF if active
+    local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
+    if [[ -d "$wcf_path" && ! "$wcf_path" == */archive/* ]]; then
+        local script_path
+        script_path="$(get_script_dir)/uspecs.sh"
+        bash "$script_path" change archiveall
+
+        # Commit the archive
+        if [[ -n $(git status --porcelain) ]]; then
+            git add -A
+            git commit -m "Archive $wcf_name"
+            git push 2>/dev/null || true
+        fi
+    fi
+
+    # Attempt merge with squash and delete branch
+    if ! gh pr merge --squash --delete-branch 2>/dev/null; then
+        # Merge failed
+        gh pr view --web >/dev/null 2>&1 || true
+
+        # shellcheck disable=SC2034  # vars used via nameref
+        declare -A fail_vars=([pr_number]="$pr_number")
+        section_templ "$prompts_file" "uaccept_merge_failed" fail_vars
+        return 0
+    fi
+
+    # Merge succeeded -- cleanup
+    # shellcheck disable=SC2034  # vars used via nameref
+    declare -A success_vars=(
+        [pr_number]="$pr_number"
+        [branch_name]="$current_branch"
+    )
+    section_templ "$prompts_file" "uaccept_success" success_vars
+}
+
 main() {
     git_path
 
@@ -664,6 +981,24 @@ main() {
     shift
 
     case "$command" in
+        prompt)
+            if [ $# -lt 1 ]; then
+                error "Usage: uspecs prompt <keyword>"
+            fi
+            local keyword="$1"
+            shift
+            case "$keyword" in
+                upr)
+                    cmd_prompt_upr "$@"
+                    ;;
+                uaccept)
+                    cmd_prompt_uaccept "$@"
+                    ;;
+                *)
+                    error "Unknown prompt keyword: $keyword. Available: upr, uaccept"
+                    ;;
+            esac
+            ;;
         change)
             if [ $# -lt 1 ]; then
                 error "Usage: uspecs change <subcommand> [args...]"
