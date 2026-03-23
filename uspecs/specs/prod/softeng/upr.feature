@@ -35,18 +35,13 @@ Feature: Create pull request from current branch
 
   Rule: Edge cases
 
-    Scenario Outline: Validation rejects invalid state
+    Scenario Outline: Validation
       Given <condition>
       When Engineer invokes upr action
       Then AI Agent displays error <message> and stops
       Examples:
-        | condition                                                                     | message                                                                                     |
-        | no changes detected in the current branch since branching from default branch | same as condition                                                                           |
-        | no git repository                                                             | same as condition                                                                           |
-        | working tree has uncommitted changes                                          | same as condition                                                                           |
-        | current branch is the default branch                                          | PR should not be created from the default branch                                            |
-        | Multiple Working Change Folder exists                                         | Multiple Working Change Folder exists with the list of folders                              |
-        | No Working Change Folder exists                                               | same as condition                                                                           |
-        | change folder has uncompleted todo items                                      | listing files and line numbers with uncompleted items, prompting to complete them before PR |
-
-  # uncompleted - AI👍
+        | condition                                                                     | message           |
+        | no changes detected in the current branch since branching from default branch | same as condition |
+      And Examples includes examples from the "Git validations#Git working tree is clean" scenario
+      And Examples includes examples from the "Change Folder validations#All todo items are completed" scenario
+      And Examples includes examples from the "Change Folder validations#Exactly one Working Change Folder" scenario

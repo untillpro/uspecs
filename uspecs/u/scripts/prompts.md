@@ -54,11 +54,3 @@ git branch ${branch_name} ${branch_head}
 Merge of PR #${pr_number} failed. The PR has been opened in your browser.
 
 Handle the PR manually (resolve conflicts, adjust settings, etc.) and run `uaccept` again.
-
-## upr_uncompleted_todos: Change folder has uncompleted todo items
-
-Cannot create PR: ${uncompleted_count} uncompleted todo item(s) found in files:
-
-${uncompleted_files}
-
-Complete todo items before creating a PR.

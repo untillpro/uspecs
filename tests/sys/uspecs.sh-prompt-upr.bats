@@ -219,7 +219,7 @@ _setup_upr_branch() {
 
 # --- Edge cases ---
 
-# Scenario Outline: Validation rejects invalid state
+# Scenario Outline: Validation
 # Example: no changes detected in the current branch since branching from default branch
 @test "action upr: Validation rejects, no changes since branching from default branch" {
     cd "$PROJECT_ROOT"
@@ -230,7 +230,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"No changes detected"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Project inside Git working tree
 # Example: no git repository
 @test "action upr: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
@@ -241,7 +241,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"No git repository"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Git working tree is clean
 # Example: working tree has uncommitted changes
 @test "action upr: Validation rejects, working tree has uncommitted changes" {
     _setup_upr_branch
@@ -252,7 +252,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"uncommitted changes"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Git working tree is clean
 # Example: current branch is the default branch
 @test "action upr: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
@@ -262,7 +262,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"default branch"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Change Folder validations#Exactly one Working Change Folder
 # Example: No Working Change Folder exists
 @test "action upr: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"
@@ -277,7 +277,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"No Working Change Folder"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Change Folder validations#Exactly one Working Change Folder
 # Example: Multiple Working Change Folder exists
 @test "action upr: Validation rejects, Multiple Working Change Folder exists" {
     cd "$PROJECT_ROOT"
@@ -296,7 +296,7 @@ _setup_upr_branch() {
     [[ "${stderr:-}" == *"2601010000-second-change"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Change Folder validations#All todo items are completed
 # Example: change folder has uncompleted todo items
 @test "action upr: Validation rejects, change folder has uncompleted todo items" {
     cd "$PROJECT_ROOT"
@@ -330,8 +330,8 @@ _setup_upr_branch() {
     [ "$status" -ne 0 ]
 
     # Verify detailed error message with file names
-    [[ "$output" == *"uncompleted todo item"* ]]
-    [[ "$output" == *"change.md"* ]]
-    [[ "$output" == *"impl.md"* ]]
-    [[ "$output" == *"Complete"* ]]
+    [[ "${stderr:-}" == *"uncompleted todo item"* ]]
+    [[ "${stderr:-}" == *"change.md"* ]]
+    [[ "${stderr:-}" == *"impl.md"* ]]
+    [[ "${stderr:-}" == *"Complete"* ]]
 }

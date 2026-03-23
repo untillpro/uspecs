@@ -655,12 +655,13 @@ cmd_change_archive() {
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
 }
 
-# changes_detect_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
+# changes_validate_single_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
+# Reflects scenario: "Exactly one Working Change Folder"
 # Detects the Working Change Folder (WCF) -- a change folder whose files have been
 # modified since merge-base with pr_remote/default_branch.
 # Outputs the relative path from changes_folder (e.g. "my-change" for active,
 # "archive/yymm/timestamp-name" for archived). Fails if not exactly one WCF is found.
-changes_detect_wcf() {
+changes_validate_single_wcf() {
     local project_dir="$1"
     local changes_folder_rel="$2"
     local pr_remote="$3"
@@ -708,6 +709,31 @@ changes_detect_wcf() {
     printf '%s\n' "${!folders[@]}"
 }
 
+# changes_validate_todos_completed <wcf_path> <project_dir>
+# Reflects scenario: "All todo items are completed"
+# Checks that there are no uncompleted todo items in the WCF.
+# On failure, outputs error to stderr and exits.
+changes_validate_todos_completed() {
+    local wcf_path="$1"
+    local project_dir="$2"
+
+    local uncompleted_count
+    uncompleted_count=$(count_uncompleted_items "$wcf_path")
+    if [[ "$uncompleted_count" -gt 0 ]]; then
+        local uncompleted_files
+        uncompleted_files=$(grep -rl "^[[:space:]]*-[[:space:]]*\[ \]" "$wcf_path"/*.md 2>/dev/null | sed "s|^$project_dir/||")
+
+        {
+            echo "Error: $uncompleted_count uncompleted todo item(s) found in files:"
+            echo ""
+            echo "$uncompleted_files"
+            echo ""
+            echo "Complete todo items before creating a PR."
+        } >&2
+        exit 1
+    fi
+}
+
 # cmd_action_upr
 # Full upr flow: validate, detect WCF, check no existing PR, read change.md,
 # compute pr_title/commit_message/see_details_line, archive WCF if active,
@@ -727,9 +753,7 @@ cmd_action_upr() {
     pr_remote=$(determine_pr_remote)
     default_branch=$(default_branch_name)
 
-    if [[ "$current_branch" == "$default_branch" ]]; then
-        error "Current branch is the default branch '$default_branch'"
-    fi
+    git_validate_clean_repo "$current_branch" "$default_branch"
 
     # Fetch remote default branch
     git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1
@@ -747,7 +771,7 @@ cmd_action_upr() {
     local changes_folder_rel
     changes_folder_rel=$(read_conf_param "changes_folder")
     local wcf_name
-    wcf_name=$(changes_detect_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+    wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
 
     local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
     local change_file="$wcf_path/change.md"
@@ -757,23 +781,7 @@ cmd_action_upr() {
     fi
 
     # Check for uncompleted todo items
-    local uncompleted_count
-    uncompleted_count=$(count_uncompleted_items "$wcf_path")
-    if [[ "$uncompleted_count" -gt 0 ]]; then
-        local uncompleted_files
-        uncompleted_files=$(grep -rl "^[[:space:]]*-[[:space:]]*\[ \]" "$wcf_path"/*.md 2>/dev/null | sed "s|^$project_dir/||")
-
-        local prompts_file
-        prompts_file="$(get_script_dir)/prompts.md"
-
-        # shellcheck disable=SC2034  # vars used via nameref
-        declare -A uncompleted_vars=(
-            [uncompleted_count]="$uncompleted_count"
-            [uncompleted_files]="$uncompleted_files"
-        )
-        section_templ "$prompts_file" "upr_uncompleted_todos" uncompleted_vars
-        exit 1
-    fi
+    changes_validate_todos_completed "$wcf_path" "$project_dir"
 
     # Check if PR already exists for this branch
     local pr_state pr_number
@@ -887,9 +895,7 @@ cmd_action_uaccept() {
     pr_remote=$(determine_pr_remote)
     default_branch=$(default_branch_name)
 
-    if [[ "$current_branch" == "$default_branch" ]]; then
-        error "Current branch is the default branch '$default_branch'"
-    fi
+    git_validate_clean_repo "$current_branch" "$default_branch"
 
     # Check upstream
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
@@ -903,7 +909,7 @@ cmd_action_uaccept() {
     local changes_folder_rel
     changes_folder_rel=$(read_conf_param "changes_folder")
     local wcf_name
-    wcf_name=$(changes_detect_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+    wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
 
     local prompts_file
     prompts_file="$(get_script_dir)/prompts.md"

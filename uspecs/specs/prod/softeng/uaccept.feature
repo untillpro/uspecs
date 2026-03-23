@@ -23,6 +23,7 @@ Feature: Accept pull request
     When Engineer invokes uaccept action
     Then Working Change Folder is archived
     And commit is made with message "Archive {wrk_change_folder}"
+    And outcome from the base scenario is followed
 
   Scenario: PR is not in OPEN state
     Given PR associated with the current branch is not in OPEN state
@@ -33,15 +34,12 @@ Feature: Accept pull request
 
   Rule: Edge cases
 
-    Scenario Outline: Validation rejects invalid state
+    Scenario Outline: Validation
       Given <condition>
       When Engineer invokes uaccept action
       Then AI Agent displays error and stops
       Examples:
-        | condition                                    |
-        | no git repository                            |
-        | working tree has uncommitted changes         |
-        | current branch is the default branch         |
-        | current branch has no upstream               |
-        | not exactly one Working Change Folder exists |
-
+        | condition                      | message           |
+        | current branch has no upstream | same as condition |
+      And Examples includes examples from the "Git validations#Git working tree is clean" scenario
+      And Examples includes examples from the "Change Folder validations#Exactly one Working Change Folder" scenario
