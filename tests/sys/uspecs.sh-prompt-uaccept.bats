@@ -159,7 +159,7 @@ _setup_uaccept_branch() {
     [[ "$gh_calls" == *"pr view --web"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Project inside Git working tree
 # Example: no git repository
 @test "action uaccept: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
@@ -170,7 +170,7 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"No git repository"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Git working tree is clean
 # Example: working tree has uncommitted changes
 @test "action uaccept: Validation rejects, working tree has uncommitted changes" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
@@ -182,7 +182,7 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"uncommitted changes"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Git validations#Git working tree is clean
 # Example: current branch is the default branch
 @test "action uaccept: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
@@ -193,7 +193,7 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"Current branch is the default branch"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Scenario Outline: Validation
 # Example: current branch has no upstream
 @test "action uaccept: Validation rejects, current branch has no upstream" {
     cd "$PROJECT_ROOT"
@@ -206,7 +206,7 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"has no upstream"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
+# Change Folder validations#Exactly one Working Change Folder
 # Example: not exactly one Working Change Folder exists
 @test "action uaccept: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"

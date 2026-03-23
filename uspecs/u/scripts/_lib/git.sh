@@ -79,6 +79,33 @@ gh_create_pr() {
     fi
 }
 
+# git_validate_working_tree
+# Reflects scenario: "Project inside Git working tree"
+# Validates that the current directory is inside a git working tree.
+git_validate_working_tree() {
+    if ! is_git_repo "$PWD"; then
+        error "No git repository found at $PWD"
+    fi
+}
+
+# git_validate_clean_repo <current_branch> <default_branch>
+# Reflects scenario: "Git working tree is clean"
+# Validates: inside git working tree, no uncommitted changes, not on default branch.
+git_validate_clean_repo() {
+    local current_branch="$1"
+    local default_branch="$2"
+
+    git_validate_working_tree
+
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes first"
+    fi
+
+    if [[ "$current_branch" == "$default_branch" ]]; then
+        error "Current branch is the default branch '$default_branch'"
+    fi
+}
+
 check_prerequisites() {
     # Check if git repository exists
     if ! is_git_repo "$PWD"; then
