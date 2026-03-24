@@ -790,14 +790,14 @@ cmd_action_upr() {
 
     # Check if PR already exists for this branch
     local pr_state pr_number
-    if pr_state=$(gh pr view --json state -q ".state" 2>&1); then
+    if pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # PR exists -- check its state
-        pr_number=$(gh pr view --json number -q ".number" 2>&1)
+        pr_number=$(gh pr view --json number -q ".number")
 
         if [[ "$pr_state" == "OPEN" ]]; then
             # PR exists and is OPEN -- open in browser and show message
             local pr_url
-            pr_url=$(gh pr view --json url -q ".url" 2>&1)
+            pr_url=$(gh pr view --json url -q ".url")
             gh pr view --web 2>&1 || true
 
             prompt_finish_log_start_instructions
@@ -807,10 +807,7 @@ cmd_action_upr() {
             prompt_finish_instructions
             return 0
         elif [[ "$pr_state" == "MERGED" ]]; then
-            # PR was already merged -- notify and proceed with new PR creation
-            # shellcheck disable=SC2034  # merged_vars used via nameref in section_templ
-            declare -A merged_vars=([pr_number]="$pr_number")
-            section_templ "$prompts_file" "upr_already_merged" merged_vars
+            echo "PR #${pr_number} for this branch was already merged. Proceeding with new PR creation..."
         fi
         # PR exists but is CLOSED -- proceed silently with new PR creation
     fi
@@ -842,37 +839,48 @@ cmd_action_upr() {
         commit_message="${change_title}"$'\n'"${see_details_line}"
     fi
 
+    # Count commits since merge-base to decide whether to squash
+    local commit_count
+    commit_count=$(git rev-list --count "$merge_base"..HEAD)
+
     # Set upstream if not already set
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
         git push -u origin "$current_branch" 2>&1
     fi
 
-    # Record pre-push HEAD for branch restoration
-    local pre_push_head
-    pre_push_head=$(git rev-parse --short HEAD)
+    local pre_push_head=""
+    if [[ "$commit_count" -gt 1 ]]; then
+        # Record pre-push HEAD for branch restoration
+        pre_push_head=$(git rev-parse --short HEAD)
 
-    # Squash branch into single commit
-    git reset --soft "$merge_base"
-    git commit -m "$commit_message"
+        # Squash branch into single commit
+        git reset --soft "$merge_base"
+        git commit -m "$commit_message"
 
-    # Register branch restoration handler in case force-push fails
-    atexit_push "git reset --hard ${pre_push_head}"
+        # Register branch restoration handler in case force-push fails
+        atexit_push "git reset --hard ${pre_push_head}"
 
-    # Force-push
-    git push --force
+        # Force-push
+        git push --force
 
-    # Force-push succeeded -- remove restoration handler
-    atexit_pop
+        # Force-push succeeded -- remove restoration handler
+        atexit_pop
+    else
+        # Already a single commit -- skip squash and force-push
+        git push 2>&1
+    fi
 
-    # Prepare PR body: replace YAML frontmatter --- delimiters with ```yaml / ```
+    # Prepare PR body: strip YAML frontmatter --- delimiters (keep field lines as plain text).
+    # Fenced code blocks (```yaml / ```) are NOT used because GitHub interprets backtick
+    # sequences in the PR creation URL query string incorrectly, breaking the PR form.
     # Then truncate to avoid URL-length limits with gh pr create --web
     local pr_body_file
     temp_create_file pr_body_file
     local pr_body_max_chars=4000
     awk '
         BEGIN { fm=0 }
-        /^---$/ && fm==0 { print "```yaml"; fm=1; next }
-        /^---$/ && fm==1 { print "```"; fm=2; next }
+        /^---$/ && fm==0 { fm=1; next }
+        /^---$/ && fm==1 { fm=2; next }
         { print }
     ' "$change_file" > "$pr_body_file"
     local pr_body_size
@@ -891,8 +899,12 @@ cmd_action_upr() {
     prompt_finish_log_start_instructions
 
     # Output success prompt
-    declare -A vars=([pre_push_head]="$pre_push_head")
-    section_templ "$prompts_file" "upr_success" vars
+    if [[ -n "$pre_push_head" ]]; then
+        declare -A vars=([pre_push_head]="$pre_push_head")
+        section_templ "$prompts_file" "upr_success" vars
+    else
+        section_templ "$prompts_file" "upr_success_no_squash"
+    fi
     prompt_finish_instructions
 }
 
@@ -937,7 +949,7 @@ cmd_action_uaccept() {
 
     # Check PR state
     local pr_state pr_number
-    if ! pr_state=$(gh pr view --json state -q ".state" 2>&1); then
+    if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
         prompt_finish_log_start_instructions
         section_templ "$prompts_file" "uaccept_no_pr"
@@ -945,7 +957,7 @@ cmd_action_uaccept() {
         return 0
     fi
 
-    pr_number=$(gh pr view --json number -q ".number" 2>&1)
+    pr_number=$(gh pr view --json number -q ".number")
 
     if [[ "$pr_state" != "OPEN" ]]; then
         # PR is not in OPEN state

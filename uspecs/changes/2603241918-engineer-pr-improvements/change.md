@@ -25,3 +25,5 @@ Improvements to cmd_action_upr:
 
 - After squash, push atexit handler to restore branch on failure; pop after force-push succeeds
 - Include PR URL in the final upr_success instructions
+- Skip squash when branch has exactly one commit since merge-base (avoid redundant force-push)
+- Strip YAML frontmatter `---` delimiters as plain text instead of fenced yaml code block (backticks break GitHub PR creation URL)

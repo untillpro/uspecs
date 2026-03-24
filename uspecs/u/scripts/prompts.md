@@ -1,16 +1,12 @@
 # Prompts
 
-## upr_already_exists: instructions: PR already exists for current branch
+## upr_already_exists: PR already exists for current branch
 
 PR already exists for the current branch: ${pr_url}
 
 It has been opened in the browser.
 
-## upr_already_merged: info: PR was already merged
-
-PR #${pr_number} for this branch was already merged. Proceeding with new PR creation...
-
-## upr_success: instructions: Next steps after PR creation
+## upr_success: Next steps after PR creation
 
 The PR creation page has been opened in your browser.
 
@@ -27,7 +23,17 @@ Next steps:
 - Fix any issues raised during review
 - Run `uaccept` once the PR is approved and ready to merge
 
-## uaccept_success: instructions: PR merged successfully
+## upr_success_no_squash: Next steps after PR creation
+
+The PR creation page has been opened in your browser.
+
+Next steps:
+
+- Complete the PR creation form in the browser (review title and body, then submit)
+- Fix any issues raised during review
+- Run `uaccept` once the PR is approved and ready to merge
+
+## uaccept_success: PR merged successfully
 
 PR #${pr_number} has been merged successfully.
 
@@ -39,11 +45,11 @@ To restore the local branch, if needed:
 git branch ${branch_name} ${branch_head}
 ```
 
-## uaccept_no_pr: instructions: No open PR for current branch
+## uaccept_no_pr: No open PR for current branch
 
 No open PR found for the current branch.
 
-## uaccept_not_open: instructions: PR is not in OPEN state
+## uaccept_not_open: PR is not in OPEN state
 
 PR #${pr_number} is in ${pr_state} state (not OPEN). It has been opened in your browser.
 
@@ -55,7 +61,7 @@ To restore the local branch:
 git branch ${branch_name} ${branch_head}
 ```
 
-## uaccept_merge_failed: instructions: Merge attempt failed
+## uaccept_merge_failed: Merge attempt failed
 
 Merge of PR #${pr_number} failed. The PR has been opened in your browser.
 
