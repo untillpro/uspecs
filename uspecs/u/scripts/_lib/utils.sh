@@ -23,9 +23,9 @@ _atexit_run() {
     for cmd in "${_ATEXIT_CMDS[@]+"${_ATEXIT_CMDS[@]}"}"; do
         eval "$cmd" || true
     done
-    local entry
-    for entry in "${_ATEXIT_STACK[@]+"${_ATEXIT_STACK[@]}"}"; do
-        eval "$entry" || true
+    local i
+    for (( i=${#_ATEXIT_STACK[@]}-1; i>=0; i-- )); do
+        eval "${_ATEXIT_STACK[$i]}" || true
     done
     if [[ -n "${_ATEXIT_PREV_TRAP:-}" ]]; then
         eval "$_ATEXIT_PREV_TRAP" || true

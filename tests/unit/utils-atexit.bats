@@ -48,6 +48,19 @@ setup() {
     [ ! -f "$popped" ]
 }
 
+# atexit_push LIFO order - last pushed runs first
+@test "atexit_push: executes in LIFO order" {
+    local log="$BATS_TEST_TMPDIR/log"
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_push 'echo first >> $log'
+        atexit_push 'echo second >> $log'
+        atexit_push 'echo third >> $log'
+    "
+    [ "$status" -eq 0 ]
+    [ "$(cat "$log")" = "$(printf 'third\nsecond\nfirst')" ]
+}
+
 # atexit_pop on empty stack - no error
 @test "atexit_pop: no error on empty stack" {
     run bash -c "
