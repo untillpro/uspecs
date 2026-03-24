@@ -560,7 +560,7 @@ cmd_change_archive() {
 
     # Insert archived_at into YAML front matter (before closing ---)
     local temp_file
-    temp_file=$(mktemp)
+    temp_create_file temp_file
     awk -v ts="$timestamp" '
         /^---$/ {
             if (count == 0) {
@@ -736,7 +736,7 @@ changes_validate_todos_completed() {
 
 # cmd_action_upr
 # Full upr flow: validate, detect WCF, check no existing PR, read change.md,
-# compute pr_title/commit_message/see_details_line, archive WCF if active,
+# compute pr_title/commit_message/see_details_line,
 # set upstream, squash, force-push, open PR creation in browser, output prompt.
 cmd_action_upr() {
     local project_dir
@@ -822,8 +822,7 @@ cmd_action_upr() {
     local issue_url pr_title commit_message see_details_line
     issue_url=$(md_read_frontmatter_field "$change_file" "issue_url" 2>/dev/null) || true
 
-    local rel_change_file="${changes_folder_rel}/${wcf_name}/change.md"
-    see_details_line="See ${rel_change_file} for details"
+    see_details_line="See change.md for details"
 
     if [[ -n "$issue_url" ]]; then
         local issue_id
@@ -833,13 +832,6 @@ cmd_action_upr() {
     else
         pr_title="${change_title}"
         commit_message="${change_title}"$'\n'"${see_details_line}"
-    fi
-
-    # Archive WCF if active (not already archived)
-    if [[ -d "$wcf_path" && ! "$wcf_path" == */archive/* ]]; then
-        local script_path
-        script_path="$(get_script_dir)/uspecs.sh"
-        bash "$script_path" change archiveall
     fi
 
     # Set upstream if not already set
@@ -865,10 +857,29 @@ cmd_action_upr() {
     # Force-push
     git push --force
 
+    # Prepare PR body: replace YAML frontmatter --- delimiters with ```yaml / ```
+    # Then truncate to avoid URL-length limits with gh pr create --web
+    local pr_body_file
+    temp_create_file pr_body_file
+    local pr_body_max_chars=4000
+    awk '
+        BEGIN { fm=0 }
+        /^---$/ && fm==0 { print "```yaml"; fm=1; next }
+        /^---$/ && fm==1 { print "```"; fm=2; next }
+        { print }
+    ' "$change_file" > "$pr_body_file"
+    local pr_body_size
+    pr_body_size=$(wc -c < "$pr_body_file")
+    if (( pr_body_size > pr_body_max_chars )); then
+        local truncated
+        truncated=$(head -c "$pr_body_max_chars" "$pr_body_file")
+        printf '%s\n\n---\n(truncated -- see change.md for full details)\n' "$truncated" > "$pr_body_file"
+    fi
+
     # Open PR creation in browser
     local pr_repo
     pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
-    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body "$commit_message" >/dev/null 2>&1 || true
+    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file"
 
     # Output success prompt
     local prompts_file

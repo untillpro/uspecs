@@ -144,7 +144,7 @@ _assert_no_pr_base_outcome() {
     [ "$count" -eq 1 ]
 }
 
-# Verifies WCF is archived before squash/force-push
+# Verifies WCF remains active (not archived) when engineer creates a PR
 @test "action upr: No PR for current branch: WCF is active" {
     cd "$PROJECT_ROOT"
     git checkout -q -b active-wcf-branch
@@ -154,11 +154,10 @@ _assert_no_pr_base_outcome() {
     uspecs action upr
     [ "$status" -eq 0 ]
 
-    # WCF was archived
-    local archive_count
-    archive_count=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" 2>/dev/null | wc -l)
-    [ "$archive_count" -eq 1 ]
-    [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
+    # WCF remains active (not archived)
+    [ -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
+    [ ! -d "$PROJECT_ROOT/uspecs/changes/archive" ] || \
+        [ "$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" | wc -l)" -eq 0 ]
 
     _assert_no_pr_base_outcome
 }
@@ -218,12 +217,19 @@ _assert_no_pr_base_outcome() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"[42] Fix the bug"* ]]
 
+    # gh pr create body contains change.md content with frontmatter as yaml code block
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"Change request: Fix the bug"* ]]
+    [[ "$gh_body" == *'```yaml'* ]]
+    [[ "$gh_body" != *"---"* ]]
+
     # Commit message contains Closes #42
     cd "$PROJECT_ROOT"
     local msg
     msg=$(git log -1 --format=%B)
     [[ "$msg" == *"Closes #42: Fix the bug"* ]]
-    [[ "$msg" == *"See uspecs/changes/2601010000-issue-change/change.md for details"* ]]
+    [[ "$msg" == *"See change.md for details"* ]]
 }
 
 @test "action upr: No PR for current branch: PR title and commit message, change does not have issue_url" {
@@ -237,14 +243,55 @@ _assert_no_pr_base_outcome() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"--title Add feature"* ]]
 
+    # gh pr create body contains change.md content with frontmatter as yaml code block
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"Change request: Add feature"* ]]
+    [[ "$gh_body" == *'```yaml'* ]]
+    [[ "$gh_body" != *"---"* ]]
+
     # Commit message is just title + see_details_line
     cd "$PROJECT_ROOT"
     local msg
     msg=$(git log -1 --format=%B)
     [[ "$msg" == "Add feature"* ]]
-    [[ "$msg" == *"See uspecs/changes/2601010000-no-issue/change.md for details"* ]]
+    [[ "$msg" == *"See change.md for details"* ]]
     # Should NOT contain "Closes"
     [[ "$msg" != *"Closes"* ]]
+}
+
+@test "action upr: No PR for current branch: PR body is truncated when change.md is large" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b large-body-branch
+    local folder_name="2601010000-large-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '---'
+        echo "registered_at: 2026-01-01T00:00:00Z"
+        echo "change_id: $folder_name"
+        echo '---'
+        echo ''
+        echo '# Change request: Large change'
+        echo ''
+        # Generate content well over 4000 chars
+        for i in $(seq 1 200); do
+            echo "Line $i: This is filler text to make the change.md body exceed the 4000 character limit for PR body truncation."
+        done
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add large change"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    # Body must contain the truncation notice
+    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    # Body size should be reasonable (truncated content + notice, under ~4200)
+    local body_size
+    body_size=${#gh_body}
+    (( body_size < 4200 ))
 }
 
 # --- Edge cases ---

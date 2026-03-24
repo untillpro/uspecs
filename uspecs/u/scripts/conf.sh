@@ -23,13 +23,6 @@ ALPHA_BRANCH="${USPECS_ALPHA_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
-case "$OSTYPE" in
-    msys*|cygwin*) _TMP_BASE=$(cygpath -w "$TEMP") ;;
-    *)             _TMP_BASE="/tmp" ;;
-esac
-
-# shellcheck source=_lib/utils.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/utils.sh"
 # shellcheck source=_lib/git.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
 
@@ -222,20 +215,6 @@ format_version_string_branch() {
     sanitize_branch_name "$result"
 }
 
-create_temp_dir() {
-    local temp_dir
-    temp_dir=$(mktemp -d "$_TMP_BASE/uspecs.XXXXXX")
-    atexit_add "rm -rf $(printf '%q' "$temp_dir")"
-    echo "$temp_dir"
-}
-
-create_temp_file() {
-    local temp_file
-    temp_file=$(mktemp "$_TMP_BASE/uspecs.XXXXXX")
-    atexit_add "rm -f $(printf '%q' "$temp_file")"
-    echo "$temp_file"
-}
-
 show_operation_plan() {
     local operation="$1"
     local current_version="${2:-}"
@@ -393,7 +372,7 @@ inject_instructions() {
     fi
 
     local temp_extract
-    temp_extract=$(create_temp_file)
+    temp_create_file temp_extract
     sed -n "/$begin_marker/,/$end_marker/p" "$source_file" > "$temp_extract"
 
     if [[ ! -s "$temp_extract" ]]; then
@@ -419,7 +398,7 @@ inject_instructions() {
     fi
 
     local temp_output
-    temp_output=$(create_temp_file)
+    temp_create_file temp_output
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
@@ -689,7 +668,7 @@ cmd_apply() {
         local pr_title="uspecs ${version_string}"
         local pr_body="$pr_title"
         local pr_info_file
-        pr_info_file=$(create_temp_file)
+        temp_create_file pr_info_file
 
         # Capture PR info from stderr while showing normal output
         (cd "$project_dir" && git_pr --title "$pr_title" --body "$pr_body" \
@@ -786,7 +765,7 @@ cmd_install() {
         bash "${BASH_SOURCE[0]}" apply "${apply_args[@]}"
     else
         local temp_dir
-        temp_dir=$(create_temp_dir)
+        temp_create_dir temp_dir
         echo "Downloading uspecs..."
         download_archive "$ref" "$temp_dir"
         bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
@@ -833,7 +812,7 @@ cmd_update_or_upgrade() {
     fi
 
     local temp_dir
-    temp_dir=$(create_temp_dir)
+    temp_create_dir temp_dir
 
     echo "Downloading uspecs..."
     download_archive "$target_ref" "$temp_dir"
@@ -902,7 +881,7 @@ cmd_im() {
         fi
 
         if [[ -z "$temp_source" ]]; then
-            temp_source=$(create_temp_file)
+            temp_create_file temp_source
             echo "Downloading source file for triggering instructions..."
             local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
             if ! curl -fsSL "$source_url" -o "$temp_source"; then

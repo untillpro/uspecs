@@ -70,6 +70,18 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
+# sourcing utils.sh twice is harmless (source guard)
+@test "atexit: double source does not cause recursion" {
+    local marker="$BATS_TEST_TMPDIR/marker"
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_add 'touch $marker'
+    "
+    [ "$status" -eq 0 ]
+    [ -f "$marker" ]
+}
+
 # chaining - EXIT trap registered before sourcing utils.sh is still called
 @test "atexit: chains previously registered EXIT trap" {
     local marker="$BATS_TEST_TMPDIR/prev"
@@ -80,6 +92,20 @@ setup() {
     "
     [ "$status" -eq 0 ]
     [ -f "$marker" ]
+}
+
+# chaining - atexit handlers run even when chained trap calls exit
+@test "atexit: handlers run before chained trap that calls exit" {
+    local cleanup="$BATS_TEST_TMPDIR/cleanup"
+    local chained="$BATS_TEST_TMPDIR/chained"
+    run bash -c "
+        trap 'touch $chained; exit 0' EXIT
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_add 'touch $cleanup'
+    "
+    [ "$status" -eq 0 ]
+    [ -f "$cleanup" ]
+    [ -f "$chained" ]
 }
 
 # atexit_add rejects multiple arguments
@@ -110,4 +136,35 @@ setup() {
         exit 42
     "
     [ "$status" -eq 42 ]
+}
+
+
+# temp_create_file creates a file and cleans it up on exit
+@test "temp_create_file: creates file and cleans up on exit" {
+    local path_file="$BATS_TEST_TMPDIR/tmp_path"
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        temp_create_file my_tmp
+        echo \"\$my_tmp\" > '$path_file'
+        [ -f \"\$my_tmp\" ] || exit 10
+    "
+    [ "$status" -eq 0 ]
+    local tmp_path
+    tmp_path=$(cat "$path_file")
+    [ ! -f "$tmp_path" ]
+}
+
+# temp_create_dir creates a directory and cleans it up on exit
+@test "temp_create_dir: creates dir and cleans up on exit" {
+    local path_file="$BATS_TEST_TMPDIR/tmp_path"
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        temp_create_dir my_tmp
+        echo \"\$my_tmp\" > '$path_file'
+        [ -d \"\$my_tmp\" ] || exit 10
+    "
+    [ "$status" -eq 0 ]
+    local tmp_path
+    tmp_path=$(cat "$path_file")
+    [ ! -d "$tmp_path" ]
 }
