@@ -48,6 +48,10 @@ _setup_uaccept_branch() {
 
     uspecs action uaccept
     [ "$status" -eq 0 ]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## uaccept_no_pr"* ]]
     [[ "$output" == *"No open PR found"* ]]
 }
@@ -63,10 +67,15 @@ _setup_uaccept_branch() {
     uspecs action uaccept
     [ "$status" -eq 0 ]
 
-    # Verify success message
+    # Verify structured output tags and success message with restore instructions
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## uaccept_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
     [[ "$output" == *"my-feature"* ]]
+    [[ "$output" == *"git branch my-feature"* ]]
 
     # Verify gh pr merge was called with correct flags
     local gh_calls
@@ -87,7 +96,11 @@ _setup_uaccept_branch() {
     uspecs action uaccept
     [ "$status" -eq 0 ]
     
-    # Verify merge failed message
+    # Verify structured output tags and merge failed message
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## uaccept_merge_failed"* ]]
     [[ "$output" == *"Merge of PR #42 failed"* ]]
     [[ "$output" == *"run \`uaccept\` again"* ]]
@@ -128,7 +141,11 @@ _setup_uaccept_branch() {
     # Verify original folder was removed
     [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
 
-    # Verify success message
+    # Verify structured output tags and success message
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## uaccept_success"* ]]
 }
 
@@ -143,7 +160,11 @@ _setup_uaccept_branch() {
     uspecs action uaccept
     [ "$status" -eq 0 ]
     
-    # Verify not_open message
+    # Verify structured output tags and not_open message
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## uaccept_not_open"* ]]
     [[ "$output" == *"PR #42 is in MERGED state"* ]]
     [[ "$output" == *"git branch my-feature"* ]]
