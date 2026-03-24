@@ -82,6 +82,26 @@ setup() {
     [ -f "$marker" ]
 }
 
+# atexit_add rejects multiple arguments
+@test "atexit_add: rejects multiple arguments" {
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_add rm -f /tmp/foo
+    "
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"atexit_add: expected 1 argument"* ]]
+}
+
+# atexit_push rejects multiple arguments
+@test "atexit_push: rejects multiple arguments" {
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_push rm -f /tmp/foo
+    "
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"atexit_push: expected 1 argument"* ]]
+}
+
 # exit code preserved - original non-zero rc propagates through dispatcher
 @test "atexit: original non-zero exit code is preserved" {
     run bash -c "

@@ -36,13 +36,17 @@ trap _atexit_run EXIT
 
 # atexit_add <cmd>
 # Appends cmd to the FIFO queue of EXIT handlers.
+# cmd must be a single quoted string, e.g. atexit_add 'rm -f /tmp/foo'
 atexit_add() {
+    [[ $# -eq 1 ]] || { echo "atexit_add: expected 1 argument, got $#" >&2; return 1; }
     _ATEXIT_CMDS+=("$1")
 }
 
 # atexit_push <cmd>
 # Pushes cmd onto the LIFO stack; dispatcher runs stack entries after _ATEXIT_CMDS.
+# cmd must be a single quoted string, e.g. atexit_push 'rm -f /tmp/foo'
 atexit_push() {
+    [[ $# -eq 1 ]] || { echo "atexit_push: expected 1 argument, got $#" >&2; return 1; }
     _ATEXIT_STACK+=("$1")
 }
 
