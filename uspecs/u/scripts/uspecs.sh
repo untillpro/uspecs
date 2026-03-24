@@ -857,10 +857,30 @@ cmd_action_upr() {
     # Force-push
     git push --force
 
+    # Prepare PR body: replace YAML frontmatter --- delimiters with ```yaml / ```
+    # Then truncate to avoid URL-length limits with gh pr create --web
+    local pr_body_file
+    pr_body_file=$(mktemp)
+    local pr_body_max_chars=4000
+    awk '
+        BEGIN { fm=0 }
+        /^---$/ && fm==0 { print "```yaml"; fm=1; next }
+        /^---$/ && fm==1 { print "```"; fm=2; next }
+        { print }
+    ' "$change_file" > "$pr_body_file"
+    local pr_body_size
+    pr_body_size=$(wc -c < "$pr_body_file")
+    if (( pr_body_size > pr_body_max_chars )); then
+        local truncated
+        truncated=$(head -c "$pr_body_max_chars" "$pr_body_file")
+        printf '%s\n\n---\n(truncated -- see change.md for full details)\n' "$truncated" > "$pr_body_file"
+    fi
+
     # Open PR creation in browser
     local pr_repo
     pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
-    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$change_file" >/dev/null 2>&1 || true
+    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file" >/dev/null 2>&1 || true
+    rm -f "$pr_body_file"
 
     # Output success prompt
     local prompts_file
