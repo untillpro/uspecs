@@ -233,15 +233,29 @@ sed_inplace() {
 # Structured prompt output (LOG / AGENT_INSTRUCTIONS)
 # ---------------------------------------------------------------------------
 
+_PROMPT_LOG_OPEN=0
+
+# _prompt_close_log_on_exit
+# EXIT handler: emits </LOG> if the process exits before
+# prompt_finish_log_start_instructions is reached (e.g. validation error).
+_prompt_close_log_on_exit() {
+    if [[ "${_PROMPT_LOG_OPEN:-0}" -eq 1 ]]; then
+        echo "</LOG>"
+    fi
+}
+atexit_add '_prompt_close_log_on_exit'
+
 # prompt_start_log
 # Emits the opening <LOG> tag.
 prompt_start_log() {
+    _PROMPT_LOG_OPEN=1
     echo "<LOG>"
 }
 
 # prompt_finish_log_start_instructions
 # Emits the closing </LOG> tag and the opening <AGENT_INSTRUCTIONS> tag.
 prompt_finish_log_start_instructions() {
+    _PROMPT_LOG_OPEN=0
     echo "</LOG>"
     echo "<AGENT_INSTRUCTIONS>"
 }

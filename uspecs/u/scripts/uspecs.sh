@@ -70,6 +70,7 @@ count_uncompleted_items() {
 
 extract_change_name() {
     local folder_name="$1"
+    # shellcheck disable=SC2001
     echo "$folder_name" | sed 's/^[0-9]\{10\}-//'
 }
 
@@ -851,7 +852,7 @@ cmd_action_upr() {
     local pre_push_head=""
     if [[ "$commit_count" -gt 1 ]]; then
         # Record pre-push HEAD for branch restoration
-        pre_push_head=$(git rev-parse --short HEAD)
+        pre_push_head=$(git rev-parse HEAD)
 
         # Squash branch into single commit
         git reset --soft "$merge_base"
@@ -1003,7 +1004,7 @@ cmd_action_uaccept() {
 
     # Record branch HEAD before merge deletes it
     local branch_head
-    branch_head=$(git rev-parse --short HEAD)
+    branch_head=$(git rev-parse HEAD)
 
     # Attempt merge with squash and delete branch
     if ! gh pr merge --squash --delete-branch 2>&1; then

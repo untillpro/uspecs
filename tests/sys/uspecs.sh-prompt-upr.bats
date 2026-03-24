@@ -40,13 +40,18 @@ _setup_upr_branch() {
 }
 
 # Helper: assert outcome from the "No PR for current branch" scenario is followed.
+# Usage: _assert_no_pr_base_outcome [section]
+# section defaults to upr_success_no_squash (single-commit path).
+# Pass upr_success explicitly for the multi-commit (squash) path.
+# shellcheck disable=SC2120
 _assert_no_pr_base_outcome() {
+    local section="${1:-upr_success_no_squash}"
     [ "$status" -eq 0 ]
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## upr_success"* ]]
+    [[ "$output" == *"## $section"* ]]
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"pr create --web"* ]]
@@ -85,7 +90,7 @@ _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
 
     # Should proceed with PR creation, not show already_exists or already_merged
-    [[ "$output" == *"## upr_success"* ]]
+    [[ "$output" == *"## upr_success_no_squash"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
     [[ "$output" != *"## upr_already_merged"* ]]
 
@@ -109,7 +114,7 @@ _assert_no_pr_base_outcome() {
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"PR #42 for this branch was already merged"* ]]
-    [[ "$output" == *"## upr_success"* ]]
+    [[ "$output" == *"## upr_success_no_squash"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
 
     # gh pr create --web was called
@@ -187,6 +192,7 @@ _assert_no_pr_base_outcome() {
     [ ! -d "$PROJECT_ROOT/uspecs/changes/archive" ] || \
         [ "$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" | wc -l)" -eq 0 ]
 
+    # shellcheck disable=SC2119
     _assert_no_pr_base_outcome
 }
 
@@ -205,6 +211,7 @@ _assert_no_pr_base_outcome() {
     tracking=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || true)
     [[ "$tracking" == "origin/no-upstream-upr-branch" ]]
 
+    # shellcheck disable=SC2119
     _assert_no_pr_base_outcome
 }
 
@@ -229,7 +236,7 @@ _assert_no_pr_base_outcome() {
 
     uspecs action upr
     [ "$status" -eq 0 ]
-    [[ "$output" == *"## upr_success"* ]]
+    [[ "$output" == *"## upr_success_no_squash"* ]]
 }
 
 # --- PR title and commit message ---
@@ -238,6 +245,7 @@ _assert_no_pr_base_outcome() {
     _setup_upr_branch "2601010000-issue-change" "Fix the bug" "https://github.com/org/repo/issues/42"
 
     uspecs action upr
+    # shellcheck disable=SC2119
     _assert_no_pr_base_outcome
 
     # gh pr create was called with title containing issue id
@@ -260,6 +268,7 @@ _assert_no_pr_base_outcome() {
     _setup_upr_branch "2601010000-no-issue" "Add feature"
 
     uspecs action upr
+    # shellcheck disable=SC2119
     _assert_no_pr_base_outcome
 
     # gh pr create was called with title = change_title only
@@ -300,6 +309,7 @@ _assert_no_pr_base_outcome() {
     git commit -q -m "add large change"
 
     uspecs action upr
+    # shellcheck disable=SC2119
     _assert_no_pr_base_outcome
 
     local gh_body
