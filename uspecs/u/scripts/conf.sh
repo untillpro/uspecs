@@ -28,9 +28,8 @@ case "$OSTYPE" in
     *)             _TMP_BASE="/tmp" ;;
 esac
 
-_TEMP_DIRS=()
-_TEMP_FILES=()
-
+# shellcheck source=_lib/utils.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/utils.sh"
 # shellcheck source=_lib/git.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
 
@@ -223,31 +222,17 @@ format_version_string_branch() {
     sanitize_branch_name "$result"
 }
 
-cleanup_temp() {
-    if [[ ${#_TEMP_FILES[@]} -gt 0 ]]; then
-        for file in "${_TEMP_FILES[@]}"; do
-            rm -f "$file"
-        done
-    fi
-    if [[ ${#_TEMP_DIRS[@]} -gt 0 ]]; then
-        for dir in "${_TEMP_DIRS[@]}"; do
-            rm -rf "$dir"
-        done
-    fi
-}
-trap cleanup_temp EXIT
-
 create_temp_dir() {
     local temp_dir
     temp_dir=$(mktemp -d "$_TMP_BASE/uspecs.XXXXXX")
-    _TEMP_DIRS+=("$temp_dir")
+    atexit_add "rm -rf $(printf '%q' "$temp_dir")"
     echo "$temp_dir"
 }
 
 create_temp_file() {
     local temp_file
     temp_file=$(mktemp "$_TMP_BASE/uspecs.XXXXXX")
-    _TEMP_FILES+=("$temp_file")
+    atexit_add "rm -f $(printf '%q' "$temp_file")"
     echo "$temp_file"
 }
 

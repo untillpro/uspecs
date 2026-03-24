@@ -76,7 +76,13 @@ def run_bats_test(test_info):
         )
 
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=60, shell=use_shell
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=60,
+            shell=use_shell,
         )
         return {
             "file": str(bats_file),
@@ -104,6 +110,9 @@ def run_bats_test(test_info):
 
 
 def main():
+    # Ensure each print() is written to terminal immediately
+    sys.stdout.reconfigure(write_through=True)
+
     parser = argparse.ArgumentParser(
         description="Run bats tests in parallel",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -154,17 +163,17 @@ def main():
             label = f"{file_path}: {result['test']}"
             if result["returncode"] == 0:
                 passed += 1
-                print(f" ok {label}")
+                print(f" ok {label}", flush=True)
             else:
                 failed += 1
-                print(f" FAIL {label}")
+                print(f" FAIL {label}", flush=True)
                 output = result["stdout"] + result["stderr"]
                 if output.strip():
                     for line in output.strip().splitlines():
-                        print(f"   {line}")
+                        print(f"   {line}", flush=True)
 
     elapsed = time.monotonic() - start_time
-    print(f"\n{passed + failed} tests, {failed} failures, {elapsed:.1f}s")
+    print(f"\n{passed + failed} tests, {failed} failures, {elapsed:.1f}s", flush=True)
 
     return 1 if failed > 0 else 0
 
