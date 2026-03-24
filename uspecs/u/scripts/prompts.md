@@ -2,22 +2,28 @@
 
 ## upr_already_exists: PR already exists for current branch
 
-Inform Engineer that PR already exists for the current branch. It has been opened in the browser.
+PR already exists for the current branch: ${pr_url}
 
-## upr_already_merged: PR was already merged
+It has been opened in the browser.
 
-PR #${pr_number} for this branch was already merged. Proceeding with new PR creation...
+## upr_success: Next steps after PR creation
 
-## upr_restore: Restore instructions
+The PR creation page has been opened in your browser.
 
-To restore branch to its current state, if needed:
+To restore branch to its pre-squash state, if needed:
 
 ```text
 git reset --hard ${pre_push_head}
 git push --force
 ```
 
-## upr_success: Next steps after PR creation
+Next steps:
+
+- Complete the PR creation form in the browser (review title and body, then submit)
+- Fix any issues raised during review
+- Run `uaccept` once the PR is approved and ready to merge
+
+## upr_success_no_squash: Next steps after PR creation
 
 The PR creation page has been opened in your browser.
 
@@ -32,6 +38,12 @@ Next steps:
 PR #${pr_number} has been merged successfully.
 
 Local branch `${branch_name}` and its remote tracking ref have been deleted.
+
+To restore the local branch, if needed:
+
+```text
+git branch ${branch_name} ${branch_head}
+```
 
 ## uaccept_no_pr: No open PR for current branch
 

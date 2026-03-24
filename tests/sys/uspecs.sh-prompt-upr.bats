@@ -42,7 +42,10 @@ _setup_upr_branch() {
 # Helper: assert outcome from the "No PR for current branch" scenario is followed.
 _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
-    [[ "$output" == *"## upr_restore"* ]]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## upr_success"* ]]
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
@@ -60,7 +63,10 @@ _assert_no_pr_base_outcome() {
 
     uspecs action upr
     [ "$status" -eq 0 ]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## upr_already_exists"* ]]
+    [[ "$output" == *"https://github.com/org/repo/pull/42"* ]]
 
     # gh pr view --web was called to open browser
     local gh_calls
@@ -79,7 +85,6 @@ _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
 
     # Should proceed with PR creation, not show already_exists or already_merged
-    [[ "$output" == *"## upr_restore"* ]]
     [[ "$output" == *"## upr_success"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
     [[ "$output" != *"## upr_already_merged"* ]]
@@ -101,9 +106,9 @@ _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
 
     # Should show already_merged notification and proceed with PR creation
-    [[ "$output" == *"## upr_already_merged"* ]]
-    [[ "$output" == *"PR #42"* ]]
-    [[ "$output" == *"## upr_restore"* ]]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"PR #42 for this branch was already merged"* ]]
     [[ "$output" == *"## upr_success"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
 
@@ -115,32 +120,55 @@ _assert_no_pr_base_outcome() {
 
 # --- Successful creation flow ---
 
-# Verifies: squash, force-push, open browser, output next steps
-@test "action upr: No PR for current branch" {
+# Verifies: single commit skips squash, open browser, output next steps (no restore instructions)
+@test "action upr: No PR for current branch: single commit, squash skipped" {
     _setup_upr_branch
-
-    # Record pre-squash HEAD to verify it appears in the output
-    cd "$PROJECT_ROOT"
-    local pre_head
-    pre_head=$(git rev-parse --short HEAD)
 
     uspecs action upr
     [ "$status" -eq 0 ]
 
-    # Output contains restore instructions (before destructive ops) and success prompt
-    [[ "$output" == *"## upr_restore"* ]]
-    [[ "$output" == *"## upr_success"* ]]
-    [[ "$output" == *"$pre_head"* ]]
+    # Output contains no-squash success prompt (no restore instructions)
+    [[ "$output" == *"## upr_success_no_squash"* ]]
+    [[ "$output" != *"git reset --hard"* ]]
 
     # gh pr create --web was called
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"pr create --web"* ]]
 
-    # Branch was squashed: only one commit beyond merge-base
+    # Still one commit beyond merge-base
     cd "$PROJECT_ROOT"
     local count
     count=$(git rev-list --count origin/main..HEAD)
+    [ "$count" -eq 1 ]
+}
+
+# Verifies: multiple commits are squashed, force-pushed, restore instructions shown
+@test "action upr: No PR for current branch: multiple commits squashed" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b multi-commit-branch
+    _make_upr_change "2601010000-multi-commit" "Multi commit change"
+
+    # Add a second commit
+    echo "extra" >> "$PROJECT_ROOT/uspecs/changes/2601010000-multi-commit/change.md"
+    git -C "$PROJECT_ROOT" add .
+    git -C "$PROJECT_ROOT" commit -q -m "second commit"
+
+    # Record pre-squash HEAD to verify it appears in the output
+    local pre_head
+    pre_head=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD)
+
+    uspecs action upr
+    [ "$status" -eq 0 ]
+
+    # Output contains success prompt with restore instructions
+    [[ "$output" == *"## upr_success"* ]]
+    [[ "$output" != *"## upr_success_no_squash"* ]]
+    [[ "$output" == *"$pre_head"* ]]
+
+    # Branch was squashed: only one commit beyond merge-base
+    local count
+    count=$(git -C "$PROJECT_ROOT" rev-list --count origin/main..HEAD)
     [ "$count" -eq 1 ]
 }
 
@@ -217,19 +245,15 @@ _assert_no_pr_base_outcome() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"[42] Fix the bug"* ]]
 
-    # gh pr create body contains change.md content with frontmatter as yaml code block
+    # gh pr create body contains change.md content with frontmatter delimiters stripped
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *"Change request: Fix the bug"* ]]
-    [[ "$gh_body" == *'```yaml'* ]]
+    # Frontmatter fields appear as plain text (no fenced code block, no --- delimiters)
+    [[ "$gh_body" == *"change_id:"* ]]
+    [[ "$gh_body" != *'```'* ]]
     [[ "$gh_body" != *"---"* ]]
-
-    # Commit message contains Closes #42
-    cd "$PROJECT_ROOT"
-    local msg
-    msg=$(git log -1 --format=%B)
-    [[ "$msg" == *"Closes #42: Fix the bug"* ]]
-    [[ "$msg" == *"See change.md for details"* ]]
+    # Note: commit message is only rewritten when squashing (multiple commits)
 }
 
 @test "action upr: No PR for current branch: PR title and commit message, change does not have issue_url" {
@@ -243,21 +267,15 @@ _assert_no_pr_base_outcome() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"--title Add feature"* ]]
 
-    # gh pr create body contains change.md content with frontmatter as yaml code block
+    # gh pr create body contains change.md content with frontmatter delimiters stripped
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *"Change request: Add feature"* ]]
-    [[ "$gh_body" == *'```yaml'* ]]
+    # Frontmatter fields appear as plain text (no fenced code block, no --- delimiters)
+    [[ "$gh_body" == *"change_id:"* ]]
+    [[ "$gh_body" != *'```'* ]]
     [[ "$gh_body" != *"---"* ]]
-
-    # Commit message is just title + see_details_line
-    cd "$PROJECT_ROOT"
-    local msg
-    msg=$(git log -1 --format=%B)
-    [[ "$msg" == "Add feature"* ]]
-    [[ "$msg" == *"See change.md for details"* ]]
-    # Should NOT contain "Closes"
-    [[ "$msg" != *"Closes"* ]]
+    # Note: commit message is only rewritten when squashing (multiple commits)
 }
 
 @test "action upr: No PR for current branch: PR body is truncated when change.md is large" {
