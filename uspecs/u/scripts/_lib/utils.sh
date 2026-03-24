@@ -12,6 +12,7 @@ _UTILS_SH_LOADED=1
 # atexit API - safe accumulating EXIT handlers
 _ATEXIT_CMDS=()
 _ATEXIT_STACK=()
+_ATEXIT_CHAINED=""
 
 _atexit_run() {
     local rc=$?
@@ -24,16 +25,18 @@ _atexit_run() {
     for (( i=${#_ATEXIT_STACK[@]}-1; i>=0; i-- )); do
         eval "${_ATEXIT_STACK[$i]}" || true
     done
+    # Run chained pre-existing trap last so our cleanup completes even if it calls exit
+    if [[ -n "$_ATEXIT_CHAINED" ]]; then
+        eval "$_ATEXIT_CHAINED" || true
+    fi
     exit "$rc"
 }
 
-# Capture any pre-existing EXIT trap and chain it as the first atexit handler.
+# Capture any pre-existing EXIT trap and chain it last.
 # The source guard above guarantees this runs at most once per shell, preventing
 # the self-chaining recursion that would occur on double-sourcing.
 { _prev_trap=$(trap -p EXIT | sed "s/^trap -- '\\(.*\\)' EXIT$/\\1/")
-  if [[ -n "$_prev_trap" ]]; then
-      _ATEXIT_CMDS+=("$_prev_trap")
-  fi
+  _ATEXIT_CHAINED="${_prev_trap:-}"
   unset _prev_trap; }
 trap _atexit_run EXIT
 

@@ -94,6 +94,20 @@ setup() {
     [ -f "$marker" ]
 }
 
+# chaining - atexit handlers run even when chained trap calls exit
+@test "atexit: handlers run before chained trap that calls exit" {
+    local cleanup="$BATS_TEST_TMPDIR/cleanup"
+    local chained="$BATS_TEST_TMPDIR/chained"
+    run bash -c "
+        trap 'touch $chained; exit 0' EXIT
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_add 'touch $cleanup'
+    "
+    [ "$status" -eq 0 ]
+    [ -f "$cleanup" ]
+    [ -f "$chained" ]
+}
+
 # atexit_add rejects multiple arguments
 @test "atexit_add: rejects multiple arguments" {
     run bash -c "
