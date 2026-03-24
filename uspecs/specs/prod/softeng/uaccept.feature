@@ -11,6 +11,7 @@ Feature: Accept pull request
     When Engineer invokes uaccept action
     # Squash and delete local and remote branches
     Then Attempt to merge PR is made with -s -d options
+    And Engineer is provided with restore instructions to recover the local branch
 
   Scenario: PR in OPEN state: Attempt to merge PR fails
     Given Attempt to merge PR fails
