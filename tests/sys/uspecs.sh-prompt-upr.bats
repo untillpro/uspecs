@@ -42,7 +42,10 @@ _setup_upr_branch() {
 # Helper: assert outcome from the "No PR for current branch" scenario is followed.
 _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
-    [[ "$output" == *"## upr_restore"* ]]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## upr_success"* ]]
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
@@ -60,7 +63,10 @@ _assert_no_pr_base_outcome() {
 
     uspecs action upr
     [ "$status" -eq 0 ]
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## upr_already_exists"* ]]
+    [[ "$output" == *"https://github.com/org/repo/pull/42"* ]]
 
     # gh pr view --web was called to open browser
     local gh_calls
@@ -79,7 +85,6 @@ _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
 
     # Should proceed with PR creation, not show already_exists or already_merged
-    [[ "$output" == *"## upr_restore"* ]]
     [[ "$output" == *"## upr_success"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
     [[ "$output" != *"## upr_already_merged"* ]]
@@ -101,9 +106,10 @@ _assert_no_pr_base_outcome() {
     [ "$status" -eq 0 ]
 
     # Should show already_merged notification and proceed with PR creation
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## upr_already_merged"* ]]
     [[ "$output" == *"PR #42"* ]]
-    [[ "$output" == *"## upr_restore"* ]]
     [[ "$output" == *"## upr_success"* ]]
     [[ "$output" != *"## upr_already_exists"* ]]
 
@@ -127,8 +133,7 @@ _assert_no_pr_base_outcome() {
     uspecs action upr
     [ "$status" -eq 0 ]
 
-    # Output contains restore instructions (before destructive ops) and success prompt
-    [[ "$output" == *"## upr_restore"* ]]
+    # Output contains success prompt with restore instructions
     [[ "$output" == *"## upr_success"* ]]
     [[ "$output" == *"$pre_head"* ]]
 

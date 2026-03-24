@@ -743,6 +743,8 @@ cmd_action_upr() {
     project_dir=$(get_project_dir)
     cd "$project_dir"
 
+    prompt_start_log
+
     # Validate preconditions
     check_prerequisites
 
@@ -756,7 +758,7 @@ cmd_action_upr() {
     git_validate_clean_repo "$current_branch" "$default_branch"
 
     # Fetch remote default branch
-    git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1
+    git fetch "$pr_remote" "$default_branch" 2>&1
 
     # Check for changes since branching
     local merge_base
@@ -783,23 +785,29 @@ cmd_action_upr() {
     # Check for uncompleted todo items
     changes_validate_todos_completed "$wcf_path" "$project_dir"
 
+    local prompts_file
+    prompts_file="$(get_script_dir)/prompts.md"
+
     # Check if PR already exists for this branch
     local pr_state pr_number
-    if pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
+    if pr_state=$(gh pr view --json state -q ".state" 2>&1); then
         # PR exists -- check its state
-        pr_number=$(gh pr view --json number -q ".number" 2>/dev/null)
+        pr_number=$(gh pr view --json number -q ".number" 2>&1)
 
         if [[ "$pr_state" == "OPEN" ]]; then
             # PR exists and is OPEN -- open in browser and show message
-            gh pr view --web >/dev/null 2>&1 || true
-            local prompts_file
-            prompts_file="$(get_script_dir)/prompts.md"
-            section_templ "$prompts_file" "upr_already_exists"
+            local pr_url
+            pr_url=$(gh pr view --json url -q ".url" 2>&1)
+            gh pr view --web 2>&1 || true
+
+            prompt_finish_log_start_instructions
+            # shellcheck disable=SC2034  # open_vars used via nameref in section_templ
+            declare -A open_vars=([pr_url]="$pr_url")
+            section_templ "$prompts_file" "upr_already_exists" open_vars
+            prompt_finish_instructions
             return 0
         elif [[ "$pr_state" == "MERGED" ]]; then
             # PR was already merged -- notify and proceed with new PR creation
-            local prompts_file
-            prompts_file="$(get_script_dir)/prompts.md"
             # shellcheck disable=SC2034  # merged_vars used via nameref in section_templ
             declare -A merged_vars=([pr_number]="$pr_number")
             section_templ "$prompts_file" "upr_already_merged" merged_vars
@@ -836,26 +844,25 @@ cmd_action_upr() {
 
     # Set upstream if not already set
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
-        git push -u origin "$current_branch" >/dev/null 2>&1
+        git push -u origin "$current_branch" 2>&1
     fi
 
-    # Record pre-push HEAD for undo instructions
+    # Record pre-push HEAD for branch restoration
     local pre_push_head
     pre_push_head=$(git rev-parse --short HEAD)
-
-    # Emit restore instructions before destructive operations
-    local prompts_file
-    prompts_file="$(get_script_dir)/prompts.md"
-    # shellcheck disable=SC2034  # restore_vars used via nameref in section_templ
-    declare -A restore_vars=([pre_push_head]="$pre_push_head")
-    section_templ "$prompts_file" "upr_restore" restore_vars
 
     # Squash branch into single commit
     git reset --soft "$merge_base"
     git commit -m "$commit_message"
 
+    # Register branch restoration handler in case force-push fails
+    atexit_push "git reset --hard ${pre_push_head}"
+
     # Force-push
     git push --force
+
+    # Force-push succeeded -- remove restoration handler
+    atexit_pop
 
     # Prepare PR body: replace YAML frontmatter --- delimiters with ```yaml / ```
     # Then truncate to avoid URL-length limits with gh pr create --web
@@ -881,11 +888,12 @@ cmd_action_upr() {
     pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
     gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file"
 
+    prompt_finish_log_start_instructions
+
     # Output success prompt
-    local prompts_file
-    prompts_file="$(get_script_dir)/prompts.md"
     declare -A vars=([pre_push_head]="$pre_push_head")
     section_templ "$prompts_file" "upr_success" vars
+    prompt_finish_instructions
 }
 
 # cmd_action_uaccept
@@ -895,6 +903,8 @@ cmd_action_uaccept() {
     local project_dir
     project_dir=$(get_project_dir)
     cd "$project_dir"
+
+    prompt_start_log
 
     # Validate preconditions
     check_prerequisites
@@ -914,7 +924,7 @@ cmd_action_uaccept() {
     fi
 
     # Fetch remote default branch
-    git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1
+    git fetch "$pr_remote" "$default_branch" 2>&1
 
     # Detect Working Change Folder
     local changes_folder_rel
@@ -927,25 +937,29 @@ cmd_action_uaccept() {
 
     # Check PR state
     local pr_state pr_number
-    if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
+    if ! pr_state=$(gh pr view --json state -q ".state" 2>&1); then
         # No PR found
+        prompt_finish_log_start_instructions
         section_templ "$prompts_file" "uaccept_no_pr"
+        prompt_finish_instructions
         return 0
     fi
 
-    pr_number=$(gh pr view --json number -q ".number" 2>/dev/null)
+    pr_number=$(gh pr view --json number -q ".number" 2>&1)
 
     if [[ "$pr_state" != "OPEN" ]]; then
         # PR is not in OPEN state
-        gh pr view --web >/dev/null 2>&1 || true
+        gh pr view --web 2>&1 || true
 
         local branch_head
         branch_head=$(git rev-parse HEAD)
 
         # Delete local branch, upstream and remote tracking ref (errors ignored)
-        git checkout "$default_branch" 2>/dev/null || true
-        git branch -D "$current_branch" 2>/dev/null || true
-        git branch -dr "origin/$current_branch" 2>/dev/null || true
+        git checkout "$default_branch" 2>&1 || true
+        git branch -D "$current_branch" 2>&1 || true
+        git branch -dr "origin/$current_branch" 2>&1 || true
+
+        prompt_finish_log_start_instructions
 
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A vars=(
@@ -955,6 +969,7 @@ cmd_action_uaccept() {
             [branch_head]="$branch_head"
         )
         section_templ "$prompts_file" "uaccept_not_open" vars
+        prompt_finish_instructions
         return 0
     fi
 
@@ -970,32 +985,43 @@ cmd_action_uaccept() {
         if [[ -n $(git status --porcelain) ]]; then
             git add -A
             git commit -m "Archive $wcf_name"
-            git push 2>/dev/null || true
+            git push 2>&1 || true
         fi
     fi
 
+    # Record branch HEAD before merge deletes it
+    local branch_head
+    branch_head=$(git rev-parse --short HEAD)
+
     # Attempt merge with squash and delete branch
-    if ! gh pr merge --squash --delete-branch 2>/dev/null; then
+    if ! gh pr merge --squash --delete-branch 2>&1; then
         # Merge failed
-        gh pr view --web >/dev/null 2>&1 || true
+        gh pr view --web 2>&1 || true
+
+        prompt_finish_log_start_instructions
 
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A fail_vars=([pr_number]="$pr_number")
         section_templ "$prompts_file" "uaccept_merge_failed" fail_vars
+        prompt_finish_instructions
         return 0
     fi
 
     # Merge succeeded -- cleanup
     # gh pr merge --delete-branch already switched to default branch and deleted local branch
     # Clean up remote tracking ref (errors ignored)
-    git branch -dr "origin/$current_branch" 2>/dev/null || true
+    git branch -dr "origin/$current_branch" 2>&1 || true
+
+    prompt_finish_log_start_instructions
 
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A success_vars=(
         [pr_number]="$pr_number"
         [branch_name]="$current_branch"
+        [branch_head]="$branch_head"
     )
     section_templ "$prompts_file" "uaccept_success" success_vars
+    prompt_finish_instructions
 }
 
 main() {

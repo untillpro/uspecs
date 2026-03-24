@@ -227,3 +227,27 @@ sed_inplace() {
     fi
     rm -f "${file}.bak"
 }
+
+
+# ---------------------------------------------------------------------------
+# Structured prompt output (LOG / AGENT_INSTRUCTIONS)
+# ---------------------------------------------------------------------------
+
+# prompt_start_log
+# Emits the opening <LOG> tag.
+prompt_start_log() {
+    echo "<LOG>"
+}
+
+# prompt_finish_log_start_instructions
+# Emits the closing </LOG> tag and the opening <AGENT_INSTRUCTIONS> tag.
+prompt_finish_log_start_instructions() {
+    echo "</LOG>"
+    echo "<AGENT_INSTRUCTIONS>"
+}
+
+# prompt_finish_instructions
+# Emits the closing </AGENT_INSTRUCTIONS> tag.
+prompt_finish_instructions() {
+    echo "</AGENT_INSTRUCTIONS>"
+}

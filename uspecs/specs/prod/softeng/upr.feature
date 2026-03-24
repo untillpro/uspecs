@@ -6,10 +6,10 @@ Feature: Create pull request from current branch
     When Engineer invokes upr action
     Then <action> is performed
     Examples:
-      | pr_state | action                                                                                |
-      | OPEN     | message "A PR already exists for the current branch" is displayed and PR is opened    |
-      | CLOSED   | new PR creation proceeds normally (squash, force-push, open browser)                  |
-      | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally |
+      | pr_state | action                                                                                   |
+      | OPEN     | PR URL is displayed, message "A PR already exists" is shown, and PR is opened in browser |
+      | CLOSED   | new PR creation proceeds normally (squash, force-push, open browser)                     |
+      | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally    |
 
   Scenario: No PR for current branch
     Given no PR is associated with the current branch
@@ -18,6 +18,7 @@ Feature: Create pull request from current branch
     And branch is squashed into a single commit with commit_message
     And branch is force-pushed
     And PR creation is opened in the browser with pr_title and pr_body
+    And Engineer is provided with restore instructions to revert the squash
     And Engineer is prompted with next steps
 
   Scenario: No PR for current branch: WCF is active
