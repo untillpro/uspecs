@@ -7,8 +7,18 @@ set -Eeuo pipefail
 _ATEXIT_CMDS=()
 _ATEXIT_STACK=()
 
+# Capture any EXIT trap registered before utils.sh was sourced so we can chain it.
+_ATEXIT_PREV_TRAP=""
+{ _tmp=$(trap -p EXIT)
+  if [[ -n "$_tmp" ]]; then
+      _tmp="${_tmp#trap -- \'}"
+      _ATEXIT_PREV_TRAP="${_tmp%\' EXIT}"
+  fi
+  unset _tmp; }
+
 _atexit_run() {
     local rc=$?
+    trap - EXIT  # prevent re-entrancy if a chained handler calls exit
     local cmd
     for cmd in "${_ATEXIT_CMDS[@]+"${_ATEXIT_CMDS[@]}"}"; do
         eval "$cmd" || true
@@ -17,6 +27,9 @@ _atexit_run() {
     for entry in "${_ATEXIT_STACK[@]+"${_ATEXIT_STACK[@]}"}"; do
         eval "$entry" || true
     done
+    if [[ -n "${_ATEXIT_PREV_TRAP:-}" ]]; then
+        eval "$_ATEXIT_PREV_TRAP" || true
+    fi
     exit "$rc"
 }
 trap _atexit_run EXIT

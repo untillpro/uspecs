@@ -57,6 +57,18 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
+# chaining - EXIT trap registered before sourcing utils.sh is still called
+@test "atexit: chains previously registered EXIT trap" {
+    local marker="$BATS_TEST_TMPDIR/prev"
+    run bash -c "
+        trap 'touch $marker' EXIT
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        atexit_add 'true'
+    "
+    [ "$status" -eq 0 ]
+    [ -f "$marker" ]
+}
+
 # exit code preserved - original non-zero rc propagates through dispatcher
 @test "atexit: original non-zero exit code is preserved" {
     run bash -c "
