@@ -3,6 +3,44 @@
 # Well, we do not neeed it, since it is sourced, just for consistency with other scripts
 set -Eeuo pipefail
 
+# atexit API - safe accumulating EXIT handlers
+_ATEXIT_CMDS=()
+_ATEXIT_STACK=()
+
+_atexit_run() {
+    local rc=$?
+    local cmd
+    for cmd in "${_ATEXIT_CMDS[@]+"${_ATEXIT_CMDS[@]}"}"; do
+        eval "$cmd" || true
+    done
+    local entry
+    for entry in "${_ATEXIT_STACK[@]+"${_ATEXIT_STACK[@]}"}"; do
+        eval "$entry" || true
+    done
+    exit "$rc"
+}
+trap _atexit_run EXIT
+
+# atexit_add <cmd>
+# Appends cmd to the FIFO queue of EXIT handlers.
+atexit_add() {
+    _ATEXIT_CMDS+=("$1")
+}
+
+# atexit_push <cmd>
+# Pushes cmd onto the LIFO stack; dispatcher runs stack entries after _ATEXIT_CMDS.
+atexit_push() {
+    _ATEXIT_STACK+=("$1")
+}
+
+# atexit_pop
+# Removes the last-pushed entry from the stack.
+atexit_pop() {
+    if [[ ${#_ATEXIT_STACK[@]} -gt 0 ]]; then
+        unset '_ATEXIT_STACK[-1]'
+    fi
+}
+
 # git_path
 # Ensures Git's usr/bin is in PATH on Windows (Git Bash / MSYS2 / Cygwin).
 # Call this at the start of main() in every top-level script.
