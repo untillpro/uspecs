@@ -8,7 +8,7 @@ Feature: Create pull request from current branch
     Examples:
       | pr_state | action                                                                                |
       | OPEN     | message "A PR already exists for the current branch" is displayed and PR is opened    |
-      | CLOSED   | new PR creation proceeds normally (archive, squash, force-push, open browser)         |
+      | CLOSED   | new PR creation proceeds normally (squash, force-push, open browser)                  |
       | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally |
 
   Scenario: No PR for current branch
@@ -17,13 +17,13 @@ Feature: Create pull request from current branch
     Then pr_remote/default_branch is fetched
     And branch is squashed into a single commit with commit_message
     And branch is force-pushed
-    And PR creation is opened in the browser with pr_title and commit_message
+    And PR creation is opened in the browser with pr_title and pr_body
     And Engineer is prompted with next steps
 
   Scenario: No PR for current branch: WCF is active
     Given Working Change Folder is active
     When Engineer invokes upr action
-    Then Working Change Folder is archived
+    Then Working Change Folder remains active (not archived)
     And outcome from the "No PR for current branch" scenario is followed
 
   Scenario: No PR for current branch: branch has no upstream
@@ -37,7 +37,8 @@ Feature: Create pull request from current branch
     And <issue_condition>
     When Engineer invokes upr action
     Then PR title is <title_format>
-    And see_details_line is "See {path-from-prj-root-to-change.md} for details"
+    And pr_body is content of change.md
+    And see_details_line is "See change.md for details"
     And commit message is <message_format>
     And change_title is text after ":" in the first `#` heading of change.md, trimmed
     Examples:
