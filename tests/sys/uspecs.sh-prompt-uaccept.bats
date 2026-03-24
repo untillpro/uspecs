@@ -40,7 +40,6 @@ _setup_uaccept_branch() {
     git branch --set-upstream-to=origin/my-feature
 }
 
-# Scenario: PR not found
 @test "action uaccept: PR not found" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
@@ -53,8 +52,7 @@ _setup_uaccept_branch() {
     [[ "$output" == *"No open PR found"* ]]
 }
 
-# Scenario: PR in OPEN state
-@test "action uaccept: PR in OPEN state - merge succeeds" {
+@test "action uaccept: PR in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -76,8 +74,7 @@ _setup_uaccept_branch() {
     [[ "$gh_calls" == *"pr merge --squash --delete-branch"* ]]
 }
 
-# Scenario: PR in OPEN state: Attempt to merge PR fails
-@test "action uaccept: PR in OPEN state - merge fails" {
+@test "action uaccept: PR in OPEN state: Attempt to merge PR fails" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -101,8 +98,7 @@ _setup_uaccept_branch() {
     [[ "$gh_calls" == *"pr view --web"* ]]
 }
 
-# Scenario: PR in OPEN state: Active Working Change Folder exists
-@test "action uaccept: PR in OPEN state - active WCF is archived" {
+@test "action uaccept: PR in OPEN state: WCF is active" {
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
 
@@ -136,8 +132,7 @@ _setup_uaccept_branch() {
     [[ "$output" == *"## uaccept_success"* ]]
 }
 
-# Scenario: PR is not in OPEN state
-@test "action uaccept: PR is not in OPEN state" {
+@test "action uaccept: PR not in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
     # shellcheck disable=SC2030,SC2031
@@ -160,7 +155,6 @@ _setup_uaccept_branch() {
 }
 
 # Git validations#Project inside Git working tree
-# Example: no git repository
 @test "action uaccept: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
     cd "$PROJECT_ROOT"
@@ -171,7 +165,6 @@ _setup_uaccept_branch() {
 }
 
 # Git validations#Git working tree is clean
-# Example: working tree has uncommitted changes
 @test "action uaccept: Validation rejects, working tree has uncommitted changes" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_uaccept_branch
@@ -183,7 +176,6 @@ _setup_uaccept_branch() {
 }
 
 # Git validations#Git working tree is clean
-# Example: current branch is the default branch
 @test "action uaccept: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
     git checkout -q main
@@ -193,8 +185,6 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"Current branch is the default branch"* ]]
 }
 
-# Scenario Outline: Validation
-# Example: current branch has no upstream
 @test "action uaccept: Validation rejects, current branch has no upstream" {
     cd "$PROJECT_ROOT"
     git checkout -q -b no-upstream-branch
@@ -207,7 +197,6 @@ _setup_uaccept_branch() {
 }
 
 # Change Folder validations#Exactly one Working Change Folder
-# Example: not exactly one Working Change Folder exists
 @test "action uaccept: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b empty-branch
@@ -223,8 +212,6 @@ _setup_uaccept_branch() {
     [[ "${stderr:-}" == *"No Working Change Folder"* ]]
 }
 
-# Scenario Outline: Validation rejects invalid state
-# Example: Multiple Working Change Folders exist
 @test "action uaccept: Validation rejects, Multiple Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b multi-wcf-branch

@@ -17,7 +17,7 @@ Feature: Accept pull request
     Then PR is opened in the browser
     And Engineer is prompted to handle PR manually and run uaccept again
 
-  Scenario: PR in OPEN state: Active Working Change Folder exists
+  Scenario: PR in OPEN state: WCF is active
     Given PR associated with the current branch is in OPEN state
     And Working Change Folder is active
     When Engineer invokes uaccept action
@@ -25,7 +25,7 @@ Feature: Accept pull request
     And commit is made with message "Archive {wrk_change_folder}"
     And outcome from the base scenario is followed
 
-  Scenario: PR is not in OPEN state
+  Scenario: PR not in OPEN state
     Given PR associated with the current branch is not in OPEN state
     When Engineer invokes uaccept action
     Then PR is opened in the browser

@@ -39,11 +39,19 @@ _setup_upr_branch() {
     _make_upr_change "$folder_name" "$title" "$issue_url"
 }
 
+# Helper: assert outcome from the "No PR for current branch" scenario is followed.
+_assert_no_pr_base_outcome() {
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"## upr_restore"* ]]
+    [[ "$output" == *"## upr_success"* ]]
+    local gh_calls
+    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
+    [[ "$gh_calls" == *"pr create --web"* ]]
+}
+
 # --- PR already exists ---
 
-# Scenario Outline: Create pull request, current branch has a PR associated with it
-# Example: PR is in OPEN state
-@test "action upr: Create pull request, current branch has OPEN PR" {
+@test "action upr: PR exists for current branch, OPEN" {
     _setup_upr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
@@ -60,9 +68,7 @@ _setup_upr_branch() {
     [[ "$gh_calls" == *"pr view --web"* ]]
 }
 
-# Scenario Outline: Create pull request, current branch has a PR associated with it
-# Example: PR is in CLOSED state - should proceed with new PR creation
-@test "action upr: Create pull request, current branch has CLOSED PR" {
+@test "action upr: PR exists for current branch, CLOSED" {
     _setup_upr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
@@ -84,9 +90,7 @@ _setup_upr_branch() {
     [[ "$gh_calls" == *"pr create --web"* ]]
 }
 
-# Scenario Outline: Create pull request, current branch has a PR associated with it
-# Example: PR is in MERGED state - should notify and proceed with new PR creation
-@test "action upr: Create pull request, current branch has MERGED PR" {
+@test "action upr: PR exists for current branch, MERGED" {
     _setup_upr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
@@ -111,9 +115,8 @@ _setup_upr_branch() {
 
 # --- Successful creation flow ---
 
-# Scenario: Create pull request, current branch does not have a PR associated with it
 # Verifies: squash, force-push, open browser, output next steps
-@test "action upr: Create pull request, current branch does not have a PR associated with it" {
+@test "action upr: No PR for current branch" {
     _setup_upr_branch
 
     # Record pre-squash HEAD to verify it appears in the output
@@ -141,9 +144,44 @@ _setup_upr_branch() {
     [ "$count" -eq 1 ]
 }
 
-# Scenario: Create pull request, current branch does not have a PR associated with it
-# Variant: Working Change Folder is already archived
-@test "action upr: Create pull request, Working Change Folder is archived" {
+# Verifies WCF is archived before squash/force-push
+@test "action upr: No PR for current branch: WCF is active" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b active-wcf-branch
+    local folder_name="2601010000-active-wcf"
+    _make_upr_change "$folder_name" "Active WCF"
+
+    uspecs action upr
+    [ "$status" -eq 0 ]
+
+    # WCF was archived
+    local archive_count
+    archive_count=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" 2>/dev/null | wc -l)
+    [ "$archive_count" -eq 1 ]
+    [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
+
+    _assert_no_pr_base_outcome
+}
+
+# Verifies tracking is set before squash/force-push
+@test "action upr: No PR for current branch: branch has no upstream" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b no-upstream-upr-branch
+    _make_upr_change "2601010000-no-upstream-upr" "No upstream"
+    # Do NOT push or set upstream -- branch has no tracking remote
+
+    uspecs action upr
+    [ "$status" -eq 0 ]
+
+    # Upstream was set (branch now tracks origin/no-upstream-upr-branch)
+    local tracking
+    tracking=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || true)
+    [[ "$tracking" == "origin/no-upstream-upr-branch" ]]
+
+    _assert_no_pr_base_outcome
+}
+
+@test "action upr: No PR for current branch: WCF already archived" {
     cd "$PROJECT_ROOT"
     git checkout -q -b archived-wcf-branch
 
@@ -167,16 +205,13 @@ _setup_upr_branch() {
     [[ "$output" == *"## upr_success"* ]]
 }
 
-# --- pr_title and commit_message with issue_url ---
+# --- PR title and commit message ---
 
-# Scenario Outline: pr_title and commit_message include issue reference when available
-# Example: change has issue_url
-@test "action upr: pr_title and commit_message, change has issue_url" {
+@test "action upr: No PR for current branch: PR title and commit message, change has issue_url" {
     _setup_upr_branch "2601010000-issue-change" "Fix the bug" "https://github.com/org/repo/issues/42"
 
     uspecs action upr
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"## upr_success"* ]]
+    _assert_no_pr_base_outcome
 
     # gh pr create was called with title containing issue id
     local gh_calls
@@ -191,16 +226,11 @@ _setup_upr_branch() {
     [[ "$msg" == *"See uspecs/changes/2601010000-issue-change/change.md for details"* ]]
 }
 
-# --- pr_title and commit_message without issue_url ---
-
-# Scenario Outline: pr_title and commit_message include issue reference when available
-# Example: change does not have issue_url
-@test "action upr: pr_title and commit_message, change does not have issue_url" {
+@test "action upr: No PR for current branch: PR title and commit message, change does not have issue_url" {
     _setup_upr_branch "2601010000-no-issue" "Add feature"
 
     uspecs action upr
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"## upr_success"* ]]
+    _assert_no_pr_base_outcome
 
     # gh pr create was called with title = change_title only
     local gh_calls
@@ -219,8 +249,6 @@ _setup_upr_branch() {
 
 # --- Edge cases ---
 
-# Scenario Outline: Validation
-# Example: no changes detected in the current branch since branching from default branch
 @test "action upr: Validation rejects, no changes since branching from default branch" {
     cd "$PROJECT_ROOT"
     git checkout -q -b empty-feature
@@ -231,7 +259,6 @@ _setup_upr_branch() {
 }
 
 # Git validations#Project inside Git working tree
-# Example: no git repository
 @test "action upr: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
     cd "$PROJECT_ROOT"
@@ -242,7 +269,6 @@ _setup_upr_branch() {
 }
 
 # Git validations#Git working tree is clean
-# Example: working tree has uncommitted changes
 @test "action upr: Validation rejects, working tree has uncommitted changes" {
     _setup_upr_branch
     echo "dirty" > "$PROJECT_ROOT/dirty-file.txt"
@@ -253,7 +279,6 @@ _setup_upr_branch() {
 }
 
 # Git validations#Git working tree is clean
-# Example: current branch is the default branch
 @test "action upr: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
 
@@ -263,7 +288,6 @@ _setup_upr_branch() {
 }
 
 # Change Folder validations#Exactly one Working Change Folder
-# Example: No Working Change Folder exists
 @test "action upr: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b no-wcf-branch
@@ -278,7 +302,6 @@ _setup_upr_branch() {
 }
 
 # Change Folder validations#Exactly one Working Change Folder
-# Example: Multiple Working Change Folder exists
 @test "action upr: Validation rejects, Multiple Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b multi-wcf-branch
@@ -297,7 +320,6 @@ _setup_upr_branch() {
 }
 
 # Change Folder validations#All todo items are completed
-# Example: change folder has uncompleted todo items
 @test "action upr: Validation rejects, change folder has uncompleted todo items" {
     cd "$PROJECT_ROOT"
     git checkout -q -b todo-feature

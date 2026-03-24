@@ -1,7 +1,7 @@
 Feature: Create pull request from current branch
   Engineer asks AI Agent to create a pull request from the current branch
 
-  Scenario Outline: Create pull request, current branch has a PR associated with it
+  Scenario Outline: PR exists for current branch
     Given a PR in <pr_state> state is associated with the current branch
     When Engineer invokes upr action
     Then <action> is performed
@@ -11,18 +11,30 @@ Feature: Create pull request from current branch
       | CLOSED   | new PR creation proceeds normally (archive, squash, force-push, open browser)         |
       | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally |
 
-  Scenario: Create pull request, current branch does not have a PR associated with it
+  Scenario: No PR for current branch
+    Given no PR is associated with the current branch
     When Engineer invokes upr action
     Then pr_remote/default_branch is fetched
-    And Working Change Folder is archived if active
-    And local branch is set to track origin/current_branch if not already
     And branch is squashed into a single commit with commit_message
     And branch is force-pushed
     And PR creation is opened in the browser with pr_title and commit_message
     And Engineer is prompted with next steps
 
-  Scenario Outline: pr_title and commit_message include issue reference when available
-    Given <issue_condition>
+  Scenario: No PR for current branch: WCF is active
+    Given Working Change Folder is active
+    When Engineer invokes upr action
+    Then Working Change Folder is archived
+    And outcome from the "No PR for current branch" scenario is followed
+
+  Scenario: No PR for current branch: branch has no upstream
+    Given local branch does not track origin/current_branch
+    When Engineer invokes upr action
+    Then local branch is set to track origin/current_branch
+    And outcome from the "No PR for current branch" scenario is followed
+
+  Scenario Outline: No PR for current branch: PR title and commit message
+    Given no PR is associated with the current branch
+    And <issue_condition>
     When Engineer invokes upr action
     Then PR title is <title_format>
     And see_details_line is "See {path-from-prj-root-to-change.md} for details"
@@ -32,6 +44,7 @@ Feature: Create pull request from current branch
       | issue_condition                | title_format                | message_format                                         |
       | change has issue_url           | [{issue_id}] {change_title} | Closes #{issue_id}: {change_title}\n{see_details_line} |
       | change does not have issue_url | {change_title}              | {change_title}\n{see_details_line}                     |
+    And outcome from the "No PR for current branch" scenario is followed
 
   Rule: Edge cases
 
