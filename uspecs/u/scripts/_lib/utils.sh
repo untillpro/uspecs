@@ -3,18 +3,15 @@
 # Well, we do not neeed it, since it is sourced, just for consistency with other scripts
 set -Eeuo pipefail
 
+# Source guard - utils.sh must only be sourced once per shell.
+if [[ -n "${_UTILS_SH_LOADED:-}" ]]; then
+    return 0
+fi
+_UTILS_SH_LOADED=1
+
 # atexit API - safe accumulating EXIT handlers
 _ATEXIT_CMDS=()
 _ATEXIT_STACK=()
-
-# Capture any EXIT trap registered before utils.sh was sourced so we can chain it.
-_ATEXIT_PREV_TRAP=""
-{ _tmp=$(trap -p EXIT)
-  if [[ -n "$_tmp" ]]; then
-      _tmp="${_tmp#trap -- \'}"
-      _ATEXIT_PREV_TRAP="${_tmp%\' EXIT}"
-  fi
-  unset _tmp; }
 
 _atexit_run() {
     local rc=$?
@@ -27,11 +24,17 @@ _atexit_run() {
     for (( i=${#_ATEXIT_STACK[@]}-1; i>=0; i-- )); do
         eval "${_ATEXIT_STACK[$i]}" || true
     done
-    if [[ -n "${_ATEXIT_PREV_TRAP:-}" ]]; then
-        eval "$_ATEXIT_PREV_TRAP" || true
-    fi
     exit "$rc"
 }
+
+# Capture any pre-existing EXIT trap and chain it as the first atexit handler.
+# The source guard above guarantees this runs at most once per shell, preventing
+# the self-chaining recursion that would occur on double-sourcing.
+{ _prev_trap=$(trap -p EXIT | sed "s/^trap -- '\\(.*\\)' EXIT$/\\1/")
+  if [[ -n "$_prev_trap" ]]; then
+      _ATEXIT_CMDS+=("$_prev_trap")
+  fi
+  unset _prev_trap; }
 trap _atexit_run EXIT
 
 # atexit_add <cmd>
@@ -82,6 +85,8 @@ is_tty() {
 
 # is_git_repo <dir>
 # Returns 0 if <dir> is inside a git repository, 1 otherwise.
+# //TODO replace with git.sh#git_validate_working_tree
+
 is_git_repo() {
     local dir="$1"
     (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
@@ -178,6 +183,33 @@ md_read_title() {
 
     [[ -n "$title" ]] || error "no title heading found in $file"
     printf '%s\n' "$title"
+}
+
+# ---------------------------------------------------------------------------
+# Temp file/dir management with automatic cleanup
+# ---------------------------------------------------------------------------
+
+case "$OSTYPE" in
+    msys*|cygwin*) _TMP_BASE=$(cygpath -w "$TEMP") ;;
+    *)             _TMP_BASE="/tmp" ;;
+esac
+
+# temp_create_dir <varname>
+# Creates a temporary directory, stores its path in the caller's variable
+# <varname>, and registers it for cleanup on exit.
+temp_create_dir() {
+    local -n _out=$1
+    _out=$(mktemp -d "$_TMP_BASE/uspecs.XXXXXX")
+    atexit_add "rm -rf '$_out'"
+}
+
+# temp_create_file <varname>
+# Creates a temporary file, stores its path in the caller's variable
+# <varname>, and registers it for cleanup on exit.
+temp_create_file() {
+    local -n _out=$1
+    _out=$(mktemp "$_TMP_BASE/uspecs.XXXXXX")
+    atexit_add "rm -f '$_out'"
 }
 
 # sed_inplace file sed-args...
