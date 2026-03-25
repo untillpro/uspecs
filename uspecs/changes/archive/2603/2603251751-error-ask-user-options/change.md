@@ -2,6 +2,7 @@
 registered_at: 2026-03-25T16:42:45Z
 change_id: 2603251642-error-ask-user-options
 baseline: c193fa970552d2b325b8f2440423ea363d619615
+archived_at: 2026-03-25T17:51:59Z
 ---
 
 # Change request: Error Ask User Options
