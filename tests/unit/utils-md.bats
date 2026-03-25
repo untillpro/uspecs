@@ -17,12 +17,12 @@ setup() {
     cat > "$TEST_TMPDIR/change.md" <<'EOF'
 ---
 registered_at: 2026-03-12T07:00:31Z
-change_id: 2603120700-introduce-uaccept
+change_id: 2603120700-introduce-umergepr
 baseline: c9614d33d1f10184c96e64781e1fe3b439938e6f
 issue_url: https://github.com/org/repo/issues/42
 ---
 
-# Change request: Introduce uaccept action
+# Change request: Introduce umergepr action
 
 ## Why
 
@@ -53,7 +53,7 @@ EOF
 @test "frontmatter: extracts existing field" {
     run md_read_frontmatter_field "$TEST_TMPDIR/change.md" "change_id"
     [ "$status" -eq 0 ]
-    [ "$output" = "2603120700-introduce-uaccept" ]
+    [ "$output" = "2603120700-introduce-umergepr" ]
 }
 
 @test "frontmatter: extracts field with URL value" {
@@ -109,7 +109,7 @@ EOF
 @test "title: extracts standard title" {
     run md_read_title "$TEST_TMPDIR/change.md"
     [ "$status" -eq 0 ]
-    [ "$output" = "Change request: Introduce uaccept action" ]
+    [ "$output" = "Change request: Introduce umergepr action" ]
 }
 
 @test "title: extracts title without frontmatter" {

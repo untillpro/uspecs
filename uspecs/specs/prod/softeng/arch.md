@@ -59,3 +59,8 @@ Non-exhaustive list of actions and their artifacts:
   - action file: actn-upr.md
   - input: Active Change Folder, change_branch
   - output: PR created on GitHub, pr_branch with squashed commits, change_branch deleted
+
+- umergepr
+  - action file: actn-umergepr.md (prompts via prompts.md)
+  - input: Active Change Folder, open PR on current branch
+  - output: PR squash-merged, branch deleted, WCF archived, Engineer notified
