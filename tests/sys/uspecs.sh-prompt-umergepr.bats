@@ -95,7 +95,7 @@ _setup_umergepr_branch() {
 
     uspecs action umergepr
     [ "$status" -eq 0 ]
-    
+
     # Verify structured output tags and merge failed message
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]
@@ -159,7 +159,7 @@ _setup_umergepr_branch() {
 
     uspecs action umergepr
     [ "$status" -eq 0 ]
-    
+
     # Verify structured output tags and not_open message
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]

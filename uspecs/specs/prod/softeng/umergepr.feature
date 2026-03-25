@@ -1,5 +1,5 @@
-Feature: Accept pull request
-  Engineer asks AI Agent to accept a PR associated with the current branch
+Feature: Merge pull request
+  Engineer asks AI Agent to merge a PR associated with the current branch
 
   Scenario: PR not found
     Given no open PR exists for the current branch
