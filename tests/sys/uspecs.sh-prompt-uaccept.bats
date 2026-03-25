@@ -4,9 +4,9 @@ set -Eeuo pipefail
 load 'helpers'
 
 # Helper: create a change folder with a proper heading for md_read_title.
-# Usage: _make_uaccept_change <folder_name> <title>
+# Usage: _make_umergepr_change <folder_name> <title>
 # shellcheck disable=SC2120  # Second argument is optional with default
-_make_uaccept_change() {
+_make_umergepr_change() {
     local folder_name="$1"
     local title="${2:-Test change title}"
 
@@ -24,47 +24,47 @@ _make_uaccept_change() {
     git -C "$PROJECT_ROOT" commit -q -m "add $folder_name"
 }
 
-# Helper: set up a feature branch with a WCF and upstream ready for action uaccept.
+# Helper: set up a feature branch with a WCF and upstream ready for action umergepr.
 # Returns with CWD in $PROJECT_ROOT on the feature branch.
 # shellcheck disable=SC2120  # Arguments are optional with defaults
-_setup_uaccept_branch() {
+_setup_umergepr_branch() {
     local folder_name="${1:-2601010000-test-change}"
     local title="${2:-Test change title}"
 
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
-    _make_uaccept_change "$folder_name" "$title"
+    _make_umergepr_change "$folder_name" "$title"
 
     # Push to origin and set upstream
     git push -q origin my-feature
     git branch --set-upstream-to=origin/my-feature
 }
 
-@test "action uaccept: PR not found" {
+@test "action umergepr: PR not found" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
-    _setup_uaccept_branch
+    _setup_umergepr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=0
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -eq 0 ]
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## uaccept_no_pr"* ]]
+    [[ "$output" == *"## umergepr_no_pr"* ]]
     [[ "$output" == *"No open PR found"* ]]
 }
 
-@test "action uaccept: PR in OPEN state" {
+@test "action umergepr: PR in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
-    _setup_uaccept_branch
+    _setup_umergepr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"OPEN","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -eq 0 ]
 
     # Verify structured output tags and success message with restore instructions
@@ -72,7 +72,7 @@ _setup_uaccept_branch() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## uaccept_success"* ]]
+    [[ "$output" == *"## umergepr_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
     [[ "$output" == *"my-feature"* ]]
     [[ "$output" == *"git branch my-feature"* ]]
@@ -83,9 +83,9 @@ _setup_uaccept_branch() {
     [[ "$gh_calls" == *"pr merge --squash --delete-branch"* ]]
 }
 
-@test "action uaccept: PR in OPEN state: Attempt to merge PR fails" {
+@test "action umergepr: PR in OPEN state: Attempt to merge PR fails" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
-    _setup_uaccept_branch
+    _setup_umergepr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
     # shellcheck disable=SC2030,SC2031
@@ -93,7 +93,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_MERGE_FAIL=1
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -eq 0 ]
     
     # Verify structured output tags and merge failed message
@@ -101,9 +101,9 @@ _setup_uaccept_branch() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## uaccept_merge_failed"* ]]
+    [[ "$output" == *"## umergepr_merge_failed"* ]]
     [[ "$output" == *"Merge of PR #42 failed"* ]]
-    [[ "$output" == *"run \`uaccept\` again"* ]]
+    [[ "$output" == *"run \`umergepr\` again"* ]]
 
     # Verify gh pr view --web was called
     local gh_calls
@@ -111,13 +111,13 @@ _setup_uaccept_branch() {
     [[ "$gh_calls" == *"pr view --web"* ]]
 }
 
-@test "action uaccept: PR in OPEN state: WCF is active" {
+@test "action umergepr: PR in OPEN state: WCF is active" {
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
 
     # Create active change folder (not in archive/)
     local folder_name="2601010000-active-change"
-    _make_uaccept_change "$folder_name" "Active change"
+    _make_umergepr_change "$folder_name" "Active change"
 
     # Push to origin and set upstream
     git push -q origin my-feature
@@ -128,7 +128,7 @@ _setup_uaccept_branch() {
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"OPEN","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -eq 0 ]
 
     # After squash merge, we're on default branch and feature branch is deleted
@@ -146,18 +146,18 @@ _setup_uaccept_branch() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## uaccept_success"* ]]
+    [[ "$output" == *"## umergepr_success"* ]]
 }
 
-@test "action uaccept: PR not in OPEN state" {
+@test "action umergepr: PR not in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
-    _setup_uaccept_branch
+    _setup_umergepr_branch
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_EXISTS=1
     # shellcheck disable=SC2030,SC2031
     export GH_STUB_PR_JSON='{"number":42,"state":"MERGED","url":"https://github.com/org/repo/pull/42"}'
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -eq 0 ]
     
     # Verify structured output tags and not_open message
@@ -165,7 +165,7 @@ _setup_uaccept_branch() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"## uaccept_not_open"* ]]
+    [[ "$output" == *"## umergepr_not_open"* ]]
     [[ "$output" == *"PR #42 is in MERGED state"* ]]
     [[ "$output" == *"git branch my-feature"* ]]
 
@@ -176,49 +176,49 @@ _setup_uaccept_branch() {
 }
 
 # Git validations#Project inside Git working tree
-@test "action uaccept: Validation rejects, no git repository" {
+@test "action umergepr: Validation rejects, no git repository" {
     rm -rf "$PROJECT_ROOT/.git"
     cd "$PROJECT_ROOT"
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"No git repository"* ]]
 }
 
 # Git validations#Git working tree is clean
-@test "action uaccept: Validation rejects, working tree has uncommitted changes" {
+@test "action umergepr: Validation rejects, working tree has uncommitted changes" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
-    _setup_uaccept_branch
+    _setup_umergepr_branch
     echo "uncommitted" > "$PROJECT_ROOT/dirty.txt"
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"uncommitted changes"* ]]
 }
 
 # Git validations#Git working tree is clean
-@test "action uaccept: Validation rejects, current branch is the default branch" {
+@test "action umergepr: Validation rejects, current branch is the default branch" {
     cd "$PROJECT_ROOT"
     git checkout -q main
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Current branch is the default branch"* ]]
 }
 
-@test "action uaccept: Validation rejects, current branch has no upstream" {
+@test "action umergepr: Validation rejects, current branch has no upstream" {
     cd "$PROJECT_ROOT"
     git checkout -q -b no-upstream-branch
-    _make_uaccept_change "2601010000-no-upstream" "No upstream"
+    _make_umergepr_change "2601010000-no-upstream" "No upstream"
     # Do NOT set upstream
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"has no upstream"* ]]
 }
 
 # Change Folder validations#Exactly one Working Change Folder
-@test "action uaccept: Validation rejects, No Working Change Folder exists" {
+@test "action umergepr: Validation rejects, No Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b empty-branch
     # Create a commit without any change folder
@@ -228,20 +228,20 @@ _setup_uaccept_branch() {
     git push -q origin empty-branch
     git branch --set-upstream-to=origin/empty-branch
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"No Working Change Folder"* ]]
 }
 
-@test "action uaccept: Validation rejects, Multiple Working Change Folder exists" {
+@test "action umergepr: Validation rejects, Multiple Working Change Folder exists" {
     cd "$PROJECT_ROOT"
     git checkout -q -b multi-wcf-branch
-    _make_uaccept_change "2601010000-first-change" "First change"
-    _make_uaccept_change "2601010000-second-change" "Second change"
+    _make_umergepr_change "2601010000-first-change" "First change"
+    _make_umergepr_change "2601010000-second-change" "Second change"
     git push -q origin multi-wcf-branch
     git branch --set-upstream-to=origin/multi-wcf-branch
 
-    uspecs action uaccept
+    uspecs action umergepr
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Multiple Working Change Folders"* ]]
 }

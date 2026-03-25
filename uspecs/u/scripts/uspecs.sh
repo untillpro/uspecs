@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 # Usage:
 #   uspecs action upr
-#   uspecs action uaccept
+#   uspecs action umergepr
 #   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
 #   uspecs change archive <change-folder-name> [-d] | --all
 #   uspecs pr preflight
@@ -909,10 +909,10 @@ cmd_action_upr() {
     prompt_finish_instructions
 }
 
-# cmd_action_uaccept
-# Full uaccept flow: validate, detect WCF, check PR state, handle branches,
+# cmd_action_umergepr
+# Full umergepr flow: validate, detect WCF, check PR state, handle branches,
 # archive WCF if active, attempt merge, handle failure, branch cleanup.
-cmd_action_uaccept() {
+cmd_action_umergepr() {
     local project_dir
     project_dir=$(get_project_dir)
     cd "$project_dir"
@@ -953,7 +953,7 @@ cmd_action_uaccept() {
     if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
         prompt_finish_log_start_instructions
-        section_templ "$prompts_file" "uaccept_no_pr"
+        section_templ "$prompts_file" "umergepr_no_pr"
         prompt_finish_instructions
         return 0
     fi
@@ -981,7 +981,7 @@ cmd_action_uaccept() {
             [branch_name]="$current_branch"
             [branch_head]="$branch_head"
         )
-        section_templ "$prompts_file" "uaccept_not_open" vars
+        section_templ "$prompts_file" "umergepr_not_open" vars
         prompt_finish_instructions
         return 0
     fi
@@ -1015,7 +1015,7 @@ cmd_action_uaccept() {
 
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A fail_vars=([pr_number]="$pr_number")
-        section_templ "$prompts_file" "uaccept_merge_failed" fail_vars
+        section_templ "$prompts_file" "umergepr_merge_failed" fail_vars
         prompt_finish_instructions
         return 0
     fi
@@ -1033,7 +1033,7 @@ cmd_action_uaccept() {
         [branch_name]="$current_branch"
         [branch_head]="$branch_head"
     )
-    section_templ "$prompts_file" "uaccept_success" success_vars
+    section_templ "$prompts_file" "umergepr_success" success_vars
     prompt_finish_instructions
 }
 
@@ -1058,11 +1058,11 @@ main() {
                 upr)
                     cmd_action_upr "$@"
                     ;;
-                uaccept)
-                    cmd_action_uaccept "$@"
+                umergepr)
+                    cmd_action_umergepr "$@"
                     ;;
                 *)
-                    error "Unknown action keyword: $keyword. Available: upr, uaccept"
+                    error "Unknown action keyword: $keyword. Available: upr, umergepr"
                     ;;
             esac
             ;;

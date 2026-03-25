@@ -10,7 +10,7 @@
 
 ## Execution instructions
 
-When a request starts with one of the following keywords, you must execute `bash uspecs/u/scripts/uspecs.sh action {keyword}` and follow the instructions provided in the output: upr, uaccept.
+When a request starts with one of the following keywords, you must execute `bash uspecs/u/scripts/uspecs.sh action {keyword}` and follow the instructions provided in the output: upr, umergepr.
 
 When a request starts with one of the keywords below, you must read the corresponding file and follow the rules described there:
 
