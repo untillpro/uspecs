@@ -24,8 +24,8 @@ setup() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
 }
 
-# prompt contract: script exits successfully - AGENT_INSTRUCTIONS absent
-@test "prompt contract: script exits successfully: output does not contain error AGENT_INSTRUCTIONS" {
+# prompt contract: script exits successfully - script error instructions not emitted
+@test "prompt contract: script exits successfully: script error instructions not emitted" {
     run bash -c "
         source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
         prompt_start_log
