@@ -2,6 +2,7 @@
 registered_at: 2026-03-25T16:18:39Z
 change_id: 2603251618-rename-uaccept-umergepr
 baseline: c193fa970552d2b325b8f2440423ea363d619615
+archived_at: 2026-03-25T17:59:14Z
 ---
 
 # Change request: Rename uaccept to umergepr
