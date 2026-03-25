@@ -236,11 +236,19 @@ sed_inplace() {
 _PROMPT_LOG_OPEN=0
 
 # _prompt_close_log_on_exit
-# EXIT handler: emits </LOG> if the process exits before
+# EXIT handler: emits </LOG> and <AGENT_INSTRUCTIONS> if the process exits before
 # prompt_finish_log_start_instructions is reached (e.g. validation error).
+# The agent instructions tell the agent to describe what happened, suggest recovery
+# options, and wait for explicit Engineer permission before taking any further action.
 _prompt_close_log_on_exit() {
     if [[ "${_PROMPT_LOG_OPEN:-0}" -eq 1 ]]; then
         echo "</LOG>"
+        echo "<AGENT_INSTRUCTIONS>"
+        echo "The script exited with an error."
+        echo "Describe what happened based on the log above."
+        echo "Suggest recovery options as a numbered list, include Abort as a last item."
+        echo "Do not take any further action until user explicitly chooses an option."
+        echo "</AGENT_INSTRUCTIONS>"
     fi
 }
 atexit_add '_prompt_close_log_on_exit'
