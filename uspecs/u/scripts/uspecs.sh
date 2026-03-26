@@ -197,6 +197,19 @@ cmd_change_new() {
     local is_new_branch="1"
     if [ -n "$opt_no_branch" ]; then
         is_new_branch=""
+    elif [ -z "$opt_branch" ]; then
+        # Skip branch creation when not on the default branch (unless --branch forces it)
+        local project_dir_check
+        project_dir_check=$(get_project_dir)
+        if is_git_repo "$project_dir_check"; then
+            local current_branch_name
+            current_branch_name=$(cd "$project_dir_check" && git symbolic-ref --short HEAD)
+            local def_branch
+            def_branch=$(cd "$project_dir_check" && git_default_branch_name || echo "")
+            if [ "$current_branch_name" != "$def_branch" ]; then
+                is_new_branch=""
+            fi
+        fi
     fi
 
     if [ -z "$change_name" ]; then
@@ -754,7 +767,7 @@ cmd_action_upr() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     git_validate_clean_repo "$current_branch" "$default_branch"
 
@@ -927,7 +940,7 @@ cmd_action_umergepr() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     git_validate_clean_repo "$current_branch" "$default_branch"
 

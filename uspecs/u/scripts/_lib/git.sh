@@ -31,6 +31,7 @@ get_project_dir() {
     cd "$script_dir/../../../.." && pwd
 }
 
+# // TODO why here?
 read_conf_param() {
     local param_name="$1"
     local conf_file
@@ -128,7 +129,7 @@ check_prerequisites() {
     fi
 }
 
-default_branch_name() {
+git_default_branch_name() {
     local branch
     branch=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}') || {
         error "Cannot determine the default branch from remote"
@@ -153,7 +154,7 @@ git_pr_info() {
     local project_dir="${2:-$PWD}"
     local pr_remote default_branch
     pr_remote=$(cd "$project_dir" && determine_pr_remote) || return 1
-    default_branch=$(cd "$project_dir" && default_branch_name) || return 1
+    default_branch=$(cd "$project_dir" && git_default_branch_name) || return 1
     _git_pr_info_map["pr_remote"]="$pr_remote"
     _git_pr_info_map["default_branch"]="$default_branch"
 }
@@ -166,7 +167,7 @@ git_prbranch() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
@@ -186,7 +187,7 @@ git_ffdefault() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
@@ -230,7 +231,7 @@ git_pr() {
     body="${body//\\n/$'\n'}"
 
     local default_branch branch_name
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     branch_name=$(git symbolic-ref --short HEAD)
 
     if [[ "$delete_branch" == "true" && "$branch_name" == "$next_branch" ]]; then
@@ -289,7 +290,7 @@ git_mergedef() {
 
     local pr_remote default_branch current_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     current_branch=$(git symbolic-ref --short HEAD)
 
     if [[ "$current_branch" == "$default_branch" ]]; then
@@ -333,7 +334,7 @@ git_diff() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     local project_dir
     project_dir=$(get_project_dir)
@@ -375,7 +376,7 @@ git_changepr() {
 
     local pr_remote default_branch change_branch pr_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     change_branch=$(git symbolic-ref --short HEAD)
     pr_branch="${change_branch}--pr"
 

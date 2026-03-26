@@ -24,14 +24,14 @@ Parameters:
 - Input
   - Change description
   - --no-branch option (optional): skip git branch creation
-  - --branch option (optional): explicitly force git branch creation (reserved for future per-project default override)
+  - --branch option (optional): force git branch creation even when not on the default branch
   - --no-impl option (optional): skip automatic uimpl invocation after change creation
   - Issue reference (optional): URL to a GitLab/GitHub/Jira/etc. issue that prompted the change
     - Referenced further as `{issue_url}`
 - Output
   - Active Change Folder with Change File
   - Issue File (if issue reference provided)
-  - Git branch (created by default unless --no-branch; git repository must exist)
+  - Git branch (created by default when on the default branch; skipped when on a non-default branch unless --branch; skipped when --no-branch; git repository must exist)
   - uimpl invocation (executed by default unless --no-impl)
 
 Flow:

@@ -14,6 +14,28 @@ load 'helpers'
     git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-change
 }
 
+@test "change new: No options on non-default branch, branch not created" {
+    cd "$PROJECT_ROOT"
+    git checkout -b feature-branch
+    uspecs change new my-change
+    [ "$status" -eq 0 ]
+    [[ "$output" == uspecs/changes/[0-9]*-my-change ]]
+    # Should stay on feature-branch, no new branch created
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+    [ "$current_branch" = "feature-branch" ]
+    run git show-ref --verify refs/heads/my-change
+    [ "$status" -ne 0 ]
+}
+
+@test "change new: --branch option on non-default branch, branch created" {
+    cd "$PROJECT_ROOT"
+    git checkout -b feature-branch
+    uspecs change new my-feature --branch
+    [ "$status" -eq 0 ]
+    git show-ref --verify --quiet refs/heads/my-feature
+}
+
 @test "change new: --branch option, branch created" {
     cd "$PROJECT_ROOT"
     uspecs change new my-feature --branch
