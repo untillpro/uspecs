@@ -12,11 +12,11 @@ Scenario names in feature files and test names in .bats files are inconsistent a
 
 ## What
 
-Optimize scenario names across feature files and align test names to match scenario purposes:
+Optimize scenario names in `uchange.feature` and align test names to match scenario purposes:
 
 Feature file scenario names:
 
-- Rename scenarios in `uchange.feature` and shared validation features to follow the descriptive style used in `upr.feature`
+- Rename scenarios in `uchange.feature` to follow the descriptive style used in `upr.feature`
 - Scenario names should reflect specific conditions and outcomes, not just commands
 
 Test names in .bats files:
