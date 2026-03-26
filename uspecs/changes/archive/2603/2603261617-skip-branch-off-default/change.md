@@ -2,6 +2,7 @@
 registered_at: 2026-03-26T14:48:24Z
 change_id: 2603261448-skip-branch-off-default
 baseline: de35a3ed744b937672baa1bf3a814aecf234178e
+archived_at: 2026-03-26T16:17:22Z
 ---
 
 # Change request: Skip branch creation when not on default branch
