@@ -30,6 +30,28 @@ Related components:
 
 ## Key flows
 
+### Curl-pipe install
+
+When conf.sh is piped via curl (`curl ... | bash -s install ...`), `BASH_SOURCE[0]` is unavailable, so `_lib/git.sh` and `utils.sh` cannot be sourced. The install command handles this in two phases:
+
+```text
+Phase 1: self-contained (no local file dependencies)
+  curl ... | bash -s install --nlia --alpha
+    |
+    +-- skip sourcing _lib/git.sh (BASH_SOURCE[0] is not a file)
+    +-- parse flags, validate arguments
+    +-- fetch version info from GitHub API (curl)
+    +-- create temp directory (mktemp), register cleanup (trap)
+    +-- download archive (curl + tar)
+    +-- exec downloaded conf.sh apply (runs from file)
+
+Phase 2: file-based (downloaded conf.sh apply)
+  bash "$temp_dir/uspecs/u/scripts/conf.sh" apply ...
+    |
+    +-- sources _lib/git.sh and utils.sh normally
+    +-- full install flow (copy files, write metadata, inject instructions)
+```
+
 ### Version detection and download
 
 ```text

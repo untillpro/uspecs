@@ -107,6 +107,44 @@ make_git_tmpdir_with_origin() {
     grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
+# Scenario: Install alpha version (remote)
+# Downloads from GitHub main branch (requires network access).
+# Verifies uspecs.yml written with alpha version, commit field, and AGENTS.md created.
+@test "Alpha install (remote, nlia)" {
+    local tmpdir
+    tmpdir=$(make_git_tmpdir)
+    # shellcheck disable=SC2064
+    trap 'rm -rf "$tmpdir"' EXIT
+    cd "$tmpdir"
+    run bash "$CONF_SH" install -y --alpha --nlia
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/AGENTS.md" ]
+    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    # Alpha version string contains "-a"
+    grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
+}
+
+# Scenario: Install via curl pipe
+# Simulates the README install command by piping conf.sh to bash (no BASH_SOURCE[0]).
+# Uses local file piped to bash instead of actual curl to test the fix before it's on main.
+# Verifies the two-phase flow: pipe (self-contained) -> downloaded conf.sh apply.
+@test "Alpha install (curl pipe)" {
+    local tmpdir
+    tmpdir=$(make_git_tmpdir)
+    # shellcheck disable=SC2064
+    trap 'rm -rf "$tmpdir"' EXIT
+    cd "$tmpdir"
+    run bash -c "cat '$CONF_SH' | bash -s install -y --alpha --nlia 2>&1"
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/AGENTS.md" ]
+    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
+}
+
 # Scenario: Installation failure - uspecs already installed
 # Verifies exit non-zero and correct error message
 @test "Already installed failure" {

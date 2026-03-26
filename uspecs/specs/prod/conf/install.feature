@@ -26,6 +26,14 @@ Feature: Install uspecs
     And uspecs metadata file is created with local version and commit info
     And other flags are respected as in stable install
 
+  Rule: Curl-pipe install
+
+    Scenario: Install via curl pipe
+      Given Engineer runs the README install command (curl ... | bash -s install ...)
+      Then conf.sh executes without sourcing any local files (_lib/*, utils.sh)
+      And conf.sh uses only curl, mktemp, trap, and bash builtins
+      And conf.sh downloads the archive and delegates to the downloaded conf.sh apply
+
   Rule: Edge cases
 
     Scenario Outline: Installation failure

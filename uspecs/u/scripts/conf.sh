@@ -23,8 +23,16 @@ ALPHA_BRANCH="${USPECS_ALPHA_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
-# shellcheck source=_lib/git.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
+# Minimal error function for the curl-pipe case (overwritten by utils.sh when sourced).
+error() { echo "Error: $1" >&2; exit 1; }
+
+# Source _lib/git.sh only when running from a file (not piped via curl).
+# When piped, BASH_SOURCE[0] is empty or not a file path, so we skip sourcing
+# and rely on the self-contained cmd_install path (Phase 1 of curl-pipe install).
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
+    # shellcheck source=_lib/git.sh
+    source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
+fi
 
 get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
@@ -765,7 +773,9 @@ cmd_install() {
         bash "${BASH_SOURCE[0]}" apply "${apply_args[@]}"
     else
         local temp_dir
-        temp_create_dir temp_dir
+        temp_dir=$(mktemp -d)
+        # shellcheck disable=SC2064
+        trap "rm -rf '$temp_dir'" EXIT
         echo "Downloading uspecs..."
         download_archive "$ref" "$temp_dir"
         bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
@@ -957,7 +967,12 @@ cmd_im() {
 }
 
 main() {
-    git_path
+    # git_path and error are available from utils.sh when sourced (file-based execution).
+    # When piped, they are not available; the install command doesn't need git_path,
+    # and error messages use inline echo/exit.
+    if type -t git_path &>/dev/null; then
+        git_path
+    fi
 
     if [[ $# -lt 1 ]]; then
         error "Usage: conf.sh <command> [args...]"
