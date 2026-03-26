@@ -1,13 +1,13 @@
 Feature: Create change request
   Engineer asks AI Agent to create change request
 
-  Scenario: Create change request, no options
+  Scenario: No options
     When Engineer invokes uchange action
     Then base change request is created
     And Git branch is created with name following branch naming rules
     And uimpl action is invoked automatically
 
-  Scenario Outline: Create change request with issue reference
+  Scenario Outline: Issue reference provided
     Given AI Agent <configured> to fetch issue content from the referenced issue URL
     When Engineer invokes uchange action with issue reference
     Then base change request is created
@@ -19,7 +19,7 @@ Feature: Create change request
       | configured to fetch content        | references Issue File         | contains fetched issue content  |
       | configured not to fetch configured | does not reference Issue File | is not created                  |
 
-  Scenario Outline: Branch naming with issue reference
+  Scenario Outline: Issue reference: branch naming
     When Engineer invokes uchange action with issue reference <issue_url> and change name <change_name>
     Then Git branch is created with name <branch_name>
     Examples:
@@ -29,17 +29,17 @@ Feature: Create change request
       | https://gitlab.com/group/project/-/issues/7 | add-validation | 7-add-validation |
       | https://example.com/projects/#!766766       | fix-crash      | 766766-fix-crash |
 
-  Scenario: Create change request with --no-branch option
+  Scenario: --no-branch option
     When Engineer invokes uchange action with --no-branch option
     Then base change request is created
     And Git branch is not created
 
-  Scenario: Create change request with --branch option
+  Scenario: --branch option
     When Engineer invokes uchange action with --branch option
     Then base change request is created
     And Git branch is created with name following branch naming rules
 
-  Scenario: Create change request with --no-impl option
+  Scenario: --no-impl option
     When Engineer invokes uchange action with --no-impl option
     Then base change request is created
     But uimpl action is not invoked
