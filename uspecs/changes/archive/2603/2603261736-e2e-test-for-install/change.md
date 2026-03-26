@@ -2,6 +2,7 @@
 registered_at: 2026-03-26T16:50:37Z
 change_id: 2603261650-e2e-test-for-install
 baseline: 73e9934d0a8456fc9400f16379e0312e39e70e3d
+archived_at: 2026-03-26T17:36:08Z
 ---
 
 # Change request: E2E test for install
