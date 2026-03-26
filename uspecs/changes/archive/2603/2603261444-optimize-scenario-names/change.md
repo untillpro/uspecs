@@ -2,6 +2,7 @@
 registered_at: 2026-03-26T10:30:53Z
 change_id: 2603261030-optimize-scenario-names
 baseline: 4c2d741d0c72f944453a233b2e9b4679dfb6c25d
+archived_at: 2026-03-26T14:44:25Z
 ---
 
 # Change request: Optimize scenario names
