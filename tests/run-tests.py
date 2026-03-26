@@ -18,6 +18,8 @@ import re
 import subprocess
 import sys
 import time
+
+IS_WINDOWS = sys.platform == "win32"
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -67,7 +69,7 @@ def run_bats_test(test_info):
     bats_file, test_name = test_info
     try:
         # On Windows, use shell=True and convert path to forward slashes for bats
-        use_shell = sys.platform == "win32"
+        use_shell = IS_WINDOWS
         bats_path = str(bats_file).replace("\\", "/") if use_shell else str(bats_file)
         cmd = (
             f'bats -f "^{re.escape(test_name)}$" "{bats_path}"'
@@ -132,7 +134,11 @@ def main():
     args = parser.parse_args()
 
     # Determine number of workers
-    workers = args.workers if args.workers else os.cpu_count()
+    workers = (
+        args.workers
+        if args.workers
+        else min(os.cpu_count(), 10) if IS_WINDOWS else os.cpu_count()
+    )
 
     # Discover bats files
     bats_files = discover_bats_files(args.folder)
