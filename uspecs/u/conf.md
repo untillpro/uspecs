@@ -20,7 +20,7 @@ All paths are relative to the project root:
     - Examples: `remove-uspecs-prefix`, `fetch-issue-to-change`, `alpha-code-bp3-endpoints`
   - Can be either Active (in `{changes_folder}`) or Archived (in `{changes_archive}`)
   - Active Change Folder files describe Active Change Request and its implementation
-  - Branch naming for Change Folder (when --branch option used):
+  - Branch naming for Change Folder:
     - Format: `{issue-id}-{change-name}` when issue URL provided, otherwise `{change-name}` (without timestamp prefix)
     - Issue ID extraction:
       - GitHub: numeric ID from URL (e.g., `42` from `https://github.com/owner/repo/issues/42`)

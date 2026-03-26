@@ -1,10 +1,18 @@
 Feature: Create change request
   Engineer asks AI Agent to create change request
 
-  Scenario: No options
+  Scenario: No options, on default branch
+    Given Engineer is on the default branch
     When Engineer invokes uchange action
     Then base change request is created
     And Git branch is created with name following branch naming rules
+    And uimpl action is invoked automatically
+
+  Scenario: No options, on non-default branch
+    Given Engineer is on a non-default branch
+    When Engineer invokes uchange action
+    Then base change request is created
+    And Git branch is not created
     And uimpl action is invoked automatically
 
   Scenario Outline: Issue reference provided
