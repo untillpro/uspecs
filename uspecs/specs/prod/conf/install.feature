@@ -34,6 +34,14 @@ Feature: Install uspecs
       And conf.sh uses only curl, mktemp, trap, and bash builtins
       And conf.sh downloads the archive and delegates to the downloaded conf.sh apply
 
+  Rule: Private repositories
+
+    Scenario: Install from a private repository
+      Given the GitHub repository is private
+      When Engineer sets USPECS_GITHUB_TOKEN environment variable to a valid GitHub token
+      Then all GitHub API and download requests include the Authorization header
+      And install, update, upgrade, and invocation method commands work as expected
+
   Rule: Edge cases
 
     Scenario Outline: Installation failure

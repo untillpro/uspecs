@@ -417,6 +417,96 @@ cmd_change_archiveall() {
     echo "Done: $archived archived, $unchanged unchanged, $failed failed"
 }
 
+# changes_archive <project_dir> <changes_folder> <change_folder> <is_git> <result_var>
+# Archives an active change folder: updates YAML metadata, converts links,
+# moves to archive/YYMM/YYMMDDHHMM-<change_name>.
+# project_dir: absolute path to project root
+# changes_folder: relative to project_dir (e.g. uspecs/changes)
+# change_folder: relative to project_dir (e.g. uspecs/changes/2601010000-my-change)
+# is_git: non-empty if project is a git repo
+# Sets result_var (nameref) to the archived folder path, relative to project_dir.
+changes_archive() {
+    local project_dir="$1"
+    local changes_folder="$2"
+    local change_folder="$3"
+    local is_git="$4"
+    local -n result_ref="$5"
+
+    local abs_change="$project_dir/$change_folder"
+    local abs_changes="$project_dir/$changes_folder"
+
+    local folder_basename
+    folder_basename=$(basename "$change_folder")
+
+    local change_name
+    change_name=$(extract_change_name "$folder_basename")
+
+    local change_file="$abs_change/change.md"
+
+    local timestamp
+    timestamp=$(get_timestamp)
+
+    # Insert archived_at into YAML front matter (before closing ---)
+    local temp_file
+    temp_create_file temp_file
+    # // TODO archived_at may already exists...
+    awk -v ts="$timestamp" '
+        /^---$/ {
+            if (count == 0) {
+                print
+                count++
+            } else {
+                print "archived_at: " ts
+                print
+            }
+            next
+        }
+        /^archived_at:/ { next }
+        { print }
+    ' "$change_file" > "$temp_file"
+    if cat "$temp_file" > "$change_file"; then
+        :  # Success, continue
+    else
+        error "failed to update $change_file"
+    fi
+
+    # Add ../ prefix to relative links for archive folder depth
+    if ! convert_links_to_relative "$abs_change"; then
+        error "failed to convert links to relative paths"
+    fi
+
+    local archive_dir="$abs_changes/archive"
+
+    local date_prefix
+    date_prefix=$(date -u +"%y%m%d%H%M")
+
+    local yymm="${date_prefix:0:4}"
+
+    local archive_sub="$archive_dir/$yymm"
+    mkdir -p "$archive_sub"
+
+    local dest="$archive_sub/${date_prefix}-${change_name}"
+
+    if [ -d "$dest" ]; then
+        error "Archive folder already exists: $dest"
+    fi
+
+    if [ -n "$is_git" ]; then
+        (cd "$project_dir" && git add "$change_folder")
+    fi
+
+    move_folder "$abs_change" "$dest" "$project_dir"
+
+    local rel_dest="${dest#"$project_dir/"}"
+
+    if [ -n "$is_git" ]; then
+        (cd "$project_dir" && git add "$rel_dest")
+    fi
+
+    # shellcheck disable=SC2034
+    result_ref="$rel_dest"
+}
+
 cmd_change_archive() {
     local folder_name=""
     local delete_branch=""
@@ -569,68 +659,13 @@ cmd_change_archive() {
         fi
     fi
 
-    local timestamp
-    timestamp=$(get_timestamp)
+    local rel_change_folder="$changes_folder_rel/$folder_name"
 
-    # Insert archived_at into YAML front matter (before closing ---)
-    local temp_file
-    temp_create_file temp_file
-    awk -v ts="$timestamp" '
-        /^---$/ {
-            if (count == 0) {
-                print
-                count++
-            } else {
-                print "archived_at: " ts
-                print
-            }
-            next
-        }
-        /^archived_at:/ { next }
-        { print }
-    ' "$change_file" > "$temp_file"
-    if cat "$temp_file" > "$change_file"; then
-        :  # Success, continue
-    else
-        return 1
-    fi
-
-    # Add ../ prefix to relative links for archive folder depth
-    if ! convert_links_to_relative "$path_to_change_folder"; then
-        error "Failed to convert links to relative paths"
-    fi
-
-    local archive_folder="$changes_folder/archive"
-
-    local date_prefix
-    date_prefix=$(date -u +"%y%m%d%H%M")
-
-    # Extract yymm for subfolder
-    local yymm_prefix="${date_prefix:0:4}"
-
-    local archive_subfolder="$archive_folder/$yymm_prefix"
-    mkdir -p "$archive_subfolder"
-
-    local archive_path="$archive_subfolder/${date_prefix}-${change_name}"
-
-    if [ -d "$archive_path" ]; then
-        error "Archive folder already exists: $archive_path"
-    fi
-
-    if [ -n "$is_git" ]; then
-        local rel_change_folder="${path_to_change_folder#"$project_dir/"}"
-        (cd "$project_dir" && git add "$rel_change_folder")
-    fi
-
-    move_folder "$path_to_change_folder" "$archive_path" "$project_dir"
-
-    if [ -n "$is_git" ]; then
-        local rel_archive_path="${archive_path#"$project_dir/"}"
-        (cd "$project_dir" && git add "$rel_archive_path")
-    fi
+    local archive_path
+    changes_archive "$project_dir" "$changes_folder_rel" "$rel_change_folder" "$is_git" archive_path
 
     if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
-        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $rel_archive_path" 2>&1)
+        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $archive_path" 2>&1)
         if [ -n "$remote_exists" ]; then
             if ! (cd "$project_dir" && git push 2>&1); then
                 local archive_commit
@@ -665,8 +700,6 @@ cmd_change_archive() {
             error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
         fi
     fi
-
-    echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"
 }
 
 # changes_validate_single_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
@@ -1002,10 +1035,9 @@ cmd_action_umergepr() {
     # PR is in OPEN state
     # Archive WCF if active
     local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
+    local archived_path=""
     if [[ -d "$wcf_path" && ! "$wcf_path" == */archive/* ]]; then
-        local script_path
-        script_path="$(get_script_dir)/uspecs.sh"
-        bash "$script_path" change archiveall
+        changes_archive "$project_dir" "$changes_folder_rel" "$changes_folder_rel/$wcf_name" "1" archived_path
 
         # Commit the archive
         if [[ -n $(git status --porcelain) ]]; then
@@ -1037,6 +1069,34 @@ cmd_action_umergepr() {
     # gh pr merge --delete-branch already switched to default branch and deleted local branch
     # Clean up remote tracking ref (errors ignored)
     git branch -dr "origin/$current_branch" 2>&1 || true
+
+    # When upstream remote exists, fast-forward local default branch.
+    # Retry fetch+ff for up to 5 seconds -- the squashed commit may not appear
+    # immediately due to eventual consistency.
+    if [[ "$pr_remote" == "upstream" ]]; then
+        cd "$project_dir"
+        # Ensure we are on the default branch (gh pr merge should have switched,
+        # but be explicit to avoid accidentally fast-forwarding a wrong branch).
+        git checkout "$default_branch" 2>&1 || true
+        # Use archived path for WCF detection; fall back to original relative path
+        local _wcf_check_path="$project_dir/${archived_path:-$changes_folder_rel/$wcf_name}"
+        local _wcf_found=false
+        for _attempt in 1 2 3 4 5; do
+            echo "Fetching $pr_remote/$default_branch (attempt $_attempt)..."
+            if git fetch "$pr_remote" "$default_branch" 2>&1; then
+                if git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
+                    if [[ -d "$_wcf_check_path" ]]; then
+                        _wcf_found=true
+                        break
+                    fi
+                fi
+            fi
+            sleep 1
+        done
+        if [[ "$_wcf_found" != "true" ]]; then
+            echo "Warning: WCF not detected in $default_branch after 5 seconds"
+        fi
+    fi
 
     prompt_finish_log_start_instructions
 

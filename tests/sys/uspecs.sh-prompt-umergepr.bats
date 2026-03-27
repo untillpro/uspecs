@@ -149,6 +149,58 @@ _setup_umergepr_branch() {
     [[ "$output" == *"## umergepr_success"* ]]
 }
 
+@test "action umergepr: PR in OPEN state: upstream remote exists" {
+    cd "$PROJECT_ROOT"
+
+    # Set up upstream bare repo (fork setup)
+    local _tmpdir="$BATS_TEST_TMPDIR"
+    case "$OSTYPE" in
+        msys*|cygwin*) _tmpdir=$(cygpath -m "$_tmpdir") ;;
+    esac
+    local upstream_repo="$_tmpdir/upstream.git"
+    git -c init.defaultBranch=main init -q --bare "$upstream_repo"
+    (cd "$upstream_repo" && git symbolic-ref HEAD refs/heads/main)
+    git remote add upstream "$upstream_repo"
+    git push -q upstream HEAD:main
+
+    # Create feature branch with WCF
+    git checkout -q -b my-feature
+    _make_umergepr_change "2601010000-upstream-test" "Upstream test"
+    git push -q origin my-feature
+    git branch --set-upstream-to=origin/my-feature
+
+    # shellcheck disable=SC2030,SC2031
+    export GH_STUB_PR_EXISTS=1
+    # shellcheck disable=SC2030,SC2031
+    export GH_STUB_PR_JSON='{"number":42,"state":"OPEN","url":"https://github.com/org/repo/pull/42"}'
+
+    uspecs action umergepr
+    [ "$status" -eq 0 ]
+
+    # Verify structured output tags and success message
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"## umergepr_success"* ]]
+    [[ "$output" == *"PR #42 has been merged successfully"* ]]
+
+    # Verify fetch+ff was attempted
+    [[ "$output" == *"Fetching upstream/main"* ]]
+
+    # Verify WCF was detected (no warning)
+    [[ "$output" != *"WCF not detected"* ]]
+
+    # Verify we are on the default branch and it contains the archived WCF
+    local current_branch
+    current_branch=$(git -C "$PROJECT_ROOT" symbolic-ref --short HEAD)
+    [ "$current_branch" = "main" ]
+    local archive_count
+    archive_count=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*-upstream-test" 2>/dev/null | wc -l)
+    [ "$archive_count" -eq 1 ]
+}
+
+
 @test "action umergepr: PR not in OPEN state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_umergepr_branch
