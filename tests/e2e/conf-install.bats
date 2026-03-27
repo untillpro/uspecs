@@ -11,14 +11,14 @@ case "$OSTYPE" in
 esac
 
 
-make_git_tmpdir() {
-    local tmp_base
+make_temp_repo() {
+    # On Windows, bash /tmp and git /tmp differ; use cygpath for agreement.
+    local _tmpdir="$BATS_TEST_TMPDIR"
     case "$OSTYPE" in
-        msys*|cygwin*) tmp_base=$(cygpath -w "$TEMP") ;;
-        *)             tmp_base="/tmp" ;;
+        msys*|cygwin*) _tmpdir=$(cygpath -m "$_tmpdir") ;;
     esac
-    local tmpdir
-    tmpdir=$(mktemp -d "$tmp_base/uspecs-e2e.XXXXXX")
+    local tmpdir="$_tmpdir/repo"
+    mkdir -p "$tmpdir"
     git -C "$tmpdir" init -q
     git -C "$tmpdir" config user.email "test@test.com"
     git -C "$tmpdir" config user.name "Test"
@@ -26,9 +26,9 @@ make_git_tmpdir() {
 }
 
 # Creates a git repo with a bare origin remote and an initial commit.
-make_git_tmpdir_with_origin() {
+make_temp_repo_with_origin() {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
+    tmpdir=$(make_temp_repo)
     local origin_dir="${tmpdir}-origin.git"
     git -C "$tmpdir" commit -q --allow-empty -m "initial"
     git init -q --bare "$origin_dir"
@@ -42,9 +42,7 @@ make_git_tmpdir_with_origin() {
 # Verifies uspecs.yml written with commit field and AGENTS.md created.
 @test "Alpha install (local, nlia)" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlia
     [ "$status" -eq 0 ]
@@ -58,9 +56,7 @@ make_git_tmpdir_with_origin() {
 # check_prerequisites in pr.sh ffdefault rejects a dirty working tree.
 @test "Install --pr fails when working directory is not clean" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir_with_origin)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir" "${tmpdir}-origin.git"' EXIT
+    tmpdir=$(make_temp_repo_with_origin)
     # Make the working directory dirty
     echo "dirty" > "$tmpdir/dirty.txt"
     # Expose the gh stub so check_prerequisites passes the gh check
@@ -76,9 +72,7 @@ make_git_tmpdir_with_origin() {
 # Verifies uspecs.yml written with commit field and CLAUDE.md created.
 @test "Alpha install (local, nlic)" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlic
     [ "$status" -eq 0 ]
@@ -93,9 +87,7 @@ make_git_tmpdir_with_origin() {
 # Verifies both AGENTS.md and CLAUDE.md created and metadata lists both methods.
 @test "Alpha install (local, nlia + nlic)" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlia --nlic
     [ "$status" -eq 0 ]
@@ -112,9 +104,7 @@ make_git_tmpdir_with_origin() {
 # Verifies uspecs.yml written with alpha version, commit field, and AGENTS.md created.
 @test "Alpha install (remote, nlia)" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --alpha --nlia
     [ "$status" -eq 0 ]
@@ -132,9 +122,7 @@ make_git_tmpdir_with_origin() {
 # Verifies the two-phase flow: pipe (self-contained) -> downloaded conf.sh apply.
 @test "Alpha install (curl pipe)" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     cd "$tmpdir"
     run bash -c "cat '$CONF_SH' | bash -s install -y --alpha --nlia 2>&1"
     [ "$status" -eq 0 ]
@@ -149,9 +137,7 @@ make_git_tmpdir_with_origin() {
 # Verifies exit non-zero and correct error message
 @test "Already installed failure" {
     local tmpdir
-    tmpdir=$(make_git_tmpdir)
-    # shellcheck disable=SC2064
-    trap 'rm -rf "$tmpdir"' EXIT
+    tmpdir=$(make_temp_repo)
     mkdir -p "$tmpdir/uspecs/u"
     touch "$tmpdir/uspecs/u/uspecs.yml"
     cd "$tmpdir"

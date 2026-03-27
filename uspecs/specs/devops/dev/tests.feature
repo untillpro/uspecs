@@ -32,3 +32,11 @@ Feature: unit, system and e2e tests
     And all tests whose names match "shell metacharacters" are executed in parallel
     And each test result is reported as it completes with file path and test name
     And summary reports total tests, failures, and elapsed time
+
+  Rule: Test runner behavior
+
+    Scenario: Skipped tests are reported as failures
+      Given a bats test is silently skipped (bats reports "Executed 0 instead of expected 1")
+      Then the test is reported as "skip" in output
+      And it is counted as a failure in the summary
+      And the runner exits with non-zero exit code

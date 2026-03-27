@@ -15,6 +15,7 @@ Examples:
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -64,18 +65,33 @@ def get_tests_to_run(bats_files, pattern):
     return tests
 
 
+def ere_escape(text):
+    """Escape ERE metacharacters for bats -f filter.
+
+    Unlike re.escape, does not escape spaces or other characters that are
+    harmless in ERE but would be misinterpreted by bash when passed as
+    positional args (backslash-space splits arguments).
+    """
+    return re.sub(r"([.^$*+?{}\\|()\[\]])", r"\\\1", text)
+
+
 def run_bats_test(test_info):
     """Run a single bats test and return the result."""
     bats_file, test_name = test_info
     try:
-        # On Windows, use shell=True and convert path to forward slashes for bats
-        use_shell = IS_WINDOWS
-        bats_path = str(bats_file).replace("\\", "/") if use_shell else str(bats_file)
-        cmd = (
-            f'bats -f "^{re.escape(test_name)}$" "{bats_path}"'
-            if use_shell
-            else ["bats", "-f", f"^{re.escape(test_name)}$", bats_path]
-        )
+        bats_path = str(bats_file).replace("\\", "/")
+        filter_re = f"^{ere_escape(test_name)}$"
+        # Run bats via bash -c to bypass bats.cmd on Windows which mangles
+        # special characters like parentheses in filter expressions.
+        bash_bin = shutil.which("bash") or "bash"
+        cmd = [
+            bash_bin,
+            "-c",
+            'exec bats --print-output-on-failure --tap -f "$1" "$2"',
+            "_",
+            filter_re,
+            bats_path,
+        ]
 
         result = subprocess.run(
             cmd,
@@ -84,7 +100,6 @@ def run_bats_test(test_info):
             stderr=subprocess.PIPE,
             text=True,
             timeout=60,
-            shell=use_shell,
         )
         return {
             "file": str(bats_file),
@@ -159,6 +174,7 @@ def main():
     # Run tests in parallel, report as they complete
     passed = 0
     failed = 0
+    skipped = 0
     start_time = time.monotonic()
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
@@ -170,6 +186,9 @@ def main():
             if result["returncode"] == 0:
                 passed += 1
                 print(f" ok {label}", flush=True)
+            elif "Executed 0 instead of expected 1 tests" in result["stdout"]:
+                skipped += 1
+                print(f" skip {label}", flush=True)
             else:
                 failed += 1
                 print(f" FAIL {label}", flush=True)
@@ -179,9 +198,15 @@ def main():
                         print(f"   {line}", flush=True)
 
     elapsed = time.monotonic() - start_time
-    print(f"\n{passed + failed} tests, {failed} failures, {elapsed:.1f}s", flush=True)
+    total = passed + failed + skipped
+    total_failed = failed + skipped
+    fail_str = f"{total_failed} failures"
+    if skipped:
+        fail_str += f" ({skipped} skipped)"
+    parts = [f"{total} tests", fail_str, f"{elapsed:.1f}s"]
+    print(f"\n{', '.join(parts)}", flush=True)
 
-    return 1 if failed > 0 else 0
+    return 1 if total_failed > 0 else 0
 
 
 if __name__ == "__main__":

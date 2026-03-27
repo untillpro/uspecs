@@ -70,6 +70,10 @@ if [[ "${1:-}" == "pr" ]]; then
                     fi
                     # Delete the feature branch
                     (git branch -D "$current_branch" 2>/dev/null) || true
+                    # Push merged state to upstream if it exists (simulates GitHub merge on upstream)
+                    if git remote | grep -q '^upstream$'; then
+                        (git push -q upstream "$default_branch" 2>/dev/null) || true
+                    fi
                 fi
             fi
             exit 0

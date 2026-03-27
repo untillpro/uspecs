@@ -26,6 +26,16 @@ GITHUB_RAW="https://raw.githubusercontent.com"
 # Minimal error function for the curl-pipe case (overwritten by utils.sh when sourced).
 error() { echo "Error: $1" >&2; exit 1; }
 
+# Authenticated curl for GitHub API and raw content requests.
+# Uses USPECS_GITHUB_TOKEN when set (required for private repositories).
+github_curl() {
+    local auth_args=()
+    if [[ -n "${USPECS_GITHUB_TOKEN:-}" ]]; then
+        auth_args=(-H "Authorization: token $USPECS_GITHUB_TOKEN")
+    fi
+    curl -fsSL "${auth_args[@]}" "$@"
+}
+
 # Source _lib/git.sh only when running from a file (not piped via curl).
 # When piped, BASH_SOURCE[0] is empty or not a file path, so we skip sourcing
 # and rely on the self-contained cmd_install path (Phase 1 of curl-pipe install).
@@ -95,7 +105,7 @@ load_config() {
 }
 
 get_latest_tag() {
-    curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
+    github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
         grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         head -n 1
@@ -107,7 +117,7 @@ get_latest_minor_tag() {
     IFS='.' read -r major minor _ <<< "$current_version"
 
     local result
-    result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
+    result=$(github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
         grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         grep "^$major\.$minor\." | \
@@ -121,7 +131,7 @@ get_latest_major_tag() {
 
 get_latest_commit_info() {
     local response
-    response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
+    response=$(github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
     sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
@@ -130,7 +140,7 @@ get_latest_commit_info() {
 }
 
 get_alpha_version() {
-    curl -fsSL "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
+    github_curl "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
 }
 
 get_local_version() {
@@ -158,8 +168,8 @@ download_archive() {
     local ref="$1"
     local temp_dir="$2"
 
-    local archive_url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/$ref.tar.gz"
-    curl -fsSL "$archive_url" | tar -xz -C "$temp_dir" --strip-components=1
+    local archive_url="$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tarball/$ref"
+    github_curl "$archive_url" | tar -xz -C "$temp_dir" --strip-components=1
 }
 
 get_nli_file() {
@@ -894,7 +904,7 @@ cmd_im() {
             temp_create_file temp_source
             echo "Downloading source file for triggering instructions..."
             local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
-            if ! curl -fsSL "$source_url" -o "$temp_source"; then
+            if ! github_curl "$source_url" -o "$temp_source"; then
                 error "Failed to download source file from $source_url"
             fi
         fi

@@ -5,6 +5,7 @@
 - Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead.
 - Use `tests/run-tests.py [test-folder] [<pattern>]` for tests
 - Never commit or push changes unless explicitly requested
+- Never use trap in bats tests
 
 <!-- uspecs:begin -->
 
