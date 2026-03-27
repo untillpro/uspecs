@@ -1075,6 +1075,9 @@ cmd_action_umergepr() {
     # immediately due to eventual consistency.
     if [[ "$pr_remote" == "upstream" ]]; then
         cd "$project_dir"
+        # Ensure we are on the default branch (gh pr merge should have switched,
+        # but be explicit to avoid accidentally fast-forwarding a wrong branch).
+        git checkout "$default_branch" 2>&1 || true
         # Use archived path for WCF detection; fall back to original relative path
         local _wcf_check_path="$project_dir/${archived_path:-$changes_folder_rel/$wcf_name}"
         local _wcf_found=false

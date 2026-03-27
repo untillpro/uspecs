@@ -186,7 +186,10 @@ def main():
             if result["returncode"] == 0:
                 passed += 1
                 print(f" ok {label}", flush=True)
-            elif "Executed 0 instead of expected 1 tests" in result["stdout"]:
+            elif (
+                "Executed 0 instead of expected 1 tests"
+                in result["stdout"] + result["stderr"]
+            ):
                 skipped += 1
                 print(f" skip {label}", flush=True)
             else:
