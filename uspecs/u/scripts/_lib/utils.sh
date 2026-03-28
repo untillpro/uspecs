@@ -251,12 +251,12 @@ sed_inplace() {
 
 _PROMPT_LOG_OPEN=0
 
-# _prompt_close_log_on_exit
-# EXIT handler: emits </LOG> and <AGENT_INSTRUCTIONS> if the process exits before
-# prompt_finish_log_start_instructions is reached (e.g. validation error).
-# The agent instructions tell the agent to describe what happened, suggest recovery
-# options, and wait for explicit Engineer permission before taking any further action.
-_prompt_close_log_on_exit() {
+# _prompt_close_tags_on_exit
+# EXIT handler: auto-closes open LOG and AGENT_INSTRUCTIONS tags.
+# If LOG is still open (script failed before prompt_start_instructions),
+# emits error-handling instructions.
+# If AGENT_INSTRUCTIONS is open, emits the closing tag.
+_prompt_close_tags_on_exit() {
     if [[ "${_PROMPT_LOG_OPEN:-0}" -eq 1 ]]; then
         echo "</LOG>"
         echo "<AGENT_INSTRUCTIONS>"
@@ -265,9 +265,11 @@ _prompt_close_log_on_exit() {
         echo "Suggest recovery options as a numbered list, include Abort as a last item."
         echo "Do not take any further action until user explicitly chooses an option."
         echo "</AGENT_INSTRUCTIONS>"
+    elif [[ "${_PROMPT_INSTR_OPEN:-0}" -eq 1 ]]; then
+        echo "</AGENT_INSTRUCTIONS>"
     fi
 }
-atexit_add '_prompt_close_log_on_exit'
+atexit_add '_prompt_close_tags_on_exit'
 
 # prompt_start_log
 # Emits the opening <LOG> tag.
@@ -276,16 +278,19 @@ prompt_start_log() {
     echo "<LOG>"
 }
 
-# prompt_finish_log_start_instructions
-# Emits the closing </LOG> tag and the opening <AGENT_INSTRUCTIONS> tag.
-prompt_finish_log_start_instructions() {
+# prompt_start_instructions [meta_instruction]
+# Closes the LOG block and opens an AGENT_INSTRUCTIONS block with a meta-instruction.
+# If meta_instruction is provided, emits it; otherwise emits the default.
+# The closing tag is emitted automatically on exit.
+# shellcheck disable=SC2120
+prompt_start_instructions() {
     _PROMPT_LOG_OPEN=0
+    _PROMPT_INSTR_OPEN=1
     echo "</LOG>"
     echo "<AGENT_INSTRUCTIONS>"
-}
-
-# prompt_finish_instructions
-# Emits the closing </AGENT_INSTRUCTIONS> tag.
-prompt_finish_instructions() {
-    echo "</AGENT_INSTRUCTIONS>"
+    if [[ $# -gt 0 ]]; then
+        printf '%s\n' "$1"
+    else
+        echo "Inform user about the results, see below."
+    fi
 }
