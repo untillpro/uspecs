@@ -7,7 +7,8 @@ set -Eeuo pipefail
 #   softeng action upr
 #   softeng action umergepr
 #   softeng change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
-#   softeng change archive <change-folder-name> [-d] | --all
+#   softeng change archive <change-folder-name> [-d]
+#   softeng change archiveall
 #   softeng pr preflight
 #   softeng pr create --title <title> [--body <body>]
 #   softeng diff specs
@@ -22,12 +23,14 @@ set -Eeuo pipefail
 #   Creates git branch by default (skip with --no-branch; --branch forces creation explicitly)
 #   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
-# change archive [-d] [--all]:
+# change archive [-d]:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
 #   -d: commit and push staged changes, checkout default branch, delete branch and refs
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
-#   --all: archive all change folders with modifications vs pr_remote/default_branch
+#
+# change archiveall:
+#   Archives all change folders with modifications vs pr_remote/default_branch
 #          No change-folder-name needed; mutually exclusive with -d
 #
 # pr preflight --change-folder <path>:

@@ -22,7 +22,7 @@ Parameters:
 Flow:
 
 - If `--all` option is provided:
-  - Run `bash uspecs/u/scripts/softeng.sh change archive --all`
+  - Run `bash uspecs/u/scripts/softeng.sh change archiveall`
   - Analyze output, show to Engineer and stop
 - Otherwise:
   - Identify Active Change Folder to archive, if unclear, ask Engineer to specify folder name
