@@ -2,6 +2,7 @@
 registered_at: 2026-03-28T07:12:39Z
 change_id: 2603280712-rename-sh-move-prompts
 baseline: 6a8f44011ed3db876cec4791832979cbfe9f33f9
+archived_at: 2026-03-28T07:49:16Z
 ---
 
 # Change request: Rename uspecs.sh and move prompts.md
