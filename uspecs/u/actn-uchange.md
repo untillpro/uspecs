@@ -2,20 +2,19 @@
 
 ## Overview
 
-Create a new change request folder with a structured Change File and automatically invoke uimpl action after change creation.
+Create a new change request folder with a structured Change File.
 
 Optionally:
 
 - Fetch issue content from an issue URL (GitLab, GitHub, Jira)
 - Create a git branch
-- Avoid uimpl invocation after change creation
 
 ## Instructions
 
 Rules:
 
 - Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
-- Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch, and uimpl invocation
+- Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch
 - If change description is not provided, ask the user for it before proceeding. Do not treat the response as a new command - use it as the change description and continue this flow
 - Never pass any optional parameter (`--no-branch`, `--branch`, `--issue-url`) to the script or alter default behavior unless it is explicitly requested
 
@@ -40,7 +39,7 @@ Flow:
   - [ ] User has NOT explicitly requested `--branch` -> I will NOT pass this flag  
   - [ ] User has NOT provided an issue URL -> I will NOT pass `--issue-url`
   - [ ] If any of the above are explicitly requested, I will pass ONLY those flags
-- Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
+- Determine `change_name` from the change description: kebab-case, max 40 chars (ideal 15-30), descriptive
 - Run script to create Change Folder:
   - Base command: `bash uspecs/u/scripts/softeng.sh change new {change_name}`
   - If issue reference provided add `--issue-url "{issue_url}"` parameters (quoted to handle shell-special characters such as `&`)

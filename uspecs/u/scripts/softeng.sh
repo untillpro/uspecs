@@ -904,16 +904,14 @@ cmd_action_upr() {
         commit_message="${change_title}"$'\n'"${see_details_line}"
     fi
 
-    # Save change_file content before archiving (archive moves the file)
-    local change_file_copy
-    temp_create_file change_file_copy
-    cat "$change_file" > "$change_file_copy"
-
     # Archive WCF if active and --no-archive not set
     if [[ -z "$opt_no_archive" && -d "$wcf_path" && "$wcf_name" != archive/* ]]; then
         echo "Archiving WCF $wcf_name..."
         local archived_path
         changes_archive "$project_dir" "$changes_folder_rel" "$changes_folder_rel/$wcf_name" "1" archived_path
+
+        # Update change_file to archived location
+        change_file="$project_dir/$archived_path/change.md"
 
         if [[ -n $(git status --porcelain) ]]; then
             quiet git add -A
@@ -970,7 +968,7 @@ cmd_action_upr() {
         /^---$/ && fm==0 { fm=1; next }
         /^---$/ && fm==1 { fm=2; next }
         { print }
-    ' "$change_file_copy" > "$pr_body_file"
+    ' "$change_file" > "$pr_body_file"
     local pr_body_size
     pr_body_size=$(wc -c < "$pr_body_file")
     if (( pr_body_size > pr_body_max_chars )); then

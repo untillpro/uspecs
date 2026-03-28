@@ -125,8 +125,8 @@ _assert_pr_body_format() {
 
 # --- Successful creation flow ---
 
-# Verifies: single commit skips squash, open browser, output next steps (no restore instructions)
-@test "action upr: No PR for current branch: single commit, squash skipped" {
+# Verifies: single user commit + archive commit -> squash, open browser, output next steps
+@test "action upr: No PR for current branch: single commit, archive triggers squash" {
     _setup_upr_branch
 
     uspecs action upr
@@ -160,8 +160,9 @@ _assert_pr_body_format() {
     # WCF was archived (no longer in active folder)
     [ ! -d "$PROJECT_ROOT/uspecs/changes/$folder_name" ]
     # Archived folder exists
+    [ -d "$PROJECT_ROOT/uspecs/changes/archive" ]
     local archived
-    archived=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" 2>/dev/null | wc -l)
+    archived=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" | wc -l)
     [ "$archived" -ge 1 ]
 
     _assert_no_pr_base_outcome "squash"
