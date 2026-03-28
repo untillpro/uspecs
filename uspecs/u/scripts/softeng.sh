@@ -962,18 +962,18 @@ cmd_action_upr() {
     # Then truncate to avoid URL-length limits with gh pr create --web
     local pr_body_file
     temp_create_file pr_body_file
-    local pr_body_max_chars=4000
+    local pr_body_max_lines=40
     awk '
         BEGIN { fm=0 }
         /^---$/ && fm==0 { fm=1; next }
         /^---$/ && fm==1 { fm=2; next }
         { print }
     ' "$change_file" > "$pr_body_file"
-    local pr_body_size
-    pr_body_size=$(wc -c < "$pr_body_file")
-    if (( pr_body_size > pr_body_max_chars )); then
+    local pr_body_lines
+    pr_body_lines=$(wc -l < "$pr_body_file")
+    if (( pr_body_lines > pr_body_max_lines )); then
         local truncated
-        truncated=$(head -c "$pr_body_max_chars" "$pr_body_file")
+        truncated=$(head -n "$pr_body_max_lines" "$pr_body_file")
         printf '%s\n\n---\n(truncated -- see change.md for full details)\n' "$truncated" > "$pr_body_file"
     fi
 

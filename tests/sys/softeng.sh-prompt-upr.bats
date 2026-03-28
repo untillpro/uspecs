@@ -263,7 +263,7 @@ _assert_pr_body_format() {
     _assert_pr_body_format
 }
 
-@test "action upr: No PR for current branch: PR body is truncated when change.md is large" {
+@test "action upr: No PR for current branch: PR body is truncated when change.md exceeds 40 lines" {
     cd "$PROJECT_ROOT"
     git checkout -q -b large-body-branch
     local folder_name="2601010000-large-change"
@@ -276,9 +276,9 @@ _assert_pr_body_format() {
         echo ''
         echo '# Change request: Large change'
         echo ''
-        # Generate content well over 4000 chars
-        for i in $(seq 1 200); do
-            echo "Line $i: This is filler text to make the change.md body exceed the 4000 character limit for PR body truncation."
+        # Generate content well over 40 lines (body lines after frontmatter stripping)
+        for i in $(seq 1 60); do
+            echo "Line $i: filler text for PR body truncation test."
         done
     } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
     git add .
@@ -291,10 +291,10 @@ _assert_pr_body_format() {
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     # Body must contain the truncation notice
     [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
-    # Body size should be reasonable (truncated content + notice, under ~4200)
-    local body_size
-    body_size=${#gh_body}
-    (( body_size < 4200 ))
+    # Body line count should be truncated (40 content lines + separator + notice)
+    local body_lines
+    body_lines=$(wc -l < "$BATS_TEST_TMPDIR/gh.body")
+    (( body_lines <= 44 ))
 }
 
 # --- Edge cases ---
