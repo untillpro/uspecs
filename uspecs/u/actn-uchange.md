@@ -17,7 +17,7 @@ Rules:
 - Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
 - Never perform any implementation, code changes, or actions outside of this flow - the only output is the Change Folder, Change File, optional Issue File, git branch, and uimpl invocation
 - If change description is not provided, ask the user for it before proceeding. Do not treat the response as a new command - use it as the change description and continue this flow
-- Never pass any optional parameter (`--no-branch`, `--branch`, `--no-impl`, `--issue-url`) to the script or alter default behavior unless it is explicitly requested
+- Never pass any optional parameter (`--no-branch`, `--branch`, `--issue-url`) to the script or alter default behavior unless it is explicitly requested
 
 Parameters:
 
@@ -25,22 +25,19 @@ Parameters:
   - Change description
   - --no-branch option (optional): skip git branch creation
   - --branch option (optional): force git branch creation even when not on the default branch
-  - --no-impl option (optional): skip automatic uimpl invocation after change creation
   - Issue reference (optional): URL to a GitLab/GitHub/Jira/etc. issue that prompted the change
     - Referenced further as `{issue_url}`
 - Output
   - Active Change Folder with Change File
   - Issue File (if issue reference provided)
   - Git branch (created by default when on the default branch; skipped when on a non-default branch unless --branch; skipped when --no-branch; git repository must exist)
-  - uimpl invocation (executed by default unless --no-impl)
 
 Flow:
 
 - Pre-flight checklist (verify before proceeding):
   - [ ] I have read `uspecs/u/concepts.md` and `uspecs/u/conf.md`
   - [ ] User has NOT explicitly requested `--no-branch` -> I will NOT pass this flag
-  - [ ] User has NOT explicitly requested `--branch` -> I will NOT pass this flag
-  - [ ] I NEVER pass `--no-impl`
+  - [ ] User has NOT explicitly requested `--branch` -> I will NOT pass this flag  
   - [ ] User has NOT provided an issue URL -> I will NOT pass `--issue-url`
   - [ ] If any of the above are explicitly requested, I will pass ONLY those flags
 - Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
@@ -59,4 +56,3 @@ Flow:
     - Save fetched content to Issue File (issue.md) inside the Change Folder
     - Add reference to Issue File in Why section: `See [issue.md](issue.md) for details.`
 - Show user what was created
-- Unless --no-impl option is provided, execute the uimpl action immediately: read `uspecs/u/actn-uimpl.md` and follow its instructions directly - do NOT ask the user to run uimpl

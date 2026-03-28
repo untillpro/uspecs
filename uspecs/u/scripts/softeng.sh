@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # softeng automation
 #
 # Usage:
-#   softeng action upr
+#   softeng action upr [--no-archive]
 #   softeng action umergepr
 #   softeng change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
 #   softeng change archive <change-folder-name> [-d]
@@ -789,6 +789,14 @@ changes_validate_todos_completed() {
 # compute pr_title/commit_message/see_details_line,
 # set upstream, squash, force-push, open PR creation in browser, output prompt.
 cmd_action_upr() {
+    local opt_no_archive=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --no-archive) opt_no_archive="1"; shift ;;
+            *) error "Unknown argument: $1" ;;
+        esac
+    done
+
     local project_dir
     project_dir=$(get_project_dir)
     cd "$project_dir"
@@ -896,6 +904,23 @@ cmd_action_upr() {
         commit_message="${change_title}"$'\n'"${see_details_line}"
     fi
 
+    # Save change_file content before archiving (archive moves the file)
+    local change_file_copy
+    temp_create_file change_file_copy
+    cat "$change_file" > "$change_file_copy"
+
+    # Archive WCF if active and --no-archive not set
+    if [[ -z "$opt_no_archive" && -d "$wcf_path" && "$wcf_name" != archive/* ]]; then
+        echo "Archiving WCF $wcf_name..."
+        local archived_path
+        changes_archive "$project_dir" "$changes_folder_rel" "$changes_folder_rel/$wcf_name" "1" archived_path
+
+        if [[ -n $(git status --porcelain) ]]; then
+            quiet git add -A
+            quiet git commit -m "Archive $wcf_name"
+        fi
+    fi
+
     # Count commits since merge-base to decide whether to squash
     local commit_count
     commit_count=$(git rev-list --count "$merge_base"..HEAD)
@@ -945,7 +970,7 @@ cmd_action_upr() {
         /^---$/ && fm==0 { fm=1; next }
         /^---$/ && fm==1 { fm=2; next }
         { print }
-    ' "$change_file" > "$pr_body_file"
+    ' "$change_file_copy" > "$pr_body_file"
     local pr_body_size
     pr_body_size=$(wc -c < "$pr_body_file")
     if (( pr_body_size > pr_body_max_chars )); then
