@@ -6,7 +6,7 @@ Feature: Create change request
     When Engineer invokes uchange action
     Then base change request is created
     And Git branch is created with name following branch naming rules
-    And uimpl action is invoked automatically
+  #    And uimpl action is invoked automatically
 
   Scenario: No options, on non-default branch
     Given Engineer is on a non-default branch
@@ -47,10 +47,10 @@ Feature: Create change request
     Then base change request is created
     And Git branch is created with name following branch naming rules
 
-  Scenario: --no-impl option
-    When Engineer invokes uchange action with --no-impl option
-    Then base change request is created
-    But uimpl action is not invoked
+  #  Scenario: --no-impl option
+  #    When Engineer invokes uchange action with --no-impl option
+  #    Then base change request is created
+  #    But uimpl action is not invoked
 
   Rule: Edge cases
 
