@@ -495,7 +495,7 @@ changes_archive() {
     fi
 
     if [ -n "$is_git" ]; then
-        (cd "$project_dir" && git add "$change_folder")
+        (cd "$project_dir" && quiet git add "$change_folder")
     fi
 
     move_folder "$abs_change" "$dest" "$project_dir"
@@ -503,7 +503,7 @@ changes_archive() {
     local rel_dest="${dest#"$project_dir/"}"
 
     if [ -n "$is_git" ]; then
-        (cd "$project_dir" && git add "$rel_dest")
+        (cd "$project_dir" && quiet git add "$rel_dest")
     fi
 
     # shellcheck disable=SC2034
