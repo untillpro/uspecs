@@ -2,6 +2,7 @@
 registered_at: 2026-03-28T11:42:59Z
 change_id: 2603281142-prompt-default-instruction
 baseline: 07c51099c7046eb95bbdb2c49a1bdd18900ab6e7
+archived_at: 2026-03-28T12:38:13Z
 ---
 
 # Change request: Default agent instruction in prompt output
