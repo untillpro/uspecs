@@ -289,7 +289,7 @@ prompt_start_instructions() {
     echo "</LOG>"
     echo "<AGENT_INSTRUCTIONS>"
     if [[ $# -gt 0 ]]; then
-        printf '%s\n' "$1"
+        printf '%s\n' "$*"
     else
         echo "Inform user about the results, see below. Ignore the <LOG> content above."
     fi
