@@ -49,6 +49,11 @@ if [[ "${1:-}" == "pr" ]]; then
             echo "https://github.com/org/repo/pull/42"
             exit 0
             ;;
+        update-branch)
+            # Simulate gh pr update-branch (no-op in tests -- branch is already up to date)
+            echo "Updating pull request branch..."
+            exit 0
+            ;;
         merge)
             if [[ "${GH_STUB_MERGE_FAIL:-}" == "1" ]]; then
                 echo "gh: merge failed" >&2
