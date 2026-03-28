@@ -185,8 +185,16 @@ _setup_umergepr_branch() {
     [[ "$output" == *"## umergepr_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
 
+    # Verify gh pr update-branch was called before merge
+    local gh_calls
+    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
+    [[ "$gh_calls" == *"pr update-branch"* ]]
+
     # Verify fetch+ff was attempted
     [[ "$output" == *"Fetching upstream/main"* ]]
+
+    # Verify no divergence warning (ff should succeed)
+    [[ "$output" != *"has diverged"* ]]
 
     # Verify WCF was detected (no warning)
     [[ "$output" != *"WCF not detected"* ]]

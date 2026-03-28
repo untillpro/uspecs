@@ -807,10 +807,14 @@ cmd_action_upr() {
 
     git_validate_clean_repo "$current_branch" "$default_branch"
 
+    echo "Branch: $current_branch -> $pr_remote/$default_branch"
+
     # Fetch remote default branch
-    git fetch "$pr_remote" "$default_branch" 2>&1
+    echo "Fetching $pr_remote/$default_branch..."
+    quiet git fetch "$pr_remote" "$default_branch"
 
     # Check for changes since branching
+    echo "Checking for changes since branching..."
     local merge_base
     merge_base=$(git merge-base HEAD "${pr_remote}/${default_branch}")
     local diff_stat
@@ -825,6 +829,8 @@ cmd_action_upr() {
     local wcf_name
     wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
 
+    echo "Working Change Folder: $wcf_name"
+
     local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
     local change_file="$wcf_path/change.md"
 
@@ -833,12 +839,14 @@ cmd_action_upr() {
     fi
 
     # Check for uncompleted todo items
+    echo "Checking for uncompleted to-do items..."
     changes_validate_todos_completed "$wcf_path" "$project_dir"
 
     local prompts_file
     prompts_file="$(get_script_dir)/../prompts.md"
 
     # Check if PR already exists for this branch
+    echo "Checking for existing PR..."
     local pr_state pr_number
     if pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # PR exists -- check its state
@@ -848,7 +856,7 @@ cmd_action_upr() {
             # PR exists and is OPEN -- open in browser and show message
             local pr_url
             pr_url=$(gh pr view --json url -q ".url")
-            gh pr view --web 2>&1 || true
+            quiet gh pr view --web || true
 
             prompt_finish_log_start_instructions
             # shellcheck disable=SC2034  # open_vars used via nameref in section_templ
@@ -895,8 +903,11 @@ cmd_action_upr() {
 
     # Set upstream if not already set
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
-        git push -u origin "$current_branch" 2>&1
+        quiet git push -u origin "$current_branch"
     fi
+
+    echo "PR title: $pr_title"
+    echo "Commits since merge-base: $commit_count"
 
     local pre_push_head=""
     if [[ "$commit_count" -gt 1 ]]; then
@@ -904,20 +915,23 @@ cmd_action_upr() {
         pre_push_head=$(git rev-parse HEAD)
 
         # Squash branch into single commit
-        git reset --soft "$merge_base"
-        git commit -m "$commit_message"
+        echo "Squashing $commit_count commits into one..."
+        quiet git reset --soft "$merge_base"
+        quiet git commit -m "$commit_message"
 
         # Register branch restoration handler in case force-push fails
         atexit_push "git reset --hard ${pre_push_head}"
 
         # Force-push
-        git push --force
+        echo "Force-pushing squashed commit..."
+        quiet git push --force
 
         # Force-push succeeded -- remove restoration handler
         atexit_pop
     else
         # Already a single commit -- skip squash and force-push
-        git push 2>&1
+        echo "Single commit, pushing..."
+        quiet git push
     fi
 
     # Prepare PR body: strip YAML frontmatter --- delimiters (keep field lines as plain text).
@@ -942,6 +956,7 @@ cmd_action_upr() {
     fi
 
     # Open PR creation in browser
+    echo "Opening PR creation in browser..."
     local pr_repo
     pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
     gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file"
@@ -980,24 +995,29 @@ cmd_action_umergepr() {
 
     git_validate_clean_repo "$current_branch" "$default_branch"
 
+    echo "Branch: $current_branch -> $pr_remote/$default_branch"
+
     # Check upstream
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
         error "Current branch '$current_branch' has no upstream"
     fi
 
     # Fetch remote default branch
-    git fetch "$pr_remote" "$default_branch" 2>&1
+    echo "Fetching $pr_remote/$default_branch..."
+    quiet git fetch "$pr_remote" "$default_branch"
 
     # Detect Working Change Folder
     local changes_folder_rel
     changes_folder_rel=$(read_conf_param "changes_folder")
     local wcf_name
     wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+    echo "Working Change Folder: $wcf_name"
 
     local prompts_file
     prompts_file="$(get_script_dir)/../prompts.md"
 
     # Check PR state
+    echo "Checking PR state..."
     local pr_state pr_number
     if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
@@ -1009,17 +1029,19 @@ cmd_action_umergepr() {
 
     pr_number=$(gh pr view --json number -q ".number")
 
+    echo "PR #$pr_number state: $pr_state"
+
     if [[ "$pr_state" != "OPEN" ]]; then
         # PR is not in OPEN state
-        gh pr view --web 2>&1 || true
+        quiet gh pr view --web || true
 
         local branch_head
         branch_head=$(git rev-parse HEAD)
 
         # Delete local branch, upstream and remote tracking ref (errors ignored)
-        git checkout "$default_branch" 2>&1 || true
-        git branch -D "$current_branch" 2>&1 || true
-        git branch -dr "origin/$current_branch" 2>&1 || true
+        quiet git checkout "$default_branch" || true
+        git branch -D "$current_branch" >/dev/null 2>&1 || true
+        git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
 
         prompt_finish_log_start_instructions
 
@@ -1040,24 +1062,31 @@ cmd_action_umergepr() {
     local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
     local archived_path=""
     if [[ -d "$wcf_path" && ! "$wcf_path" == */archive/* ]]; then
+        echo "Archiving WCF $wcf_name..."
         changes_archive "$project_dir" "$changes_folder_rel" "$changes_folder_rel/$wcf_name" "1" archived_path
 
         # Commit the archive
         if [[ -n $(git status --porcelain) ]]; then
-            git add -A
-            git commit -m "Archive $wcf_name"
-            git push 2>&1 || true
+            quiet git add -A
+            quiet git commit -m "Archive $wcf_name"
+            echo "Pushing archive commit..."
+            quiet git push || true
         fi
     fi
+
+    # Sync PR branch with latest base branch (handles "base branch was modified" error)
+    echo "Updating PR branch with latest base..."
+    quiet gh pr update-branch || echo "Warning: gh pr update-branch failed (may not be needed)"
 
     # Record branch HEAD before merge deletes it
     local branch_head
     branch_head=$(git rev-parse HEAD)
 
     # Attempt merge with squash and delete branch
-    if ! gh pr merge --squash --delete-branch 2>&1; then
+    echo "Merging PR #$pr_number (squash)..."
+    if ! quiet gh pr merge --squash --delete-branch; then
         # Merge failed
-        gh pr view --web 2>&1 || true
+        quiet gh pr view --web || true
 
         prompt_finish_log_start_instructions
 
@@ -1069,35 +1098,56 @@ cmd_action_umergepr() {
     fi
 
     # Merge succeeded -- cleanup
-    # gh pr merge --delete-branch already switched to default branch and deleted local branch
-    # Clean up remote tracking ref (errors ignored)
-    git branch -dr "origin/$current_branch" 2>&1 || true
+    echo "Merge succeeded, cleaning up..."
+    # gh pr merge --delete-branch switches to default branch and deletes local branch,
+    # but in fork workflows (crossRepoPR) it skips remote branch deletion by design.
+    # Explicitly delete the branch on origin (the fork) and clean up tracking ref.
+    if git ls-remote --exit-code --heads origin "$current_branch" >/dev/null 2>&1; then
+        echo "Deleting branch $current_branch from origin..."
+        quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
+    fi
+    git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
 
     # When upstream remote exists, fast-forward local default branch.
     # Retry fetch+ff for up to 5 seconds -- the squashed commit may not appear
     # immediately due to eventual consistency.
     if [[ "$pr_remote" == "upstream" ]]; then
+        echo "Syncing local $default_branch with $pr_remote/$default_branch..."
         cd "$project_dir"
         # Ensure we are on the default branch (gh pr merge should have switched,
         # but be explicit to avoid accidentally fast-forwarding a wrong branch).
-        git checkout "$default_branch" 2>&1 || true
-        # Use archived path for WCF detection; fall back to original relative path
-        local _wcf_check_path="$project_dir/${archived_path:-$changes_folder_rel/$wcf_name}"
-        local _wcf_found=false
-        for _attempt in 1 2 3 4 5; do
-            echo "Fetching $pr_remote/$default_branch (attempt $_attempt)..."
-            if git fetch "$pr_remote" "$default_branch" 2>&1; then
-                if git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
-                    if [[ -d "$_wcf_check_path" ]]; then
-                        _wcf_found=true
-                        break
-                    fi
+        quiet git checkout "$default_branch" || true
+
+        echo "Fetching $pr_remote/$default_branch..."
+        quiet git fetch "$pr_remote" "$default_branch"
+
+        if ! git merge-base --is-ancestor HEAD "$pr_remote/$default_branch" 2>/dev/null; then
+            # Local branch has diverged from upstream -- log and skip sync entirely
+            echo "Warning: local $default_branch has diverged from $pr_remote/$default_branch, skipping sync"
+            echo "  local HEAD: $(git rev-parse --short HEAD)"
+            echo "  $pr_remote/$default_branch: $(git rev-parse --short "$pr_remote/$default_branch")"
+            echo "  merge-base: $(git merge-base HEAD "$pr_remote/$default_branch" | cut -c1-7)"
+            echo "  local-only commits:"
+            git log --oneline "$pr_remote/$default_branch..HEAD" 2>&1 | sed 's/^/    /'
+        else
+            # Fast-forward is possible -- retry ff+WCF detection for up to 5 seconds
+            # (squashed commit may not appear immediately due to eventual consistency)
+            local _wcf_check_path="$project_dir/${archived_path:-$changes_folder_rel/$wcf_name}"
+            local _wcf_found=false
+            for _attempt in 1 2 3 4 5; do
+                echo "Fast-forwarding $default_branch (attempt $_attempt)..."
+                quiet git fetch "$pr_remote" "$default_branch"
+                quiet git merge --ff-only "$pr_remote/$default_branch"
+                quiet git push origin "$default_branch" || echo "Warning: failed to push $default_branch to origin"
+                if [[ -d "$_wcf_check_path" ]]; then
+                    _wcf_found=true
+                    break
                 fi
+                sleep 1
+            done
+            if [[ "$_wcf_found" != "true" ]]; then
+                echo "Warning: WCF not detected in $default_branch after 5 seconds"
             fi
-            sleep 1
-        done
-        if [[ "$_wcf_found" != "true" ]]; then
-            echo "Warning: WCF not detected in $default_branch after 5 seconds"
         fi
     fi
 

@@ -20,8 +20,9 @@ Feature: Merge pull request
 
     Scenario: PR in OPEN state
       When Engineer invokes umergepr action
+      Then PR branch is updated with latest base via gh pr update-branch
       # Squash and delete local and remote branches
-      Then Attempt to merge PR is made with -s -d options
+      And Attempt to merge PR is made with -s -d options
       And Engineer is provided with restore instructions to recover the local branch
 
     Scenario: PR in OPEN state: Attempt to merge PR fails
@@ -39,7 +40,12 @@ Feature: Merge pull request
     Scenario: PR in OPEN state: upstream remote exists
       Given upstream remote exists
       When Attempt to merge PR succeeds
-      Then fetch+ff of pr_remote/default_branch to default_branch is retried for up to 5 seconds until WCF in the default branch is detected
+      Then branch is deleted from origin (fork) if it exists, via git push origin --delete
+      And local default branch is checked out
+      And pr_remote/default_branch is fetched
+      And if local default branch has diverged from pr_remote/default_branch, divergence details are logged and sync is skipped
+      And if fast-forward is possible, fetch+ff is retried for up to 5 seconds until WCF in the default branch is detected
+      And default_branch is pushed to origin after fast-forward
       And errors are logged but do not block completion
 
   Rule: Edge cases

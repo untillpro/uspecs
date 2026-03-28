@@ -73,6 +73,22 @@ git_path() {
     fi
 }
 
+# quiet <command> [args...]
+# Runs the command with both stdout and stderr suppressed.
+# On failure, dumps captured stdout to stdout and stderr to stderr,
+# then returns the original exit code.
+quiet() {
+    local _q_out _q_err _q_rc=0
+    _q_err=$(mktemp)
+    _q_out=$("$@" 2>"$_q_err") || _q_rc=$?
+    if [[ $_q_rc -ne 0 ]]; then
+        [[ -n "$_q_out" ]] && printf '%s\n' "$_q_out"
+        [[ -s "$_q_err" ]] && cat "$_q_err" >&2
+    fi
+    rm -f "$_q_err"
+    return $_q_rc
+}
+
 # error <message>
 # Prints an error message to stderr and exits with status 1.
 error() {
