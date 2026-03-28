@@ -45,7 +45,7 @@ Flow:
   - [ ] If any of the above are explicitly requested, I will pass ONLY those flags
 - Determine `change_name` from the change description: kebab-case, 15-30 chars, descriptive
 - Run script to create Change Folder:
-  - Base command: `bash uspecs/u/scripts/uspecs.sh change new {change_name}`
+  - Base command: `bash uspecs/u/scripts/softeng.sh change new {change_name}`
   - If issue reference provided add `--issue-url "{issue_url}"` parameters (quoted to handle shell-special characters such as `&`)
   - If --no-branch option provided add `--no-branch` parameter
   - If --branch option provided add `--branch` parameter

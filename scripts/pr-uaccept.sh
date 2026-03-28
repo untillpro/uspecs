@@ -14,7 +14,7 @@ set -Eeuo pipefail
 # Prerequisites:
 #   - Git repository with GitHub remote
 #   - GitHub CLI (gh) installed and authenticated via GH_TOKEN
-#   - uspecs tooling available at uspecs/u/scripts/uspecs.sh
+#   - uspecs tooling available at uspecs/u/scripts/softeng.sh
 #
 # Environment variables:
 #   PR_NUMBER   - Pull request number to merge
@@ -38,7 +38,7 @@ check_gh_cli() {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-USPECS_SH="$REPO_ROOT/uspecs/u/scripts/uspecs.sh"
+USPECS_SH="$REPO_ROOT/uspecs/u/scripts/softeng.sh"
 
 # Validate prerequisites
 check_gh_cli
