@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# uspecs automation
+# softeng automation
 #
 # Usage:
-#   uspecs action upr
-#   uspecs action umergepr
-#   uspecs change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
-#   uspecs change archive <change-folder-name> [-d] | --all
-#   uspecs pr preflight
-#   uspecs pr create --title <title> [--body <body>]
-#   uspecs diff specs
+#   softeng action upr
+#   softeng action umergepr
+#   softeng change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
+#   softeng change archive <change-folder-name> [-d]
+#   softeng change archiveall
+#   softeng pr preflight
+#   softeng pr create --title <title> [--body <body>]
+#   softeng diff specs
 #
 # change new:
 #   Creates Change Folder and change.md with frontmatter:
@@ -22,12 +23,14 @@ set -Eeuo pipefail
 #   Creates git branch by default (skip with --no-branch; --branch forces creation explicitly)
 #   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
 #
-# change archive [-d] [--all]:
+# change archive [-d]:
 #   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
 #   -d: commit and push staged changes, checkout default branch, delete branch and refs
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
-#   --all: archive all change folders with modifications vs pr_remote/default_branch
+#
+# change archiveall:
+#   Archives all change folders with modifications vs pr_remote/default_branch
 #          No change-folder-name needed; mutually exclusive with -d
 #
 # pr preflight --change-folder <path>:
@@ -390,7 +393,7 @@ cmd_change_archiveall() {
 
     local archived=0 unchanged=0 failed=0
     local script_path
-    script_path="$(get_script_dir)/uspecs.sh"
+    script_path="$(get_script_dir)/softeng.sh"
 
     for folder_path in "$changes_folder"/*/; do
         [ -d "$folder_path" ] || continue
@@ -833,7 +836,7 @@ cmd_action_upr() {
     changes_validate_todos_completed "$wcf_path" "$project_dir"
 
     local prompts_file
-    prompts_file="$(get_script_dir)/prompts.md"
+    prompts_file="$(get_script_dir)/../prompts.md"
 
     # Check if PR already exists for this branch
     local pr_state pr_number
@@ -992,7 +995,7 @@ cmd_action_umergepr() {
     wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
 
     local prompts_file
-    prompts_file="$(get_script_dir)/prompts.md"
+    prompts_file="$(get_script_dir)/../prompts.md"
 
     # Check PR state
     local pr_state pr_number
@@ -1114,7 +1117,7 @@ main() {
     git_path
 
     if [ $# -lt 1 ]; then
-        error "Usage: uspecs <command> [args...]"
+        error "Usage: softeng <command> [args...]"
     fi
 
     local command="$1"
@@ -1123,7 +1126,7 @@ main() {
     case "$command" in
         action)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs action <keyword>"
+                error "Usage: softeng action <keyword>"
             fi
             local keyword="$1"
             shift
@@ -1141,7 +1144,7 @@ main() {
             ;;
         change)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs change <subcommand> [args...]"
+                error "Usage: softeng change <subcommand> [args...]"
             fi
             local subcommand="$1"
             shift
@@ -1163,7 +1166,7 @@ main() {
             ;;
         pr)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs pr <subcommand> [args...]"
+                error "Usage: softeng pr <subcommand> [args...]"
             fi
             local subcommand="$1"
             shift
@@ -1182,7 +1185,7 @@ main() {
             ;;
         diff)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs diff <target>"
+                error "Usage: softeng diff <target>"
             fi
             local target="$1"
             shift
@@ -1198,7 +1201,7 @@ main() {
             ;;
         status)
             if [ $# -lt 1 ]; then
-                error "Usage: uspecs status <subcommand> [args...]"
+                error "Usage: softeng status <subcommand> [args...]"
             fi
             local subcommand="$1"
             shift

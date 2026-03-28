@@ -1,4 +1,4 @@
-# helpers.bash -- shared setup and helpers for uspecs.sh system tests
+# helpers.bash -- shared setup and helpers for softeng.sh system tests
 # Loaded by each per-command .bats file via: load 'helpers'
 set -Eeuo pipefail
 
@@ -53,10 +53,10 @@ setup() {
 # Helpers
 # ---------------------------------------------------------------------------
 
-# uspecs <args>: runs uspecs.sh with stderr captured separately.
+# uspecs <args>: runs softeng.sh with stderr captured separately.
 # $output holds stdout; $stderr holds stderr (error messages, git notices, etc.).
 uspecs() {
-    run --separate-stderr bash "$PROJECT_ROOT/uspecs/u/scripts/uspecs.sh" "$@"
+    run --separate-stderr bash "$PROJECT_ROOT/uspecs/u/scripts/softeng.sh" "$@"
 }
 
 # _make_change_folder <folder-name>: creates a minimal change folder with no

@@ -175,6 +175,7 @@ def main():
     passed = 0
     failed = 0
     skipped = 0
+    failures = []
     start_time = time.monotonic()
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
@@ -194,11 +195,21 @@ def main():
                 print(f" skip {label}", flush=True)
             else:
                 failed += 1
+                output = (result["stdout"] + result["stderr"]).strip()
+                failures.append((label, output))
                 print(f" FAIL {label}", flush=True)
-                output = result["stdout"] + result["stderr"]
-                if output.strip():
-                    for line in output.strip().splitlines():
+                if output:
+                    for line in output.splitlines():
                         print(f"   {line}", flush=True)
+
+    if failures:
+        print("\nFailed tests:", flush=True)
+        for label, output in failures:
+            print(f"  FAIL {label}", flush=True)
+            if output:
+                for line in output.splitlines():
+                    print(f"    {line}", flush=True)
+                print(flush=True)
 
     elapsed = time.monotonic() - start_time
     total = passed + failed + skipped

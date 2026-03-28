@@ -2,7 +2,7 @@
 
 ## Overview
 
-All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, and the `AI Agent` reads the corresponding `actn-u*.md` for workflow steps, fills in templates, reads/creates/updates artifact files, and runs shell commands via uspecs.sh. The result is reported back to the Engineer.
+All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, and the `AI Agent` reads the corresponding `actn-u*.md` for workflow steps, fills in templates, reads/creates/updates artifact files, and runs shell commands via softeng.sh. The result is reported back to the Engineer.
 
 ## Key flows
 
@@ -17,7 +17,7 @@ sequenceDiagram
     participant actn as 🎯actn-u*.md
     participant templates as 📄templates/
     participant artifacts as 📁Artifacts
-    participant uspecs as ⚙️uspecs.sh
+    participant softeng as ⚙️softeng.sh
 
     engineer->>ai_agent: u-keyword [instructions, parameters]
     activate ai_agent
@@ -25,7 +25,7 @@ sequenceDiagram
       actn -->> ai_agent: workflow steps
       templates-->>ai_agent: templates
       ai_agent->>artifacts: read/create/update
-      ai_agent ->> uspecs: execute commands
+      ai_agent ->> softeng: execute commands
       deactivate ai_agent
     end
     ai_agent-->>engineer: report result
@@ -61,6 +61,6 @@ Non-exhaustive list of actions and their artifacts:
   - output: PR created on GitHub, pr_branch with squashed commits, change_branch deleted
 
 - umergepr
-  - action file: actn-umergepr.md (prompts via prompts.md)
+  - action file: actn-umergepr.md (prompts via u/prompts.md)
   - input: Active Change Folder, open PR on current branch
   - output: PR squash-merged, branch deleted, WCF archived, Engineer notified
