@@ -963,18 +963,31 @@ cmd_action_upr() {
     local pr_body_file
     temp_create_file pr_body_file
     local pr_body_max_lines=40
+    local pr_body_max_chars=4000
     awk '
         BEGIN { fm=0 }
         /^---$/ && fm==0 { fm=1; next }
         /^---$/ && fm==1 { fm=2; next }
         { print }
     ' "$change_file" > "$pr_body_file"
+    local pr_body_truncated=false
     local pr_body_lines
     pr_body_lines=$(wc -l < "$pr_body_file")
     if (( pr_body_lines > pr_body_max_lines )); then
+        head -n "$pr_body_max_lines" "$pr_body_file" > "${pr_body_file}.tmp"
+        mv "${pr_body_file}.tmp" "$pr_body_file"
+        pr_body_truncated=true
+    fi
+    local pr_body_size
+    pr_body_size=$(wc -c < "$pr_body_file")
+    if (( pr_body_size > pr_body_max_chars )); then
         local truncated
-        truncated=$(head -n "$pr_body_max_lines" "$pr_body_file")
-        printf '%s\n\n---\n(truncated -- see change.md for full details)\n' "$truncated" > "$pr_body_file"
+        truncated=$(head -c "$pr_body_max_chars" "$pr_body_file")
+        printf '%s' "$truncated" > "$pr_body_file"
+        pr_body_truncated=true
+    fi
+    if [[ "$pr_body_truncated" == "true" ]]; then
+        printf '\n\n---\n(truncated -- see change.md for full details)\n' >> "$pr_body_file"
     fi
 
     # Open PR creation in browser
