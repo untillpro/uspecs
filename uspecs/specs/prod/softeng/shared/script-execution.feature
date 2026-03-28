@@ -1,6 +1,11 @@
 Feature: Script execution
   Script execution behaviors used across multiple features
 
+  Scenario: Script exits without error
+    When AI Agent runs a script and interprets its output
+    And the script exits without error
+    Then AI Agent follows the instructions provided in the output
+
   Scenario: Script exits with error
     When AI Agent runs a script and interprets its output
     And the script exits with error

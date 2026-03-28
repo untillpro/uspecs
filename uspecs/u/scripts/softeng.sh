@@ -858,11 +858,10 @@ cmd_action_upr() {
             pr_url=$(gh pr view --json url -q ".url")
             quiet gh pr view --web || true
 
-            prompt_finish_log_start_instructions
+            prompt_start_instructions
             # shellcheck disable=SC2034  # open_vars used via nameref in section_templ
             declare -A open_vars=([pr_url]="$pr_url")
             section_templ "$prompts_file" "upr_already_exists" open_vars
-            prompt_finish_instructions
             return 0
         elif [[ "$pr_state" == "MERGED" ]]; then
             echo "PR #${pr_number} for this branch was already merged. Proceeding with new PR creation..."
@@ -961,7 +960,7 @@ cmd_action_upr() {
     pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
     gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file"
 
-    prompt_finish_log_start_instructions
+    prompt_start_instructions
 
     # Output success prompt
     if [[ -n "$pre_push_head" ]]; then
@@ -970,7 +969,6 @@ cmd_action_upr() {
     else
         section_templ "$prompts_file" "upr_success_no_squash"
     fi
-    prompt_finish_instructions
 }
 
 # cmd_action_umergepr
@@ -1021,9 +1019,8 @@ cmd_action_umergepr() {
     local pr_state pr_number
     if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
-        prompt_finish_log_start_instructions
+        prompt_start_instructions
         section_templ "$prompts_file" "umergepr_no_pr"
-        prompt_finish_instructions
         return 0
     fi
 
@@ -1043,8 +1040,6 @@ cmd_action_umergepr() {
         git branch -D "$current_branch" >/dev/null 2>&1 || true
         git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
 
-        prompt_finish_log_start_instructions
-
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A vars=(
             [pr_number]="$pr_number"
@@ -1052,8 +1047,8 @@ cmd_action_umergepr() {
             [branch_name]="$current_branch"
             [branch_head]="$branch_head"
         )
+        prompt_start_instructions
         section_templ "$prompts_file" "umergepr_not_open" vars
-        prompt_finish_instructions
         return 0
     fi
 
@@ -1088,12 +1083,10 @@ cmd_action_umergepr() {
         # Merge failed
         quiet gh pr view --web || true
 
-        prompt_finish_log_start_instructions
-
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A fail_vars=([pr_number]="$pr_number")
+        prompt_start_instructions
         section_templ "$prompts_file" "umergepr_merge_failed" fail_vars
-        prompt_finish_instructions
         return 0
     fi
 
@@ -1151,16 +1144,15 @@ cmd_action_umergepr() {
         fi
     fi
 
-    prompt_finish_log_start_instructions
-
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A success_vars=(
         [pr_number]="$pr_number"
         [branch_name]="$current_branch"
         [branch_head]="$branch_head"
     )
+    # shellcheck disable=SC2119
+    prompt_start_instructions
     section_templ "$prompts_file" "umergepr_success" success_vars
-    prompt_finish_instructions
 }
 
 main() {

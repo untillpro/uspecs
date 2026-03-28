@@ -24,20 +24,37 @@ setup() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
 }
 
-# prompt contract: script exits successfully - script error instructions not emitted
-@test "prompt contract: script exits successfully: script error instructions not emitted" {
+# prompt contract: no parameter - default meta-instruction, auto-close
+@test "prompt contract: no parameter: emits default meta-instruction" {
     run bash -c "
         source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
         prompt_start_log
         echo 'some log output'
-        prompt_finish_log_start_instructions
-        echo 'normal instructions'
-        prompt_finish_instructions
+        prompt_start_instructions
+        echo 'Content here'
     "
     [ "$status" -eq 0 ]
-    [[ "$output" == *"<LOG>"* ]]
-    [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" != *"The script exited with an error."* ]]
+    [[ "$output" == *"Inform user about the results, see below."* ]]
+    [[ "$output" == *"Content here"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
+}
+
+# prompt contract: custom meta-instruction replaces default
+@test "prompt contract: custom meta-instruction: replaces default" {
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        prompt_start_log
+        echo 'some log output'
+        prompt_start_instructions 'Ask user to choose an option.'
+        echo 'Option 1: foo'
+        echo 'Option 2: bar'
+    "
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"Ask user to choose an option."* ]]
+    [[ "$output" != *"Inform user about the results"* ]]
+    [[ "$output" == *"Option 1: foo"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
 }
 
