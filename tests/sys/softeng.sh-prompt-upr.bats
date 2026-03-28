@@ -263,7 +263,8 @@ _assert_pr_body_format() {
     _assert_pr_body_format
 }
 
-@test "action upr: No PR for current branch: PR body is truncated when change.md is large" {
+# 60 short lines after frontmatter stripping -> line limit (40) truncates
+@test "action upr: No PR for current branch: PR body truncated by line limit" {
     cd "$PROJECT_ROOT"
     git checkout -q -b large-body-branch
     local folder_name="2601010000-large-change"
@@ -276,9 +277,9 @@ _assert_pr_body_format() {
         echo ''
         echo '# Change request: Large change'
         echo ''
-        # Generate content well over 4000 chars
-        for i in $(seq 1 200); do
-            echo "Line $i: This is filler text to make the change.md body exceed the 4000 character limit for PR body truncation."
+        # 3 header lines + 57 filler = 60 body lines after frontmatter stripping
+        for i in $(seq 1 57); do
+            echo "Line $i: short filler"
         done
     } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
     git add .
@@ -289,9 +290,44 @@ _assert_pr_body_format() {
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    # Body must contain the truncation notice
     [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
-    # Body size should be reasonable (truncated content + notice, under ~4200)
+    # Late lines must be gone (line 57 is well past the 40-line cut)
+    [[ "$gh_body" != *"Line 57"* ]]
+    # Early lines must be present
+    [[ "$gh_body" == *"Line 1: short filler"* ]]
+}
+
+# 10 long lines (~500 chars each, ~5000 total) under 40 lines -> char limit truncates
+@test "action upr: No PR for current branch: PR body truncated by char limit" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b large-chars-branch
+    local folder_name="2601010000-large-chars"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '---'
+        echo "registered_at: 2026-01-01T00:00:00Z"
+        echo "change_id: $folder_name"
+        echo '---'
+        echo ''
+        echo '# Change request: Large chars change'
+        echo ''
+        # 3 lines above + 10 below = 13 body lines, well under 40 but over 4000 chars
+        for i in $(seq 1 10); do
+            printf 'Line %d: ' "$i"
+            printf '%0.s_' $(seq 1 500)
+            echo ''
+        done
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add large chars change"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome "squash"
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    # Body size capped near 4000 (content + notice)
     local body_size
     body_size=${#gh_body}
     (( body_size < 4200 ))
