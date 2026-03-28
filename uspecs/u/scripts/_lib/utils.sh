@@ -291,6 +291,6 @@ prompt_start_instructions() {
     if [[ $# -gt 0 ]]; then
         printf '%s\n' "$1"
     else
-        echo "Inform user about the results, see below."
+        echo "Inform user about the results, see below. Ignore the <LOG> content above."
     fi
 }
