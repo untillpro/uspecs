@@ -43,7 +43,7 @@ setup() {
         atexit_push 'touch $popped'
         atexit_pop
     "
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 0 ]
     [ -f "$pushed" ]
     [ ! -f "$popped" ]
 }
