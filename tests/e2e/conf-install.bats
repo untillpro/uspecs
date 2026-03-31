@@ -133,7 +133,7 @@ make_temp_repo_with_origin() {
     grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Installation failure - uspecs already installed
+# Scenario: Installation failure - uspecs already installed (without --override)
 # Verifies exit non-zero and correct error message
 @test "Already installed failure" {
     local tmpdir
@@ -144,5 +144,26 @@ make_temp_repo_with_origin() {
     run bash -c "bash '$CONF_SH' install --nlia 2>&1"
     [ "$status" -ne 0 ]
     echo "$output" | grep -q "already installed"
+}
+
+# Scenario: Install with --override succeeds when already installed
+# Verifies that --override replaces existing installation and removes stale files
+@test "Install with --override succeeds when already installed" {
+    local tmpdir
+    tmpdir=$(make_temp_repo)
+    cd "$tmpdir"
+    # First install
+    run bash "$CONF_SH" install -y --local --nlia
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    # Plant a stale file that should be removed by the override install
+    touch "$tmpdir/uspecs/u/stale-file.txt"
+    # Override install
+    run bash "$CONF_SH" install -y --local --nlia --override
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
+    # Stale file must be gone
+    [ ! -f "$tmpdir/uspecs/u/stale-file.txt" ]
 }
 
