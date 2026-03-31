@@ -554,6 +554,7 @@ cmd_apply() {
 
     local project_dir="" version="" commit="" commit_timestamp="" pr_flag=false
     local current_version=""
+    local override=false
     local invocation_methods=()
 
     local yes_flag=false
@@ -566,6 +567,7 @@ cmd_apply() {
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
             --current-version) current_version="$2"; shift 2 ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
             -y) yes_flag=true; shift ;;
@@ -593,7 +595,7 @@ cmd_apply() {
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
-    if [[ "$command_name" == "install" && -f "$metadata_file" ]]; then
+    if [[ "$command_name" == "install" && "$override" != "true" && -f "$metadata_file" ]]; then
         error "uspecs is already installed, use update instead"
     fi
 
@@ -607,7 +609,7 @@ cmd_apply() {
 
     local -A config
     if [[ "$command_name" == "install" ]]; then
-        if [[ -f "$metadata_file" ]]; then
+        if [[ "$override" != "true" && -f "$metadata_file" ]]; then
             error "uspecs is already installed, use update instead"
         fi
     else
@@ -656,14 +658,8 @@ cmd_apply() {
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
 
-    if [[ "$command_name" == "install" ]]; then
-        rm -f "$source_dir/uspecs/u/uspecs.yml"
-        echo "Installing uspecs/u..."
-        mkdir -p "$project_dir/uspecs"
-        cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
-    else
-        replace_uspecs_u "$source_dir" "$project_dir"
-    fi
+    mkdir -p "$project_dir/uspecs/u"
+    replace_uspecs_u "$source_dir" "$project_dir"
 
     # Write metadata
     echo "Writing installation metadata..."
@@ -719,6 +715,7 @@ cmd_install() {
     local local_flag=false
     local pr_flag=false
     local yes_flag=false
+    local override=false
     local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
@@ -726,6 +723,7 @@ cmd_install() {
             --alpha) alpha=true; shift ;;
             --local) local_flag=true; shift ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
             -y) yes_flag=true; shift ;;
@@ -743,7 +741,9 @@ cmd_install() {
     local project_dir
     project_dir=$PWD
 
-    check_not_installed "$project_dir"
+    if [[ "$override" != "true" ]]; then
+        check_not_installed "$project_dir"
+    fi
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
@@ -770,6 +770,9 @@ cmd_install() {
     done
     if [[ -n "$commit" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
+    fi
+    if [[ "$override" == "true" ]]; then
+        apply_args+=("--override")
     fi
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")

@@ -26,6 +26,12 @@ Feature: Install uspecs
     And uspecs metadata file is created with local version and commit info
     And other flags are respected as in stable install
 
+  Scenario: Install with --override
+    When Engineer runs install with --override and other flags
+    Then uspecs is installed even if it is already installed
+    And existing installation is replaced regardless of version
+    And other flags are respected as in stable install
+
   Rule: Curl-pipe install
 
     Scenario: Install via curl pipe
@@ -50,8 +56,8 @@ Feature: Install uspecs
       Then installation fails with "<message>"
 
       Examples:
-        | condition                             | message                                         |
-        | no git repository exists              | No git repository found                         |
-        | uspecs is already installed           | uspecs is already installed, use update instead |
-        | working directory is not clean (--pr) | Working directory has uncommitted changes       |
+        | condition                                        | message                                         |
+        | no git repository exists                         | No git repository found                         |
+        | uspecs is already installed (without --override) | uspecs is already installed, use update instead |
+        | working directory is not clean (--pr)            | Working directory has uncommitted changes       |
 
