@@ -7,7 +7,7 @@ set -Eeuo pipefail
 #   Manages uspecs lifecycle: install, update, upgrade, and invocation method configuration
 #
 # Usage:
-#   conf.sh install --nlia [--alpha] [--pr]
+#   conf.sh install --nlia [--alpha] [--local] [--override] [--pr] [-y]
 #   conf.sh update [--pr]
 #   conf.sh upgrade [--pr]
 #   conf.sh im --add nlia
@@ -353,6 +353,10 @@ replace_uspecs_u() {
     echo "Removing installation metadata file from archive..."
     rm -f "$source_dir/uspecs/u/uspecs.yml"
     echo "Removing old uspecs/u files..."
+    # Delete only regular files, not directories. Removing directories while they
+    # may still be in use causes "directory busy" errors on Windows (and with some
+    # tools on other platforms). Leaving empty directories behind is harmless
+    # because cp -r will overwrite or reuse them.
     find "$project_dir/uspecs/u" -type f -delete
     echo "Installing new uspecs/u..."
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
