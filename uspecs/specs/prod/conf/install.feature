@@ -31,6 +31,7 @@ Feature: Install uspecs
     Then uspecs is installed even if it is already installed
     And existing installation is replaced regardless of version
     And other flags are respected as in stable install
+    But if installed version equals incoming version, script exits with message suggesting to remove uspecs.yml
 
   Rule: Curl-pipe install
 

@@ -37,10 +37,11 @@ make_temp_repo_with_origin() {
     echo "$tmpdir"
 }
 
-# Scenario: Install alpha version
-# Uses --local so the current workspace code is installed (no GitHub download lag).
-# Verifies uspecs.yml written with commit field and AGENTS.md created.
-@test "Alpha install (local, nlia)" {
+@test "install: scn: Install stable version: local nlia" {
+# And <file> is created if it does not exist
+# And instructions are injected into <file>
+# method: nlia
+# file: AGENTS.md
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -52,9 +53,11 @@ make_temp_repo_with_origin() {
     grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Installation failure - working directory is not clean (--pr)
-# check_prerequisites in pr.sh ffdefault rejects a dirty working tree.
-@test "Install --pr fails when working directory is not clean" {
+@test "install: scn: Installation failure: dirty working directory with --pr" {
+# Given <condition>
+# Then installation fails with "<message>"
+# condition: working directory is not clean (--pr)
+# message: Working directory has uncommitted changes
     local tmpdir
     tmpdir=$(make_temp_repo_with_origin)
     # Make the working directory dirty
@@ -67,10 +70,11 @@ make_temp_repo_with_origin() {
     echo "$output" | grep -q "uncommitted changes"
 }
 
-# Scenario: Install alpha version with nlic
-# Uses --local so the current workspace code is installed (no GitHub download lag).
-# Verifies uspecs.yml written with commit field and CLAUDE.md created.
-@test "Alpha install (local, nlic)" {
+@test "install: scn: Install stable version: local nlic" {
+# And <file> is created if it does not exist
+# And instructions are injected into <file>
+# method: nlic
+# file: CLAUDE.md
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -82,10 +86,10 @@ make_temp_repo_with_origin() {
     grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Install alpha version with both nlia and nlic
-# Uses --local so the current workspace code is installed (no GitHub download lag).
-# Verifies both AGENTS.md and CLAUDE.md created and metadata lists both methods.
-@test "Alpha install (local, nlia + nlic)" {
+@test "install: scn: Install stable version: local nlia + nlic" {
+# And <file> is created if it does not exist
+# And instructions are injected into <file>
+# file: AGENTS.md, CLAUDE.md
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -99,10 +103,9 @@ make_temp_repo_with_origin() {
     grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Install alpha version (remote)
-# Downloads from GitHub main branch (requires network access).
-# Verifies uspecs.yml written with alpha version, commit field, and AGENTS.md created.
-@test "Alpha install (remote, nlia)" {
+@test "install: scn: Install alpha version: remote nlia" {
+# Then uspecs is installed from the latest commit on main branch
+# And uspecs metadata file is created and describes the alpha version
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -116,11 +119,9 @@ make_temp_repo_with_origin() {
     grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Install via curl pipe
-# Simulates the README install command by piping conf.sh to bash (no BASH_SOURCE[0]).
-# Uses local file piped to bash instead of actual curl to test the fix before it's on main.
-# Verifies the two-phase flow: pipe (self-contained) -> downloaded conf.sh apply.
-@test "Alpha install (curl pipe)" {
+@test "install: scn: Install via curl pipe: alpha nlia" {
+# Then conf.sh executes without sourcing any local files (_lib/*, utils.sh)
+# And conf.sh downloads the archive and delegates to the downloaded conf.sh apply
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -133,9 +134,11 @@ make_temp_repo_with_origin() {
     grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
 }
 
-# Scenario: Installation failure - uspecs already installed (without --override)
-# Verifies exit non-zero and correct error message
-@test "Already installed failure" {
+@test "install: scn: Installation failure: already installed without override" {
+# Given <condition>
+# Then installation fails with "<message>"
+# condition: uspecs is already installed (without --override)
+# message: uspecs is already installed, use update instead
     local tmpdir
     tmpdir=$(make_temp_repo)
     mkdir -p "$tmpdir/uspecs/u"
@@ -146,9 +149,8 @@ make_temp_repo_with_origin() {
     echo "$output" | grep -q "already installed"
 }
 
-# Scenario: Install with --override succeeds when already installed
-# Verifies that --override replaces existing installation and removes stale files
-@test "Install with --override succeeds when already installed" {
+@test "install: scn: Install with --override: different version replaces" {
+# And existing installation is replaced regardless of version
     local tmpdir
     tmpdir=$(make_temp_repo)
     cd "$tmpdir"
@@ -156,6 +158,9 @@ make_temp_repo_with_origin() {
     run bash "$CONF_SH" install -y --local --nlia
     [ "$status" -eq 0 ]
     [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    # Fake a different installed version so override proceeds with replacement
+    sed -i 's/^version: .*/version: 0.0.0/' "$tmpdir/uspecs/u/uspecs.yml"
+    sed -i 's/^commit: .*/commit: 0000000000000000000000000000000000000000/' "$tmpdir/uspecs/u/uspecs.yml"
     # Plant a stale file that should be removed by the override install
     touch "$tmpdir/uspecs/u/stale-file.txt"
     # Override install
@@ -165,5 +170,20 @@ make_temp_repo_with_origin() {
     grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
     # Stale file must be gone
     [ ! -f "$tmpdir/uspecs/u/stale-file.txt" ]
+}
+
+@test "install: scn: Install with --override: version matches" {
+# But if installed version equals incoming version, script exits with message suggesting to remove uspecs.yml
+    local tmpdir
+    tmpdir=$(make_temp_repo)
+    cd "$tmpdir"
+    # First install
+    run bash "$CONF_SH" install -y --local --nlia
+    [ "$status" -eq 0 ]
+    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    # Override install with same version
+    run bash "$CONF_SH" install -y --local --nlia --override
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Remove uspecs.yml to force reinstall"
 }
 

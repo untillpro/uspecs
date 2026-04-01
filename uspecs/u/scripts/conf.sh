@@ -616,6 +616,14 @@ cmd_apply() {
         if [[ "$override" != "true" && -f "$metadata_file" ]]; then
             error "uspecs is already installed, use update instead"
         fi
+        if [[ "$override" == "true" && -f "$metadata_file" ]]; then
+            load_config "$project_dir" config
+            if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
+               [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
+                echo "Version is already installed. Remove uspecs.yml to force reinstall."
+                return 0
+            fi
+        fi
     else
         load_config "$project_dir" config
         if [[ "${config[version]:-}" != "$current_version" ]]; then
