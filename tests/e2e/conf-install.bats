@@ -34,6 +34,7 @@ make_temp_repo_with_origin() {
     git init -q --bare "$origin_dir"
     git -C "$tmpdir" remote add origin "$origin_dir"
     git -C "$tmpdir" push -q origin HEAD:main
+    git -C "$origin_dir" symbolic-ref HEAD refs/heads/main
     echo "$tmpdir"
 }
 
@@ -63,7 +64,8 @@ make_temp_repo_with_origin() {
     # Make the working directory dirty
     echo "dirty" > "$tmpdir/dirty.txt"
     # Expose the gh stub so check_prerequisites passes the gh check
-    export PATH="$BATS_TEST_DIRNAME/../stubs:$PATH"
+    # shellcheck disable=SC2030
+    PATH="$BATS_TEST_DIRNAME/../stubs:$PATH"
     cd "$tmpdir"
     run bash -c "bash '$CONF_SH' install -y --local --nlia --pr 2>&1"
     [ "$status" -ne 0 ]
@@ -186,4 +188,55 @@ make_temp_repo_with_origin() {
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Remove uspecs.yml to force reinstall"
 }
+
+@test "install: scn: Install with --override: version matches with --pr restores branch" {
+# But if installed version equals incoming version, script exits with message suggesting to remove uspecs.yml
+    local tmpdir
+    tmpdir=$(make_temp_repo_with_origin)
+    cd "$tmpdir"
+    # First install and commit so working tree is clean for --pr
+    run bash "$CONF_SH" install -y --local --nlia
+    [ "$status" -eq 0 ]
+    git -C "$tmpdir" add -A && git -C "$tmpdir" commit -q -m "install uspecs"
+    git -C "$tmpdir" push -q origin HEAD:main
+    local branch_before
+    branch_before=$(git -C "$tmpdir" symbolic-ref --short HEAD)
+    # Expose the gh stub so check_prerequisites passes
+    # shellcheck disable=SC2030,SC2031
+    PATH="$BATS_TEST_DIRNAME/../stubs:$PATH"
+    # Override install with same version + --pr
+    run bash "$CONF_SH" install -y --local --nlia --override --pr
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Remove uspecs.yml to force reinstall"
+    # Branch must be restored to where it was before
+    local branch_after
+    branch_after=$(git -C "$tmpdir" symbolic-ref --short HEAD)
+    [ "$branch_before" = "$branch_after" ]
+}
+
+@test "install: scn: Install with --override: error after branch switch restores branch" {
+# Then installation fails and branch is restored via atexit
+    local tmpdir
+    tmpdir=$(make_temp_repo_with_origin)
+    cd "$tmpdir"
+    # Install uspecs, commit, push so working tree is clean for --pr
+    run bash "$CONF_SH" install -y --local --nlia
+    [ "$status" -eq 0 ]
+    git -C "$tmpdir" add -A && git -C "$tmpdir" commit -q -m "install uspecs"
+    git -C "$tmpdir" push -q origin HEAD:main
+    local branch_before
+    branch_before=$(git -C "$tmpdir" symbolic-ref --short HEAD)
+    # Expose the gh stub so check_prerequisites passes
+    # shellcheck disable=SC2031
+    PATH="$BATS_TEST_DIRNAME/../stubs:$PATH"
+    # Use "apply update" with wrong --current-version to trigger error after atexit_push
+    run bash "$CONF_SH" apply update --project-dir "$tmpdir" --version 99.0.0 --current-version WRONG --pr -y
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "does not match expected"
+    # Branch must be restored via atexit handler
+    local branch_after
+    branch_after=$(git -C "$tmpdir" symbolic-ref --short HEAD)
+    [ "$branch_before" = "$branch_after" ]
+}
+
 

@@ -608,7 +608,7 @@ cmd_apply() {
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
         (cd "$project_dir" && git_ffdefault)
-        trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
+        atexit_push "git -C '$project_dir' checkout '$prev_branch' || true"
     fi
 
     local -A config
@@ -633,7 +633,6 @@ cmd_apply() {
         if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
            [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
             echo "Already up to date"
-            [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
             return 0
         fi
     fi
@@ -649,7 +648,6 @@ cmd_apply() {
     # Show operation plan and confirm
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
     if ! confirm_action "$command_name" "$yes_flag"; then
-        [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
         return 0
     fi
 
@@ -696,10 +694,12 @@ cmd_apply() {
         local pr_info_file
         temp_create_file pr_info_file
 
+        # git_pr --next-branch handles its own branch switch; remove our atexit handler
+        atexit_pop
+
         # Capture PR info from stderr while showing normal output
         (cd "$project_dir" && git_pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
-        trap - ERR
 
         # Parse PR info from temp file
         pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
