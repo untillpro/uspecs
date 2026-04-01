@@ -74,6 +74,7 @@ _setup_umergepr_branch() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## umergepr_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
+    [[ "$output" == *"https://github.com/org/repo/pull/42"* ]]
     [[ "$output" == *"my-feature"* ]]
     [[ "$output" == *"git branch my-feature"* ]]
 
@@ -184,6 +185,7 @@ _setup_umergepr_branch() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"## umergepr_success"* ]]
     [[ "$output" == *"PR #42 has been merged successfully"* ]]
+    [[ "$output" == *"https://github.com/org/repo/pull/42"* ]]
 
     # Verify gh pr update-branch was called before merge
     local gh_calls

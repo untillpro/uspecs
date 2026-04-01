@@ -57,9 +57,14 @@ _assert_no_pr_base_outcome() {
     else
         [[ "$output" == *"## upr_success_no_squash"* ]]
     fi
+    # PR was created programmatically (not --web) and then opened in browser
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
-    [[ "$gh_calls" == *"pr create --web"* ]]
+    [[ "$gh_calls" == *"pr create"* ]]
+    [[ "$gh_calls" != *"pr create --web"* ]]
+    [[ "$gh_calls" == *"pr view --web"* ]]
+    # pr_url appears in output
+    [[ "$output" == *"https://github.com/org/repo/pull/42"* ]]
     # Always squashed to one commit beyond merge-base
     local count
     count=$(git -C "$PROJECT_ROOT" rev-list --count origin/main..HEAD)
