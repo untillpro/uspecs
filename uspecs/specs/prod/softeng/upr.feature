@@ -6,10 +6,10 @@ Feature: Create pull request from current branch
     When Engineer invokes upr action
     Then <action> is performed
     Examples:
-      | pr_state | action                                                                                   |
-      | OPEN     | PR URL is displayed, message "A PR already exists" is shown, and PR is opened in browser |
-      | CLOSED   | new PR creation proceeds normally (open browser, squash only if more than one commit)    |
-      | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally    |
+      | pr_state | action                                                                                              |
+      | OPEN     | PR URL is displayed, message "A PR already exists" is shown, and PR is opened in browser            |
+      | CLOSED   | new PR creation proceeds normally (create PR, open in browser, squash only if more than one commit) |
+      | MERGED   | Engineer is notified that PR was already merged and new PR creation proceeds normally               |
 
   Scenario: No PR for current branch: single commit
     Given no PR is associated with the current branch
@@ -17,7 +17,8 @@ Feature: Create pull request from current branch
     When Engineer invokes upr action
     Then pr_remote/default_branch is fetched
     And squash and force-push are skipped
-    And PR creation is opened in the browser with pr_title and pr_body
+    And PR is created via gh CLI with pr_title and pr_body
+    And PR is opened in browser
     And Engineer is prompted with next steps (no restore instructions)
 
   Scenario: No PR for current branch: multiple commits
@@ -27,7 +28,8 @@ Feature: Create pull request from current branch
     Then pr_remote/default_branch is fetched
     And branch is squashed into a single commit with commit_message
     And branch is force-pushed
-    And PR creation is opened in the browser with pr_title and pr_body
+    And PR is created via gh CLI with pr_title and pr_body
+    And PR is opened in browser
     And Engineer is provided with restore instructions to revert the squash
     And Engineer is prompted with next steps
 
@@ -49,7 +51,6 @@ Feature: Create pull request from current branch
     When Engineer invokes upr action
     Then PR title is <title_format>
     And pr_body is content of change.md with YAML frontmatter --- delimiters stripped (fields kept as plain text)
-    And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
     And see_details_line is "See change.md for details"
     And when squashing (multiple commits), commit message is <message_format>
     And change_title is text after ":" in the first `#` heading of change.md, trimmed

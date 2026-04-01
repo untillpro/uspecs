@@ -23,6 +23,7 @@ Feature: Merge pull request
       Then PR branch is updated with latest base via gh pr update-branch
       # Squash and delete local and remote branches
       And Attempt to merge PR is made with -s -d options
+      And pr_url is displayed in the success message
       And Engineer is provided with restore instructions to recover the local branch
 
     Scenario: PR in OPEN state: Attempt to merge PR fails
