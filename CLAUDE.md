@@ -1,15 +1,22 @@
 # Agents instructions
 
+## General guidelines
+
+- Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead.
+- Use `tests/run-tests.py [test-folder] [<pattern>]` to run tests
+- Never commit or push changes unless explicitly requested
+
 ## Claude specific
 
 - Prefer Glob/Grep/Read directly over spawning Explore agents for file searches
+- Use auggie mcp to explore codebase for open-ended conceptual questions where keyword search would be unreliable
 
 <!-- uspecs:begin -->
 
 ## Execution instructions
 
 - When user input starts with {action} [options] {other-input} like `uchange --no-impl here is some prompt` then
-  - run `bash uspecs/u/scripts/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
+  - run `bash bin/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
     - Do not pass {other-input} verbatim to the command
   - Available commands: upr, umergepr, uimpl, uarchive, usync
   - For uchange

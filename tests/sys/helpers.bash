@@ -22,9 +22,9 @@ setup() {
     export PROJECT_ROOT="$_tmpdir/project"
     mkdir -p "$PROJECT_ROOT/uspecs"
 
-    # Mirror uspecs/u/ into isolated project root so the script resolves
+    # Mirror bin/ into isolated project root so the script resolves
     # get_project_dir() to $PROJECT_ROOT instead of the real repo root.
-    cp -r "$REPO_ROOT/uspecs/u" "$PROJECT_ROOT/uspecs/"
+    cp -r "$REPO_ROOT/bin" "$PROJECT_ROOT/"
     mkdir -p "$PROJECT_ROOT/uspecs/changes"
     mkdir -p "$PROJECT_ROOT/uspecs/specs"
 
@@ -56,7 +56,7 @@ setup() {
 # uspecs <args>: runs softeng.sh with stderr captured separately.
 # $output holds stdout; $stderr holds stderr (error messages, git notices, etc.).
 uspecs() {
-    run --separate-stderr bash "$PROJECT_ROOT/uspecs/u/scripts/softeng.sh" "$@"
+    run --separate-stderr bash "$PROJECT_ROOT/bin/softeng.sh" "$@"
 }
 
 # _make_change_folder <folder-name>: creates a minimal change folder with no

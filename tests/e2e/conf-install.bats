@@ -3,7 +3,7 @@
 # E2E tests for: Install uspecs (uspecs/specs/prod/conf/install.feature)
 # Requires network access to GitHub. Run on demand, not in every CI step.
 
-CONF_SH="$BATS_TEST_DIRNAME/../../uspecs/u/scripts/conf.sh"
+CONF_SH="$BATS_TEST_DIRNAME/../../bin/conf.sh"
 
 # Ensure git's Unix tools (grep, sed, etc.) take priority over Windows stubs.
 case "$OSTYPE" in
@@ -49,10 +49,10 @@ make_temp_repo_with_origin() {
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlia
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     [ -f "$tmpdir/AGENTS.md" ]
-    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlia" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/bin/uspecs.yml"
     # Claude Code skills copied
     [ -f "$tmpdir/.claude/skills/uspecs-fd/SKILL.md" ]
     [ -f "$tmpdir/.claude/skills/uspecs-fd/echo.feature" ]
@@ -87,10 +87,10 @@ make_temp_repo_with_origin() {
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlic
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     [ -f "$tmpdir/CLAUDE.md" ]
-    grep -q "invocation_methods:.*nlic" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlic" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/bin/uspecs.yml"
 }
 
 @test "install: scn: Install stable version: local nlia + nlic" {
@@ -102,12 +102,12 @@ make_temp_repo_with_origin() {
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --local --nlia --nlic
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     [ -f "$tmpdir/AGENTS.md" ]
     [ -f "$tmpdir/CLAUDE.md" ]
-    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -q "invocation_methods:.*nlic" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlia" "$tmpdir/bin/uspecs.yml"
+    grep -q "invocation_methods:.*nlic" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/bin/uspecs.yml"
 }
 
 @test "install: scn: Install alpha version: remote nlia" {
@@ -118,12 +118,12 @@ make_temp_repo_with_origin() {
     cd "$tmpdir"
     run bash "$CONF_SH" install -y --alpha --nlia
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     [ -f "$tmpdir/AGENTS.md" ]
-    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlia" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/bin/uspecs.yml"
     # Alpha version string contains "-a"
-    grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -qE "^version: .*-a" "$tmpdir/bin/uspecs.yml"
 }
 
 @test "install: scn: Install via curl pipe: alpha nlia" {
@@ -134,11 +134,11 @@ make_temp_repo_with_origin() {
     cd "$tmpdir"
     run bash -c "cat '$CONF_SH' | bash -s install -y --alpha --nlia 2>&1"
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     [ -f "$tmpdir/AGENTS.md" ]
-    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
-    grep -qE "^version: .*-a" "$tmpdir/uspecs/u/uspecs.yml"
+    grep -q "invocation_methods:.*nlia" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/bin/uspecs.yml"
+    grep -qE "^version: .*-a" "$tmpdir/bin/uspecs.yml"
 }
 
 @test "install: scn: Installation failure: already installed without override" {
@@ -148,8 +148,8 @@ make_temp_repo_with_origin() {
 # message: uspecs is already installed, use update instead
     local tmpdir
     tmpdir=$(make_temp_repo)
-    mkdir -p "$tmpdir/uspecs/u"
-    touch "$tmpdir/uspecs/u/uspecs.yml"
+    mkdir -p "$tmpdir/bin"
+    touch "$tmpdir/bin/uspecs.yml"
     cd "$tmpdir"
     run bash -c "bash '$CONF_SH' install --nlia 2>&1"
     [ "$status" -ne 0 ]
@@ -164,19 +164,19 @@ make_temp_repo_with_origin() {
     # First install
     run bash "$CONF_SH" install -y --local --nlia
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     # Fake a different installed version so override proceeds with replacement
-    sed -i 's/^version: .*/version: 0.0.0/' "$tmpdir/uspecs/u/uspecs.yml"
-    sed -i 's/^commit: .*/commit: 0000000000000000000000000000000000000000/' "$tmpdir/uspecs/u/uspecs.yml"
+    sed -i 's/^version: .*/version: 0.0.0/' "$tmpdir/bin/uspecs.yml"
+    sed -i 's/^commit: .*/commit: 0000000000000000000000000000000000000000/' "$tmpdir/bin/uspecs.yml"
     # Plant a stale file that should be removed by the override install
-    touch "$tmpdir/uspecs/u/stale-file.txt"
+    touch "$tmpdir/bin/stale-file.txt"
     # Override install
     run bash "$CONF_SH" install -y --local --nlia --override
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
-    grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
+    [ -f "$tmpdir/bin/uspecs.yml" ]
+    grep -q "invocation_methods:.*nlia" "$tmpdir/bin/uspecs.yml"
     # Stale file must be gone
-    [ ! -f "$tmpdir/uspecs/u/stale-file.txt" ]
+    [ ! -f "$tmpdir/bin/stale-file.txt" ]
 }
 
 @test "install: scn: Install with --override: version matches" {
@@ -187,7 +187,7 @@ make_temp_repo_with_origin() {
     # First install
     run bash "$CONF_SH" install -y --local --nlia
     [ "$status" -eq 0 ]
-    [ -f "$tmpdir/uspecs/u/uspecs.yml" ]
+    [ -f "$tmpdir/bin/uspecs.yml" ]
     # Override install with same version
     run bash "$CONF_SH" install -y --local --nlia --override
     [ "$status" -eq 0 ]

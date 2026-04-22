@@ -110,7 +110,7 @@ context_specs_folder() {
 # Returns the prompts directory path.
 context_prompts_dir() {
     local -n _cprd_ref=$1
-    _cprd_ref="$_CTX_SCRIPT_DIR/../prompts"
+    _cprd_ref="$_CTX_SCRIPT_DIR/prompts"
 }
 
 _CTX_IS_GIT_REPO=""
@@ -694,7 +694,6 @@ cmd_action_uchange() {
         [td_exists]=""
         [constr_exists]=""
         [change_file_rel_path]="$change_file"
-        [templates_folder]="uspecs/u/templates"
     )
 
     prompt_start_instructions "action"
@@ -762,7 +761,7 @@ cmd_action_uimpl() {
             done
             # shellcheck disable=SC2034
             declare -A select_vars=(
-                [next_command]="bash uspecs/u/scripts/softeng.sh action uimpl"
+                [next_command]="bash bin/softeng.sh action uimpl"
                 [folder_list]="$folder_list"
             )
             prompt_start_instructions "results"
@@ -918,7 +917,6 @@ cmd_action_uimpl() {
             [td_exists]="$td_exists"
             [constr_exists]="$constr_exists"
             [change_file_rel_path]="$change_folder_rel/$impl_file"
-            [templates_folder]="uspecs/u/templates"
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl" impl_vars
@@ -1070,7 +1068,7 @@ cmd_action_uarchive() {
             done
             # shellcheck disable=SC2034
             declare -A select_vars=(
-                [next_command]="bash uspecs/u/scripts/softeng.sh action uarchive"
+                [next_command]="bash bin/softeng.sh action uarchive"
                 [folder_list]="$folder_list"
             )
             prompt_start_instructions "results"

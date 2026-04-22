@@ -77,8 +77,8 @@ def main() -> int:
         return 2
 
     repo_root = Path(positional[0])
-    softeng_sh = repo_root / "uspecs" / "u" / "scripts" / "softeng.sh"
-    prompts_dir = repo_root / "uspecs" / "u" / "prompts"
+    softeng_sh = repo_root / "bin" / "softeng.sh"
+    prompts_dir = repo_root / "bin" / "prompts"
 
     if not softeng_sh.is_file():
         print(f"ERROR: {softeng_sh} not found", file=sys.stderr)

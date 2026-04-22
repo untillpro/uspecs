@@ -6,14 +6,14 @@ bats_require_minimum_version 1.5.0
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 
 setup() {
-    source "$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh"
+    source "$REPO_ROOT/bin/_lib/utils.sh"
 }
 
 # atexit_add - single handler runs on exit
 @test "atexit_add: single handler runs on exit" {
     local marker="$BATS_TEST_TMPDIR/marker"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'touch $marker'
     "
     [ "$status" -eq 0 ]
@@ -24,7 +24,7 @@ setup() {
 @test "atexit_add: multiple handlers run in registration order" {
     local log="$BATS_TEST_TMPDIR/log"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'echo first >> $log'
         atexit_add 'echo second >> $log'
         atexit_add 'echo third >> $log'
@@ -38,7 +38,7 @@ setup() {
     local pushed="$BATS_TEST_TMPDIR/pushed"
     local popped="$BATS_TEST_TMPDIR/popped"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_push 'touch $pushed'
         atexit_push 'touch $popped'
         atexit_pop
@@ -52,7 +52,7 @@ setup() {
 @test "atexit_push: executes in LIFO order" {
     local log="$BATS_TEST_TMPDIR/log"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_push 'echo first >> $log'
         atexit_push 'echo second >> $log'
         atexit_push 'echo third >> $log'
@@ -64,7 +64,7 @@ setup() {
 # atexit_pop on empty stack - no error
 @test "atexit_pop: no error on empty stack" {
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_pop
     "
     [ "$status" -eq 0 ]
@@ -74,8 +74,8 @@ setup() {
 @test "atexit: double source does not cause recursion" {
     local marker="$BATS_TEST_TMPDIR/marker"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'touch $marker'
     "
     [ "$status" -eq 0 ]
@@ -87,7 +87,7 @@ setup() {
     local marker="$BATS_TEST_TMPDIR/prev"
     run bash -c "
         trap 'touch $marker' EXIT
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'true'
     "
     [ "$status" -eq 0 ]
@@ -100,7 +100,7 @@ setup() {
     local chained="$BATS_TEST_TMPDIR/chained"
     run bash -c "
         trap 'touch $chained; exit 0' EXIT
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'touch $cleanup'
     "
     [ "$status" -eq 0 ]
@@ -111,7 +111,7 @@ setup() {
 # atexit_add rejects multiple arguments
 @test "atexit_add: rejects multiple arguments" {
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add rm -f /tmp/foo
     "
     [ "$status" -ne 0 ]
@@ -121,7 +121,7 @@ setup() {
 # atexit_push rejects multiple arguments
 @test "atexit_push: rejects multiple arguments" {
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_push rm -f /tmp/foo
     "
     [ "$status" -ne 0 ]
@@ -131,7 +131,7 @@ setup() {
 # exit code preserved - original non-zero rc propagates through dispatcher
 @test "atexit: original non-zero exit code is preserved" {
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         atexit_add 'true'
         exit 42
     "
@@ -143,7 +143,7 @@ setup() {
 @test "temp_create_file: creates file and cleans up on exit" {
     local path_file="$BATS_TEST_TMPDIR/tmp_path"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         temp_create_file my_tmp
         echo \"\$my_tmp\" > '$path_file'
         [ -f \"\$my_tmp\" ] || exit 10
@@ -158,7 +158,7 @@ setup() {
 @test "temp_create_dir: creates dir and cleans up on exit" {
     local path_file="$BATS_TEST_TMPDIR/tmp_path"
     run bash -c "
-        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        source '$REPO_ROOT/bin/_lib/utils.sh'
         temp_create_dir my_tmp
         echo \"\$my_tmp\" > '$path_file'
         [ -d \"\$my_tmp\" ] || exit 10
