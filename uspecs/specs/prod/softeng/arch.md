@@ -41,24 +41,24 @@ Non-exhaustive list of actions and their artifacts:
   - output: Active Change Folder with change.md
 
 - uarchive
-  - action file: actn-uarchive.md
-  - input: Active Change Folder
-  - output: Active Change Folder moved to changes/archive/; on git cleanup, deleted branch hash and restore instructions reported to Engineer
+  - dispatch: softeng.sh action uarchive
+  - input: Active Change Folder or --all
+  - output: Active Change Folder moved to changes/archive/
 
 - uimpl
-  - action file: actn-uimpl.md
-  - input: Active Change Folder, impl.md
-  - output: impl.md, spec files, codebase files
-
-- udecs
-  - action file: actn-udecs.md
-  - input: change.md, optional decs.md
-  - output: decs.md
+  - dispatch: softeng.sh action uimpl
+  - input: Active Change Folder, impl.md or change.md
+  - output: impl.md or change.md, spec files, codebase files
 
 - upr
   - action file: actn-upr.md
   - input: Active Change Folder, change_branch
   - output: PR created on GitHub, pr_branch with squashed commits, change_branch deleted
+
+- usync
+  - dispatch: softeng.sh action usync [-y]
+  - input: Working Change Folder, source changes since merge-base
+  - output: Implementation Plan and specs aligned with source changes
 
 - umergepr
   - action file: actn-umergepr.md (prompts via u/prompts.md)

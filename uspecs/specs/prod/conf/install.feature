@@ -8,6 +8,7 @@ Feature: Install uspecs
     And uspecs metadata file is created and describes the stable version
     And <file> is created if it does not exist
     And instructions are injected into <file>
+    And Claude Code skills are copied to .claude/skills/
 
     Examples:
       | method | file      |

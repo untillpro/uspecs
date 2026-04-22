@@ -1,39 +1,61 @@
 Feature: Implementation plan management
-
   Engineer implements change request
 
-  Scenario Outline: Execute uspecs-impl command, all to-do items checked
-    Given all to-do items in Implementation Plan are checked
-    When Engineer runs uspecs-impl command
-    Then Implementation Plan is created if not existing
-    And AI Agent executes only one (the first available) <action> depending on <condition>
-    Examples:
-      | condition                                                                | action                                                                                |
-      | `Functional design` section does not exist and it is needed              | Create `Functional design` section with checkbox items referencing spec files         |
-      | `Provisioning and configuration` section does not exist and it is needed | Create `Provisioning and configuration` section with installation/configuration steps |
-      | `Technical design` section does not exist and it is needed               | Create `Technical design` section with checkbox items referencing design files        |
-      | `Construction` section does not exist and it is needed                   | Create `Construction` section and optionally `Quick start` section                    |
-      | Nothing of the above                                                     | Display message "No action needed"                                                    |
-    And AI Agent stops execution after performing the action
+  # ## Glossary
+  #
+  # Implementation Folder: Active Change Folder the implementation plan is applied to
+  # Implementation Plan File: impl.md or change.md file, which exists
 
-  Scenario: Execute uspecs-impl command, some to-do items unchecked
-    Given some to-do items in Implementation Plan are unchecked
-    When Engineer runs uspecs-impl command
-    Then AI Agent implements each unchecked To-Do Item and checks it immediately after implementation
-    But it stops on Review Item if it is unchecked
+  Scenario: Multiple Active Working Change Folders
+    Given multiple Active Working Change Folders exist
+    When Engineer invokes uimpl action
+    Then AI Agent displays a message "Multiple appropriate change folders found. Please specify which one to use"
+    And lists all Active Change Folders
 
-  Rule: Edge cases
+    # Agent reinvokes uchange with --impl-folder option
+    And allows Engineer to select one and then Agent reinvokes action with the selected folder as Implementation Folder
 
-    Scenario: No Active Change Request exists
-      Given no Active Change Request exists in changes folder
-      When Engineer runs uspecs-impl command
-      Then AI Agent displays error "No Active Change Request found"
-      And Implementation Plan is not created
+  Scenario: No Active Working Change Folders
+    Given no Active Working Change Folders exist
+    When Engineer invokes uimpl action
+    Then AI Agent displays a message "No active working change folder found. Please create a change request first"
+    And Implementation Plan is not created
 
-    Scenario: Multiple Active Change Requests exist
-      Given multiple Active Change Requests exist in changes folder
-      And AI Agent may not infer from the context which one to use
-      When Engineer runs uspecs-impl command
-      Then AI Agent displays error "Multiple Active Change Requests found. Please specify which one to use"
-      And lists all Active Change Request folders
-      And allows Engineer to select one and proceed
+  Rule: Implementation Folder is identified
+    Background:
+      Given Implementation Folder is selected by Engineer or there is only one Active Working Change Folder
+
+    Scenario Outline: uimpl base behavior
+      Given impl.md <existence> in Implementation Folder
+      When Engineer invokes uimpl action
+      Then Implementation Plan File is <file>
+      Examples:
+        | existence      | file                    |
+        | does not exist | {impl_folder}/change.md |
+        | already exists | {impl_folder}/impl.md   |
+
+    Scenario: Only Review Item unchecked
+      Given only Review Item in Implementation Plan File is unchecked
+      When Engineer invokes uimpl action
+      Then AI Agent displays a message "Review item is pending. Please review the implementation plan and check the item when ready"
+      And AI Agent does not perform any implementation action
+
+    Scenario Outline: No unchecked to-do items
+      Given there are no unchecked to-do items in Implementation Plan File
+      When Engineer invokes uimpl action
+      And AI Agent executes only one (the first available) <action> depending on <condition>
+      Examples:
+        | condition                                                                  | action                                                                                        |
+        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files        |
+        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files  |
+        | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps         |
+        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files |
+        | `Construction` section does not exist and it is needed                     | Create `Construction` section and optionally `Quick start` section                            |
+        | Nothing of the above                                                       | Display message "No action needed"                                                            |
+      And AI Agent stops execution after performing the action
+
+    Scenario: Some unchecked to-do items
+      Given some to-do items in Implementation Plan File are unchecked
+      When Engineer invokes uimpl action
+      Then AI Agent implements each unchecked To-Do Item and checks it immediately after implementation
+      But it stops on Review Item if it is unchecked

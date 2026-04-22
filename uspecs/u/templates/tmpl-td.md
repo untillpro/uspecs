@@ -1,3 +1,5 @@
+<!-- // TODO migrate parts to the skill -->
+
 # Templates: Technical Design
 
 ## Overview

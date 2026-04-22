@@ -19,7 +19,7 @@ make_temp_repo() {
     esac
     local tmpdir="$_tmpdir/repo"
     mkdir -p "$tmpdir"
-    git -C "$tmpdir" init -q
+    git -c init.defaultBranch=main -C "$tmpdir" init -q
     git -C "$tmpdir" config user.email "test@test.com"
     git -C "$tmpdir" config user.name "Test"
     echo "$tmpdir"
@@ -31,7 +31,7 @@ make_temp_repo_with_origin() {
     tmpdir=$(make_temp_repo)
     local origin_dir="${tmpdir}-origin.git"
     git -C "$tmpdir" commit -q --allow-empty -m "initial"
-    git init -q --bare "$origin_dir"
+    git -c init.defaultBranch=main init -q --bare "$origin_dir"
     git -C "$tmpdir" remote add origin "$origin_dir"
     git -C "$tmpdir" push -q origin HEAD:main
     git -C "$origin_dir" symbolic-ref HEAD refs/heads/main
@@ -41,6 +41,7 @@ make_temp_repo_with_origin() {
 @test "install: scn: Install stable version: local nlia" {
 # And <file> is created if it does not exist
 # And instructions are injected into <file>
+# And Claude Code skills are copied to .claude/skills/
 # method: nlia
 # file: AGENTS.md
     local tmpdir
@@ -52,6 +53,10 @@ make_temp_repo_with_origin() {
     [ -f "$tmpdir/AGENTS.md" ]
     grep -q "invocation_methods:.*nlia" "$tmpdir/uspecs/u/uspecs.yml"
     grep -qE "^commit: [a-f0-9]{40}" "$tmpdir/uspecs/u/uspecs.yml"
+    # Claude Code skills copied
+    [ -f "$tmpdir/.claude/skills/uspecs-fd/SKILL.md" ]
+    [ -f "$tmpdir/.claude/skills/uspecs-fd/echo.feature" ]
+    [ -f "$tmpdir/.claude/skills/uspecs-fd/echo--reqs.md" ]
 }
 
 @test "install: scn: Installation failure: dirty working directory with --pr" {

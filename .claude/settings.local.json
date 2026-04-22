@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash uspecs/u/scripts/softeng.sh*)",
+      "Bash(find*)",
+      "Bash(bats*)",
+      "mcp__auggie__codebase-retrieval",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Agent"
+    ]
+  }
+}

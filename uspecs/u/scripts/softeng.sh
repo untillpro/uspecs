@@ -4,56 +4,30 @@ set -Eeuo pipefail
 # softeng automation
 #
 # Usage:
+#   softeng action uchange --kebab-name <name> [--no-impl] [--branch] [--no-branch] [--issue-url <url>]
+#   softeng action uimpl [--change-folder <path>]
+#   softeng action uarchive [--change-folder <path>] [--all]
 #   softeng action upr [--no-archive]
 #   softeng action umergepr
-#   softeng change new <change-name> [--issue-url <url>] [--no-branch] [--branch]
-#   softeng change archive <change-folder-name> [-d]
-#   softeng change archiveall
-#   softeng pr preflight
-#   softeng pr create --title <title> [--body <body>]
+#   softeng action usync [-y]
+#   softeng change list-wcf
 #   softeng diff specs
-#
-# change new:
-#   Creates Change Folder and change.md with frontmatter:
-#     - Folder: <changes_folder from conf.md>/ymdHM-<change-name>
-#     - registered_at: YYYY-MM-DDTHH:MM:SSZ
-#     - change_id: ymdHM-<change-name>
-#     - baseline: <commit-hash> (if git repository)
-#     - issue_url: <url> (if --issue-url provided)
-#   Creates git branch by default (skip with --no-branch; --branch forces creation explicitly)
-#   Prints: <relative-path-to-change-folder> (e.g. uspecs/changes/2602201746-my-change)
-#
-# change archive [-d]:
-#   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
-#   Adds archived_at metadata and updates folder date prefix
-#   -d: commit and push staged changes, checkout default branch, delete branch and refs
-#       Requires git repository, clean working tree, PR branch (ending with --pr)
-#
-# change archiveall:
-#   Archives all change folders with modifications vs pr_remote/default_branch
-#          No change-folder-name needed; mutually exclusive with -d
-#
-# pr preflight --change-folder <path>:
-#   Checks for uncompleted todo items in Change Folder, then validates preconditions, fetches
-#   pr_remote/default_branch, and merges it into the current branch.
-#   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
-#
-# pr create --title <title> --body <body>:
-#   Creates a PR from the current change branch (delegates to _lib/git.sh git_changepr).
-#   Body can be passed via --body or piped via stdin.
-#   Literal \n sequences in --body are decoded to actual newlines.
+#   softeng diff file <path>
 #
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
+# diff file <path>:
+#   Outputs git diff of a single file between merge-base and HEAD.
 
 get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
 get_baseline() {
-    local project_dir="$1"
-    if is_git_repo "$project_dir"; then
-        (cd "$project_dir" && git rev-parse HEAD 2>/dev/null) || echo ""
+    local _is_git
+    context_is_git_repo _is_git
+    if [[ "$_is_git" == "1" ]]; then
+        git rev-parse HEAD 2>/dev/null || echo ""
     else
         echo ""
     fi
@@ -86,7 +60,7 @@ move_folder() {
         if [[ -n "$project_dir" ]]; then
             local rel_src="${source#"$project_dir/"}"
             local rel_dst="${destination#"$project_dir/"}"
-            (cd "$project_dir" && git mv "$rel_src" "$rel_dst" 2>/dev/null) || mv "$source" "$destination"
+            git mv "$rel_src" "$rel_dst" 2>/dev/null || mv "$source" "$destination"
         else
             git mv "$source" "$destination" 2>/dev/null || mv "$source" "$destination"
         fi
@@ -95,57 +69,64 @@ move_folder() {
     fi
 }
 
-get_script_dir() {
-    cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
-}
+# Cache script dir at source time (one subshell, reused everywhere).
+_CTX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+case "$OSTYPE" in
+    msys*|cygwin*) _CTX_SCRIPT_DIR=$(cygpath -w "$_CTX_SCRIPT_DIR") ;;
+esac
 
 # shellcheck source=_lib/utils.sh
-source "$(get_script_dir)/_lib/utils.sh"
+source "$_CTX_SCRIPT_DIR/_lib/utils.sh"
 # shellcheck source=_lib/git.sh
-source "$(get_script_dir)/_lib/git.sh"
+source "$_CTX_SCRIPT_DIR/_lib/git.sh"
 
-get_project_dir() {
-    local script_dir
-    script_dir=$(get_script_dir)
-    # scripts/ -> u/ -> uspecs/ -> project root
-    cd "$script_dir/../../.." && pwd
+# ---------------------------------------------------------------------------
+# Context accessors (param-by-ref, no subshells)
+# The script must be invoked from the project root directory.
+# ---------------------------------------------------------------------------
+
+# context_project_dir <varname>
+# Project dir is the current working directory (script invoked from project root).
+context_project_dir() {
+    local -n _cpd_ref=$1
+    _cpd_ref="."
 }
 
-cmd_status_ispr() {
-    local project_dir
-    project_dir=$(get_project_dir)
-    if ! is_git_repo "$project_dir"; then
-        return 0
-    fi
-    local branch
-    branch=$(cd "$project_dir" && git branch --show-current 2>&1)
-    if [[ "$branch" == *"--pr" ]]; then
-        echo "yes"
-    fi
+# context_changes_folder <varname>
+# Returns the changes folder path relative to project root.
+context_changes_folder() {
+    local -n _ccf_ref=$1
+    _ccf_ref="uspecs/changes"
 }
 
-read_conf_param() {
-    local param_name="$1"
-    local conf_file
-    conf_file="$(get_project_dir)/uspecs/u/conf.md"
+# context_specs_folder <varname>
+# Returns the specs folder path relative to project root.
+context_specs_folder() {
+    local -n _csf_ref=$1
+    _csf_ref="uspecs/specs"
+}
 
-    if [ ! -f "$conf_file" ]; then
-        error "conf.md not found: $conf_file"
+# context_prompts_dir <varname>
+# Returns the prompts directory path.
+context_prompts_dir() {
+    local -n _cprd_ref=$1
+    _cprd_ref="$_CTX_SCRIPT_DIR/../prompts"
+}
+
+_CTX_IS_GIT_REPO=""
+
+# context_is_git_repo <varname>
+# Sets caller's variable to "1" if inside a git repo, "0" otherwise. Cached.
+context_is_git_repo() {
+    if [[ -z "$_CTX_IS_GIT_REPO" ]]; then
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            _CTX_IS_GIT_REPO="1"
+        else
+            _CTX_IS_GIT_REPO="0"
+        fi
     fi
-
-    local line raw
-    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
-    raw="${line#*: }"
-
-    if [ -z "$raw" ]; then
-        error "Parameter '${param_name}' not found in conf.md"
-    fi
-
-    # trim leading/trailing whitespace and surrounding backticks
-    local value
-    value=$(echo "$raw" | sed 's/^[[:space:]`]*//' | sed 's/[[:space:]`]*$//')
-
-    echo "$value"
+    local -n _cigr_ref=$1
+    _cigr_ref="$_CTX_IS_GIT_REPO"
 }
 
 extract_issue_id() {
@@ -159,6 +140,7 @@ extract_issue_id() {
     fi
 }
 
+# TODO: this is a part of obsoleted approach, refactor
 cmd_change_new() {
     local change_name=""
     local issue_url=""
@@ -202,13 +184,13 @@ cmd_change_new() {
         is_new_branch=""
     elif [ -z "$opt_branch" ]; then
         # Skip branch creation when not on the default branch (unless --branch forces it)
-        local project_dir_check
-        project_dir_check=$(get_project_dir)
-        if is_git_repo "$project_dir_check"; then
+        local _is_git
+        context_is_git_repo _is_git
+        if [[ "$_is_git" == "1" ]]; then
             local current_branch_name
-            current_branch_name=$(cd "$project_dir_check" && git symbolic-ref --short HEAD)
+            current_branch_name=$(git symbolic-ref --short HEAD)
             local def_branch
-            def_branch=$(cd "$project_dir_check" && git_default_branch_name || echo "")
+            def_branch=$(git_default_branch_name || echo "")
             if [ "$current_branch_name" != "$def_branch" ]; then
                 is_new_branch=""
             fi
@@ -224,16 +206,13 @@ cmd_change_new() {
     fi
 
     local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
+    context_changes_folder changes_folder_rel
 
     local project_dir
-    project_dir=$(get_project_dir)
+    context_project_dir project_dir
 
     local changes_folder="$project_dir/$changes_folder_rel"
 
-    if [ ! -d "$changes_folder" ]; then
-        error "Changes folder not found: $changes_folder"
-    fi
 
     local timestamp
     timestamp=$(date -u +"%y%m%d%H%M")
@@ -268,7 +247,9 @@ cmd_change_new() {
     printf '%s\n' "$frontmatter" > "$change_folder/change.md"
 
     if [ -n "$is_new_branch" ]; then
-        if is_git_repo "$project_dir"; then
+        local _is_git
+        context_is_git_repo _is_git
+        if [[ "$_is_git" == "1" ]]; then
             local branch_name="$change_name"
             if [ -n "$issue_url" ]; then
                 local issue_id
@@ -277,7 +258,7 @@ cmd_change_new() {
                     branch_name="${issue_id}-${change_name}"
                 fi
             fi
-            if ! (cd "$project_dir" && git checkout -b "$branch_name"); then
+            if ! git checkout -b "$branch_name"; then
                 echo "Warning: Failed to create branch '$branch_name'" >&2
             fi
         else
@@ -332,101 +313,13 @@ convert_links_to_relative() {
     return 0
 }
 
-cmd_pr_preflight() {
-    local change_folder_path=""
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --change-folder) change_folder_path="$2"; shift 2 ;;
-            *) error "Unknown flag: $1" ;;
-        esac
-    done
-    if [ -z "$change_folder_path" ]; then
-        error "pr preflight requires --change-folder <path>"
-    fi
-    if [ ! -d "$change_folder_path" ]; then
-        error "Change folder not found: $change_folder_path"
-    fi
-    local uncompleted_count
-    uncompleted_count=$(count_uncompleted_items "$change_folder_path")
-    if [ "$uncompleted_count" -gt 0 ]; then
-        echo "Cannot create PR: $uncompleted_count uncompleted todo item(s) found"
-        echo ""
-        echo "Uncompleted items:"
-        grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$change_folder_path"/*.md 2>/dev/null | sed 's/^/  /'
-        echo ""
-        echo "Complete or cancel todo items before creating a PR"
-        exit 1
-    fi
-    git_mergedef
-}
-
-cmd_change_archiveall() {
-    if [ $# -gt 0 ]; then
-        error "change archiveall takes no arguments"
-    fi
-
-    local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
-
-    local project_dir
-    project_dir=$(get_project_dir)
-
-    if ! is_git_repo "$project_dir"; then
-        error "change archiveall requires a git repository"
-    fi
-
-    local -A pr_info
-    if ! git_pr_info pr_info "$project_dir"; then
-        error "change archiveall requires remote info to be available (remote reachable?)"
-    fi
-    local default_branch="${pr_info[default_branch]:-}"
-    local pr_remote="${pr_info[pr_remote]:-}"
-
-    local changes_folder="$project_dir/$changes_folder_rel"
-
-    echo "Fetching ${pr_remote}/${default_branch}..."
-    (cd "$project_dir" && git fetch "$pr_remote" "$default_branch" 2>&1)
-
-    if [ ! -d "$changes_folder" ]; then
-        error "Changes folder not found: $changes_folder"
-    fi
-
-    local archived=0 unchanged=0 failed=0
-    local script_path
-    script_path="$(get_script_dir)/softeng.sh"
-
-    for folder_path in "$changes_folder"/*/; do
-        [ -d "$folder_path" ] || continue
-        local fname
-        fname=$(basename "$folder_path")
-        [ "$fname" = "archive" ] && continue
-
-        local rel_folder="$changes_folder_rel/$fname"
-        local diff_output
-        diff_output=$(cd "$project_dir" && git diff --name-only "${pr_remote}/${default_branch}" HEAD -- "$rel_folder")
-        if [ -z "$diff_output" ]; then
-            unchanged=$((unchanged + 1))
-            continue
-        fi
-
-        if bash "$script_path" change archive "$fname"; then
-            archived=$((archived + 1))
-        else
-            echo "Warning: could not archive $fname" >&2
-            failed=$((failed + 1))
-        fi
-    done
-
-    echo "Done: $archived archived, $unchanged unchanged, $failed failed"
-}
-
 # changes_archive <project_dir> <changes_folder> <change_folder> <is_git> <result_var>
 # Archives an active change folder: updates YAML metadata, converts links,
 # moves to archive/YYMM/YYMMDDHHMM-<change_name>.
 # project_dir: absolute path to project root
 # changes_folder: relative to project_dir (e.g. uspecs/changes)
 # change_folder: relative to project_dir (e.g. uspecs/changes/2601010000-my-change)
-# is_git: non-empty if project is a git repo
+# is_git: "1" if project is a git repo, "0" otherwise
 # Sets result_var (nameref) to the archived folder path, relative to project_dir.
 changes_archive() {
     local project_dir="$1"
@@ -494,234 +387,71 @@ changes_archive() {
         error "Archive folder already exists: $dest"
     fi
 
-    if [ -n "$is_git" ]; then
-        (cd "$project_dir" && quiet git add "$change_folder")
+    if [[ "$is_git" == "1" ]]; then
+        quiet git add "$change_folder"
     fi
 
     move_folder "$abs_change" "$dest" "$project_dir"
 
     local rel_dest="${dest#"$project_dir/"}"
 
-    if [ -n "$is_git" ]; then
-        (cd "$project_dir" && quiet git add "$rel_dest")
+    if [[ "$is_git" == "1" ]]; then
+        quiet git add "$rel_dest"
     fi
 
     # shellcheck disable=SC2034
     result_ref="$rel_dest"
 }
 
-cmd_change_archive() {
-    local folder_name=""
-    local delete_branch=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -d)
-                delete_branch="1"
-                shift
-                ;;
-            *)
-                if [ -z "$folder_name" ]; then
-                    folder_name="$1"
-                    shift
-                else
-                    error "Unknown argument: $1"
-                fi
-                ;;
-        esac
-    done
-
-    if [ -z "$folder_name" ]; then
-        error "change-folder-name is required"
-    fi
-
-    local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
-
-    local project_dir
-    project_dir=$(get_project_dir)
-
-    local is_git=""
-    if is_git_repo "$project_dir"; then
-        is_git="1"
-    fi
-
-    if [ -n "$delete_branch" ] && [ -z "$is_git" ]; then
-        error "-d requires a git repository"
-    fi
+# wcf_list <project_dir> <changes_folder_rel> [<pr_remote> <default_branch>]
+# Lists Working Change Folders -- change folders whose files have been modified
+# since merge-base with pr_remote/default_branch (committed or uncommitted).
+# If there is no git repository, returns all Change Folders (non-archive subdirs).
+# Outputs one relative path per line (from changes_folder), sorted.
+# Does not error on 0 or multiple results.
+wcf_list() {
+    local project_dir="$1"
+    local changes_folder_rel="$2"
+    local pr_remote="${3:-}"
+    local default_branch="${4:-}"
 
     local changes_folder="$project_dir/$changes_folder_rel"
 
-    local path_to_change_folder="$changes_folder/$folder_name"
-
-    if [ ! -d "$path_to_change_folder" ]; then
-        error "Folder not found: $path_to_change_folder"
+    local _is_git
+    context_is_git_repo _is_git
+    if [[ "$_is_git" != "1" ]]; then
+        # No git -- return all non-archive subdirs that contain change.md
+        local dir
+        for dir in "$changes_folder"/*/; do
+            [[ -d "$dir" ]] || continue
+            local fname
+            fname=$(basename "$dir")
+            [[ "$fname" == "archive" ]] && continue
+            printf '%s\n' "$fname"
+        done | sort
+        return 0
     fi
 
-    local change_file="$path_to_change_folder/change.md"
-    if [ ! -f "$change_file" ]; then
-        error "change.md not found in folder: $path_to_change_folder"
+    # Determine merge-base (need pr_remote and default_branch)
+    local merge_base=""
+    if [[ -n "$pr_remote" && -n "$default_branch" ]]; then
+        merge_base=$(git merge-base HEAD "${pr_remote}/${default_branch}" 2>/dev/null) || true
     fi
 
-    if [[ "$folder_name" == archive/* ]]; then
-        error "Folder is already in archive: $folder_name"
+    # Collect changed files: committed diff + uncommitted (staged + unstaged)
+    local all_changed=""
+    if [[ -n "$merge_base" ]]; then
+        all_changed=$(git diff --name-only "$merge_base" HEAD -- "$changes_folder_rel" 2>/dev/null) || true
     fi
+    # Uncommitted changes (staged + unstaged working tree)
+    local uncommitted
+    uncommitted=$(git diff --name-only HEAD -- "$changes_folder_rel" 2>/dev/null) || true
+    # Untracked files
+    local untracked
+    untracked=$(git ls-files --others --exclude-standard -- "$changes_folder_rel" 2>/dev/null) || true
 
-    local uncompleted_count
-    uncompleted_count=$(count_uncompleted_items "$path_to_change_folder")
-
-    if [ "$uncompleted_count" -gt 0 ]; then
-        echo "Cannot archive: $uncompleted_count uncompleted todo item(s) found"
-        echo ""
-        echo "Uncompleted items:"
-        grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
-        echo ""
-        echo "Complete or cancel todo items before archiving"
-        exit 1
-    fi
-
-    local change_name
-    change_name=$(extract_change_name "$folder_name")
-
-    if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
-        local branch_name
-        branch_name=$(cd "$project_dir" && git symbolic-ref --short HEAD 2>/dev/null || echo "")
-        if [ -z "$branch_name" ]; then
-            error "-d requires a named branch (HEAD is detached)"
-        fi
-
-        local -A pr_info
-        if ! git_pr_info pr_info; then
-            error "-d requires git remote info to be available (remote reachable?)"
-        fi
-        local default_branch="${pr_info[default_branch]:-}"
-        local pr_remote="${pr_info[pr_remote]:-}"
-
-        # a) no uncommitted changes
-        local git_status
-        git_status=$(cd "$project_dir" && git status --porcelain)
-        if [ -n "$git_status" ]; then
-            error "-d requires a clean working tree (uncommitted changes found)"
-        fi
-
-        # b) branch must not be the default branch
-        if [ "$branch_name" = "$default_branch" ]; then
-            error "-d cannot be used on the default branch '$default_branch'"
-        fi
-
-        # c) check whether the remote branch actually exists
-        # exit non-zero means remote unreachable/auth failed -- treat as hard error, not as "branch gone"
-        local remote_exists
-        if ! remote_exists=$(cd "$project_dir" && git ls-remote --heads "${pr_remote:-origin}" "$branch_name"); then
-            error "Cannot reach remote '${pr_remote:-origin}'. Check connectivity and authentication."
-        fi
-
-        # d) no divergence (skip when remote branch is already gone)
-        if [ -n "$remote_exists" ]; then
-            (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$branch_name" 2>&1)
-            local behind
-            behind=$(cd "$project_dir" && git rev-list --count "HEAD..${pr_remote:-origin}/$branch_name")
-            if [ "$behind" -gt 0 ]; then
-                error "Branch '$branch_name' is behind ${pr_remote:-origin} by $behind commit(s). Pull or rebase first."
-            fi
-        fi
-
-        # e) branch must be a PR branch
-        if [[ "$branch_name" != *--pr ]]; then
-            error "-d can only be used on a PR branch (must end with '--pr'): '$branch_name'"
-        fi
-
-        # f) PR branch with remote gone: skip archive, just refresh default and switch
-        if [ -z "$remote_exists" ]; then
-            echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping archive."
-            echo "Switching to $default_branch..."
-            if ! (cd "$project_dir" && git checkout "$default_branch" 2>&1); then
-                error "Failed to checkout '$default_branch'. Resolve manually."
-            fi
-
-            local deleted_branch_hash=""
-            if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
-                deleted_branch_hash=$(cd "$project_dir" && git rev-parse "refs/heads/$branch_name")
-                (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
-            fi
-            (cd "$project_dir" && git branch -dr "${pr_remote:-origin}/$branch_name") 2>/dev/null || true
-
-            if [ -n "$deleted_branch_hash" ]; then
-                echo "Deleted branch: $branch_name ($deleted_branch_hash)"
-                echo "To restore: git branch $branch_name $deleted_branch_hash"
-            fi
-
-            echo "Updating local $default_branch from ${pr_remote:-origin}/$default_branch..."
-            (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$default_branch" 2>&1)
-            if ! (cd "$project_dir" && git merge --ff-only "${pr_remote:-origin}/$default_branch" 2>&1); then
-                error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
-            fi
-
-            echo "Done: skipped archive (remote branch gone), switched to $default_branch"
-            return 0
-        fi
-    fi
-
-    local rel_change_folder="$changes_folder_rel/$folder_name"
-
-    local archive_path
-    changes_archive "$project_dir" "$changes_folder_rel" "$rel_change_folder" "$is_git" archive_path
-
-    if [ -n "$delete_branch" ] && [ -n "$is_git" ]; then
-        (cd "$project_dir" && git commit -m "archive $rel_change_folder to $archive_path" 2>&1)
-        if [ -n "$remote_exists" ]; then
-            if ! (cd "$project_dir" && git push 2>&1); then
-                local archive_commit
-                archive_commit=$(cd "$project_dir" && git rev-parse HEAD)
-                error "Push to '${pr_remote:-origin}/$branch_name' failed. Branch '$branch_name' preserved (archive commit: $archive_commit). Resolve the push issue and re-run the archive command."
-            fi
-        else
-            echo "Remote branch '${pr_remote:-origin}/$branch_name' no longer exists; skipping push."
-        fi
-
-        if ! (cd "$project_dir" && git checkout "$default_branch" 2>&1); then
-            error "Failed to checkout '$default_branch'. Resolve manually."
-        fi
-
-        local deleted_branch_hash=""
-        if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
-            deleted_branch_hash=$(cd "$project_dir" && git rev-parse "refs/heads/$branch_name")
-            (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
-        else
-            echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
-        fi
-        (cd "$project_dir" && git branch -dr "${pr_remote:-origin}/$branch_name") 2>/dev/null || true
-
-        if [ -n "$deleted_branch_hash" ]; then
-            echo "Deleted branch: $branch_name ($deleted_branch_hash)"
-            echo "To restore: git branch $branch_name $deleted_branch_hash"
-        fi
-
-        echo "Updating local $default_branch from ${pr_remote:-origin}/$default_branch..."
-        (cd "$project_dir" && git fetch "${pr_remote:-origin}" "$default_branch" 2>&1)
-        if ! (cd "$project_dir" && git merge --ff-only "${pr_remote:-origin}/$default_branch" 2>&1); then
-            error "Cannot fast-forward '$default_branch' to '${pr_remote:-origin}/$default_branch' (branches have diverged). Run 'git rebase' or resolve manually."
-        fi
-    fi
-}
-
-# changes_validate_single_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
-# Reflects scenario: "Exactly one Working Change Folder"
-# Detects the Working Change Folder (WCF) -- a change folder whose files have been
-# modified since merge-base with pr_remote/default_branch.
-# Outputs the relative path from changes_folder (e.g. "my-change" for active,
-# "archive/yymm/timestamp-name" for archived). Fails if not exactly one WCF is found.
-changes_validate_single_wcf() {
-    local project_dir="$1"
-    local changes_folder_rel="$2"
-    local pr_remote="$3"
-    local default_branch="$4"
-
-    local merge_base
-    merge_base=$(cd "$project_dir" && git merge-base HEAD "${pr_remote}/${default_branch}")
-
-    local diff_output
-    diff_output=$(cd "$project_dir" && git diff --name-only "$merge_base" HEAD -- "$changes_folder_rel")
+    # Merge all sources
+    all_changed=$(printf '%s\n%s\n%s\n' "$all_changed" "$uncommitted" "$untracked")
 
     # Collect unique change folder paths.
     # Active folders: first path component (e.g. "my-change")
@@ -745,18 +475,96 @@ changes_validate_single_wcf() {
         else
             folders["$top"]=1
         fi
-    done <<< "$diff_output"
+    done <<< "$all_changed"
 
-    local count=${#folders[@]}
+    printf '%s\n' "${!folders[@]}" | sort
+}
+
+# cmd_change_list_wcf
+# Lists Working Change Folders. Resolves pr_remote/default_branch automatically.
+cmd_change_list_wcf() {
+    local project_dir
+    context_project_dir project_dir
+
+    local changes_folder_rel
+    context_changes_folder changes_folder_rel
+
+    local pr_remote="" default_branch=""
+    local _is_git
+    context_is_git_repo _is_git
+    if [[ "$_is_git" == "1" ]]; then
+        local -A pr_info
+        if git_pr_info pr_info "$project_dir"; then
+            pr_remote="${pr_info[pr_remote]:-}"
+            default_branch="${pr_info[default_branch]:-}"
+        fi
+    fi
+
+    wcf_list "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch"
+}
+
+# wcf_resolve_active
+# Resolves active (non-archive) Working Change Folders.
+# Resolves project_dir, changes_folder_rel, pr_remote/default_branch internally.
+# Outputs newline-separated active WCF names to stdout (consistent with wcf_list).
+wcf_resolve_active() {
+    local project_dir
+    context_project_dir project_dir
+
+    local changes_folder_rel
+    context_changes_folder changes_folder_rel
+
+    local pr_remote="" default_branch=""
+    local _is_git
+    context_is_git_repo _is_git
+    if [[ "$_is_git" == "1" ]]; then
+        local -A pr_info
+        if git_pr_info pr_info "$project_dir"; then
+            pr_remote="${pr_info[pr_remote]:-}"
+            default_branch="${pr_info[default_branch]:-}"
+        fi
+    fi
+
+    local wcf_output
+    wcf_output=$(wcf_list "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        [[ "$line" == archive/* ]] && continue
+        printf '%s\n' "$line"
+    done <<< "$wcf_output"
+}
+
+# changes_validate_single_wcf <project_dir> <changes_folder_rel> <pr_remote> <default_branch>
+# Reflects scenario: "Exactly one Working Change Folder"
+# Detects the Working Change Folder (WCF) -- a change folder whose files have been
+# modified since merge-base with pr_remote/default_branch.
+# Outputs the relative path from changes_folder (e.g. "my-change" for active,
+# "archive/yymm/timestamp-name" for archived). Fails if not exactly one WCF is found.
+changes_validate_single_wcf() {
+    local project_dir="$1"
+    local changes_folder_rel="$2"
+    local pr_remote="$3"
+    local default_branch="$4"
+
+    local wcf_output
+    wcf_output=$(wcf_list "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+
+    local -a wcf_array=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && wcf_array+=("$line")
+    done <<< "$wcf_output"
+
+    local count=${#wcf_array[@]}
     if [[ "$count" -eq 0 ]]; then
         error "No Working Change Folder found (no changes in $changes_folder_rel since merge-base)"
     elif [[ "$count" -gt 1 ]]; then
         local names
-        names=$(printf '%s\n' "${!folders[@]}" | sort)
+        names=$(printf '%s\n' "${wcf_array[@]}")
         error "Multiple Working Change Folders found (expected exactly one):\n$names"
     fi
 
-    printf '%s\n' "${!folders[@]}"
+    printf '%s\n' "${wcf_array[0]}"
 }
 
 # changes_validate_todos_completed <wcf_path> <project_dir>
@@ -784,6 +592,657 @@ changes_validate_todos_completed() {
     fi
 }
 
+
+# cmd_action_uchange --kebab-name <name> [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
+# Creates Change Folder via cmd_change_new, then emits AGENT_INSTRUCTIONS
+# telling the agent to append sections to the created change.md.
+cmd_action_uchange() {
+    local opt_no_impl=""
+    local opt_specs=""
+    local opt_branch=""
+    local opt_no_branch=""
+    local issue_url=""
+    local change_name=""
+    local change_new_args=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --no-impl)
+                # shellcheck disable=SC2034
+                opt_no_impl="1"
+                shift
+                ;;
+            --kebab-name)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--kebab-name requires a name argument"
+                fi
+                change_name="$2"
+                shift 2
+                ;;
+            --specs)
+                opt_specs="1"
+                shift
+                ;;
+            --branch)
+                opt_branch="1"
+                change_new_args+=("--branch")
+                shift
+                ;;
+            --no-branch)
+                opt_no_branch="1"
+                change_new_args+=("--no-branch")
+                shift
+                ;;
+            --issue-url)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--issue-url requires a URL argument"
+                fi
+                issue_url="$2"
+                change_new_args+=("--issue-url" "$2")
+                shift 2
+                ;;
+            *)
+                error "Unknown argument: $1"
+                ;;
+        esac
+    done
+
+    if [[ -z "$change_name" ]]; then
+        error "--kebab-name is required"
+    fi
+
+    if [[ -n "$opt_branch" && -n "$opt_no_branch" ]]; then
+        error "--branch and --no-branch are mutually exclusive"
+    fi
+
+    # Create Change Folder and change.md via cmd_change_new
+    local change_folder_rel
+    change_folder_rel=$(cmd_change_new "$change_name" "${change_new_args[@]+"${change_new_args[@]}"}")
+
+    local project_dir
+    context_project_dir project_dir
+
+    local change_file="$change_folder_rel/change.md"
+
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    prompt_start_log
+    echo "Action: uchange"
+    echo "Change folder: $change_folder_rel"
+
+    # Detect specs folder
+    local specs_folder_rel
+    context_specs_folder specs_folder_rel
+    local specs_maybe=""
+    if [[ -n "$opt_specs" ]]; then
+        mkdir -p "$project_dir/$specs_folder_rel"
+        specs_maybe="1"
+    elif [[ -d "$project_dir/$specs_folder_rel" ]]; then
+        specs_maybe="1"
+    fi
+
+    # shellcheck disable=SC2034  # used via nameref in emit_prompt
+    declare -A context_vars=(
+        [change_file]="$change_file"
+        [specs_folder]="$specs_folder_rel"
+        [specs_maybe]="$specs_maybe"
+        [no_impl]="$opt_no_impl"
+        [domains_exists]=""
+        [fd_exists]=""
+        [prov_exists]=""
+        [td_exists]=""
+        [constr_exists]=""
+        [change_file_rel_path]="$change_file"
+        [templates_folder]="uspecs/u/templates"
+    )
+
+    prompt_start_instructions "action"
+    emit_prompt "$prompts_dir" "instr_uchange" context_vars
+}
+
+
+# cmd_action_uimpl [--change-folder <path>]
+# Determines the Implementation Folder and emits AGENT_INSTRUCTIONS
+# for the next implementation step.
+cmd_action_uimpl() {
+    local opt_change_folder=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --change-folder)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--change-folder requires a path argument"
+                fi
+                opt_change_folder="$2"
+                shift 2
+                ;;
+            *)
+                error "Unknown argument: $1"
+                ;;
+        esac
+    done
+
+    local project_dir
+    context_project_dir project_dir
+
+    local changes_folder_rel
+    context_changes_folder changes_folder_rel
+
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    prompt_start_log
+    echo "Action: uimpl"
+
+    local change_folder_rel=""
+
+    if [[ -n "$opt_change_folder" ]]; then
+        change_folder_rel="$opt_change_folder"
+    else
+        local -a active_wcfs=()
+        while IFS= read -r line; do
+            [[ -n "$line" ]] && active_wcfs+=("$line")
+        done <<< "$(wcf_resolve_active)"
+
+        local count=${#active_wcfs[@]}
+        if [[ "$count" -eq 0 ]]; then
+            prompt_start_instructions "results"
+            emit_prompt "$prompts_dir" "instr_uimpl_no_change_folder"
+            return 0
+        elif [[ "$count" -eq 1 ]]; then
+            change_folder_rel="$changes_folder_rel/${active_wcfs[0]}"
+        else
+            # Multiple active WCFs -- let agent select
+            local folder_list=""
+            local i=1
+            for f in "${active_wcfs[@]}"; do
+                folder_list+="$i. $changes_folder_rel/$f"$'\n'
+                ((i++))
+            done
+            # shellcheck disable=SC2034
+            declare -A select_vars=(
+                [next_command]="bash uspecs/u/scripts/softeng.sh action uimpl"
+                [folder_list]="$folder_list"
+            )
+            prompt_start_instructions "results"
+            emit_prompt "$prompts_dir" "instr_shared_select_change_folder" select_vars
+            return 0
+        fi
+    fi
+
+    echo "Change folder: $change_folder_rel"
+
+    # Determine impl_file: if impl.md exists use it, else change.md
+    local impl_file="change.md"
+    if [[ -f "$project_dir/$change_folder_rel/impl.md" ]]; then
+        impl_file="impl.md"
+    fi
+    echo "Implementation Plan File: $impl_file"
+
+    local impl_file_path="$project_dir/$change_folder_rel/$impl_file"
+
+    # Single pass: detect sections, unchecked items, and review item (no grep subprocesses)
+    local domains_exists="" fd_exists="" prov_exists="" td_exists="" constr_exists=""
+    local has_unchecked="" has_review_unchecked="" review_item="" review_is_checkbox=""
+    local total_unchecked=0
+    local _line_num=0
+    local _first_review_line=""
+    local unchecked_items=""
+    local _in_item=0
+    local _current_buf=""
+    local _current_is_review=0
+    local _seen_item=0
+    local _area_closed=0
+
+    _uimpl_flush_item() {
+        if (( ! _current_is_review )) && [[ -n "$_current_buf" ]]; then
+            unchecked_items+="$_current_buf"
+        fi
+        _current_buf=""
+        _current_is_review=0
+        _in_item=0
+    }
+
+    # Close the first contiguous run of unchecked items on section boundaries and
+    # on non-indented non-empty lines. After the area is closed no further
+    # unchecked items are collected (section-existence and review-item scans
+    # continue across the whole file).
+    _flush_and_close_area() {
+        _uimpl_flush_item
+        if (( _seen_item )) && (( ! _area_closed )); then
+            _area_closed=1
+        fi
+    }
+
+    while IFS= read -r _line; do
+        ((_line_num++)) || true
+        case "$_line" in
+            "## Domain specifications"*)            domains_exists="1"; _flush_and_close_area ;;
+            "## Functional design specifications"*) fd_exists="1";      _flush_and_close_area ;;
+            "## Provisioning"*)                     prov_exists="1";    _flush_and_close_area ;;
+            "## Technical design specifications"*)  td_exists="1";      _flush_and_close_area ;;
+            "## Construction"*)                     constr_exists="1";  _flush_and_close_area ;;
+            "- [ ] "*)
+                if (( _area_closed )); then
+                    :
+                else
+                    _uimpl_flush_item
+                    has_unchecked="1"
+                    ((total_unchecked++)) || true
+                    _current_buf="${_line}"$'\n'
+                    _in_item=1
+                    _seen_item=1
+                    local _lower_item="${_line,,}"
+                    if [[ "$_lower_item" =~ ^-[[:space:]]+\[[[:space:]]+\][[:space:]]+review($|[[:space:]]) ]]; then
+                        _current_is_review=1
+                    fi
+                fi
+                ;;
+            *)
+                if (( _in_item )); then
+                    if [[ -z "$_line" ]]; then
+                        _current_buf+=$'\n'
+                    elif [[ "$_line" =~ ^[[:space:]] ]]; then
+                        _current_buf+="${_line}"$'\n'
+                    else
+                        _flush_and_close_area
+                    fi
+                fi
+                ;;
+        esac
+        # Detect review item (case-insensitive): "- [ ] Review...", "- Review..."
+        if [[ -z "$_first_review_line" ]]; then
+            local _lower="${_line,,}"
+            if [[ "$_lower" =~ ^-[[:space:]]+(\[[[:space:]]+\][[:space:]]+)?review($|[[:space:]]) ]]; then
+                _first_review_line="$_line_num:$_line"
+            fi
+        fi
+    done < "$impl_file_path" 2>/dev/null || true
+    _uimpl_flush_item
+
+    if [[ -n "$_first_review_line" ]]; then
+        has_review_unchecked="1"
+        review_item="${_first_review_line#*:}"
+        if [[ "$review_item" =~ ^-[[:space:]]+\[ ]]; then
+            review_is_checkbox="1"
+        fi
+    fi
+
+    # Count non-review unchecked items
+    local non_review_unchecked_count=0
+    if [[ -n "$has_unchecked" ]]; then
+        if [[ -n "$review_is_checkbox" ]]; then
+            non_review_unchecked_count=$((total_unchecked - 1))
+        else
+            non_review_unchecked_count=$total_unchecked
+        fi
+    fi
+
+    # Detect specs_maybe
+    local specs_folder_rel
+    context_specs_folder specs_folder_rel
+    local specs_maybe=""
+    if [[ -d "$project_dir/$specs_folder_rel" ]]; then
+        specs_maybe="1"
+    fi
+
+    # Branching
+    if [[ "$non_review_unchecked_count" -eq 0 && -n "$has_review_unchecked" ]]; then
+        # Only review item unchecked
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_uimpl_review_pending"
+    elif [[ "$non_review_unchecked_count" -gt 0 ]]; then
+        # Has unchecked to-do items (not just review)
+        # shellcheck disable=SC2034
+        declare -A todos_vars=(
+            [change_folder]="$change_folder_rel"
+            [impl_file]="$impl_file"
+            [has_review]="$has_review_unchecked"
+            [review_item]="${review_item:-}"
+            [unchecked_items]="$unchecked_items"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_uimpl_todos" todos_vars
+    else
+        # No unchecked todos -- add next section
+        # shellcheck disable=SC2034
+        declare -A impl_vars=(
+            [change_folder]="$change_folder_rel"
+            [impl_file]="$impl_file"
+            [specs_folder]="$specs_folder_rel"
+            [specs_maybe]="$specs_maybe"
+            [domains_exists]="$domains_exists"
+            [fd_exists]="$fd_exists"
+            [prov_exists]="$prov_exists"
+            [td_exists]="$td_exists"
+            [constr_exists]="$constr_exists"
+            [change_file_rel_path]="$change_folder_rel/$impl_file"
+            [templates_folder]="uspecs/u/templates"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_uimpl" impl_vars
+    fi
+}
+
+
+# cmd_action_uarchive [--change-folder <path>] [--all]
+# Archives a change folder or all modified change folders.
+cmd_action_uarchive() {
+    local opt_change_folder=""
+    local opt_all=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --change-folder)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--change-folder requires a path argument"
+                fi
+                opt_change_folder="$2"
+                shift 2
+                ;;
+            --all)
+                opt_all="1"
+                shift
+                ;;
+            *)
+                error "Unknown argument: $1"
+                ;;
+        esac
+    done
+
+    if [[ -n "$opt_all" && -n "$opt_change_folder" ]]; then
+        error "--all and --change-folder are mutually exclusive"
+    fi
+
+    local project_dir
+    context_project_dir project_dir
+
+    local changes_folder_rel
+    context_changes_folder changes_folder_rel
+
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    prompt_start_log
+    echo "Action: uarchive"
+
+    local is_git=""
+    context_is_git_repo is_git
+
+    if [[ -n "$opt_all" ]]; then
+        if [[ "$is_git" != "1" ]]; then
+            error "--all requires a git repository"
+        fi
+
+        local -A pr_info
+        if ! git_pr_info pr_info "$project_dir"; then
+            error "--all requires remote info to be available (remote reachable?)"
+        fi
+        local pr_remote="${pr_info[pr_remote]:-}"
+        local default_branch="${pr_info[default_branch]:-}"
+
+        local changes_folder="$project_dir/$changes_folder_rel"
+
+        echo "Fetching ${pr_remote}/${default_branch}..."
+        git fetch "$pr_remote" "$default_branch" 2>&1
+
+        if [ ! -d "$changes_folder" ]; then
+            error "Changes folder not found: $changes_folder"
+        fi
+
+        local archived=0 unchanged=0 failed=0
+        local archiveall_output=""
+
+        for folder_path in "$changes_folder"/*/; do
+            [ -d "$folder_path" ] || continue
+            local fname
+            fname=$(basename "$folder_path")
+            [ "$fname" = "archive" ] && continue
+
+            local rel_folder="$changes_folder_rel/$fname"
+            local diff_output
+            diff_output=$(git diff --name-only "${pr_remote}/${default_branch}" HEAD -- "$rel_folder")
+            if [ -z "$diff_output" ]; then
+                unchanged=$((unchanged + 1))
+                continue
+            fi
+
+            local uncompleted_count
+            uncompleted_count=$(count_uncompleted_items "$folder_path")
+            if [ "$uncompleted_count" -gt 0 ]; then
+                archiveall_output+="failed: $rel_folder (uncompleted items)"$'\n'
+                failed=$((failed + 1))
+                continue
+            fi
+
+            local archive_path=""
+            if changes_archive "$project_dir" "$changes_folder_rel" "$rel_folder" "$is_git" archive_path; then
+                archiveall_output+="ok: $rel_folder -> $archive_path"$'\n'
+                archived=$((archived + 1))
+            else
+                archiveall_output+="failed: $rel_folder (archive error)"$'\n'
+                failed=$((failed + 1))
+            fi
+        done
+
+        archiveall_output+="Done: $archived archived, $unchanged unchanged, $failed failed"
+        echo "$archiveall_output"
+
+        # shellcheck disable=SC2034
+        declare -A all_vars=(
+            [archiveall_output]="$archiveall_output"
+        )
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_uarchive_all" all_vars
+
+        if [ "$failed" -gt 0 ]; then
+            return 1
+        fi
+        return 0
+    fi
+
+    local change_folder_name=""
+
+    if [[ -n "$opt_change_folder" ]]; then
+        # Extract folder name from relative path (e.g. uspecs/changes/foo -> foo)
+        change_folder_name=$(basename "$opt_change_folder")
+    else
+        local -a active_wcfs=()
+        while IFS= read -r line; do
+            [[ -n "$line" ]] && active_wcfs+=("$line")
+        done <<< "$(wcf_resolve_active)"
+
+        local count=${#active_wcfs[@]}
+        if [[ "$count" -eq 0 ]]; then
+            prompt_start_instructions "results"
+            emit_prompt "$prompts_dir" "instr_uarchive_no_change_folder"
+            return 0
+        elif [[ "$count" -eq 1 ]]; then
+            change_folder_name="${active_wcfs[0]}"
+        else
+            # Multiple active WCFs -- let agent select
+            local folder_list=""
+            local i=1
+            for f in "${active_wcfs[@]}"; do
+                folder_list+="$i. $changes_folder_rel/$f"$'\n'
+                ((i++))
+            done
+            # shellcheck disable=SC2034
+            declare -A select_vars=(
+                [next_command]="bash uspecs/u/scripts/softeng.sh action uarchive"
+                [folder_list]="$folder_list"
+            )
+            prompt_start_instructions "results"
+            emit_prompt "$prompts_dir" "instr_shared_select_change_folder" select_vars
+            return 0
+        fi
+    fi
+
+    # Validate folder
+    local path_to_change_folder="$project_dir/$changes_folder_rel/$change_folder_name"
+
+    if [ ! -d "$path_to_change_folder" ]; then
+        error "Folder not found: $path_to_change_folder"
+    fi
+
+    if [ ! -f "$path_to_change_folder/change.md" ]; then
+        error "change.md not found in folder: $path_to_change_folder"
+    fi
+
+    local uncompleted_count
+    uncompleted_count=$(count_uncompleted_items "$path_to_change_folder")
+    if [ "$uncompleted_count" -gt 0 ]; then
+        echo "Cannot archive: $uncompleted_count uncompleted todo item(s) found"
+        echo ""
+        echo "Uncompleted items:"
+        grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
+        echo ""
+        echo "Complete or cancel todo items before archiving"
+        exit 1
+    fi
+
+    echo "Archiving: $changes_folder_rel/$change_folder_name"
+
+    local archive_path=""
+    changes_archive "$project_dir" "$changes_folder_rel" "$changes_folder_rel/$change_folder_name" "$is_git" archive_path
+
+    # shellcheck disable=SC2034
+    declare -A success_vars=(
+        [archive_path]="$archive_path"
+    )
+    prompt_start_instructions "results"
+    emit_prompt "$prompts_dir" "instr_uarchive_success" success_vars
+}
+
+
+# cmd_action_usync [-y]
+# Aligns Working Change Folder plan and specs with source changes.
+# Emits prompt with diff or file list depending on diff size.
+cmd_action_usync() {
+    local opt_yes=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y) opt_yes="1"; shift ;;
+            *) error "Unknown argument: $1" ;;
+        esac
+    done
+
+    local project_dir
+    context_project_dir project_dir
+
+    prompt_start_log
+    echo "Action: usync"
+
+    # Validate preconditions
+    git_validate_working_tree
+
+    local current_branch
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    local pr_remote default_branch
+    pr_remote=$(determine_pr_remote)
+    default_branch=$(git_default_branch_name)
+
+    git_validate_clean_repo "$current_branch" "$default_branch"
+
+    echo "Branch: $current_branch -> $pr_remote/$default_branch"
+
+    # Fetch remote default branch
+    echo "Fetching $pr_remote/$default_branch..."
+    quiet git fetch "$pr_remote" "$default_branch"
+
+    # Detect Working Change Folder
+    local changes_folder_rel
+    context_changes_folder changes_folder_rel
+    local wcf_name
+    wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
+    echo "Working Change Folder: $wcf_name"
+
+    local change_folder_rel="$changes_folder_rel/$wcf_name"
+
+    # Resolve specs folder
+    local specs_folder_rel
+    context_specs_folder specs_folder_rel
+
+    # Resolve prompts dir
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    # Check impl.md and issue.md existence
+    local impl_exists=""
+    if [[ -f "$project_dir/$change_folder_rel/impl.md" ]]; then
+        impl_exists="1"
+    fi
+    local issue_exists=""
+    if [[ -f "$project_dir/$change_folder_rel/issue.md" ]]; then
+        issue_exists="1"
+    fi
+
+    # Compute merge-base and diff
+    local merge_base
+    merge_base=$(git merge-base HEAD "${pr_remote}/${default_branch}")
+
+    local diff_file
+    temp_create_file diff_file
+    git diff "$merge_base" HEAD -- . ":(exclude)$changes_folder_rel/*" > "$diff_file" || true
+
+    local diff_size
+    diff_size=$(wc -c < "$diff_file" | tr -d ' ')
+    echo "Diff size: $diff_size bytes"
+
+    local diff_threshold=102400  # 100K
+
+    if [[ "$diff_size" -gt "$diff_threshold" && -z "$opt_yes" ]]; then
+        # Large diff without -y: emit gate prompt
+        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
+        # shellcheck disable=SC2034
+        declare -A gate_vars=(
+            [size]="$diff_size"
+            [softeng_sh]="$softeng_sh"
+        )
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_usync_large_diff" gate_vars
+        return 0
+    fi
+
+    if [[ "$diff_size" -gt "$diff_threshold" ]]; then
+        # Large diff with -y: emit file list + instruction
+        local file_list
+        file_list=$(git diff --name-only "$merge_base" HEAD -- . ":(exclude)$changes_folder_rel/*")
+        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
+        # shellcheck disable=SC2034
+        declare -A usync_vars=(
+            [change_folder]="$change_folder_rel"
+            [specs_folder]="$specs_folder_rel"
+            [impl_exists]="$impl_exists"
+            [issue_exists]="$issue_exists"
+            [is_large_diff]="1"
+            [softeng_sh]="$softeng_sh"
+            [file_list]="$file_list"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_usync" usync_vars
+    else
+        # Normal diff (including empty): emit diff + instruction
+        local diff_content
+        diff_content=$(cat "$diff_file")
+        # shellcheck disable=SC2034
+        declare -A usync_vars=(
+            [change_folder]="$change_folder_rel"
+            [specs_folder]="$specs_folder_rel"
+            [impl_exists]="$impl_exists"
+            [issue_exists]="$issue_exists"
+            [is_large_diff]=""
+            [diff]="$diff_content"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_usync" usync_vars
+    fi
+}
+
+
+
 # cmd_action_upr
 # Full upr flow: validate, detect WCF, check no existing PR, read change.md,
 # compute pr_title/commit_message/see_details_line,
@@ -798,8 +1257,7 @@ cmd_action_upr() {
     done
 
     local project_dir
-    project_dir=$(get_project_dir)
-    cd "$project_dir"
+    context_project_dir project_dir
 
     prompt_start_log
 
@@ -833,7 +1291,7 @@ cmd_action_upr() {
 
     # Detect Working Change Folder
     local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
+    context_changes_folder changes_folder_rel
     local wcf_name
     wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
 
@@ -850,8 +1308,8 @@ cmd_action_upr() {
     echo "Checking for uncompleted to-do items..."
     changes_validate_todos_completed "$wcf_path" "$project_dir"
 
-    local prompts_file
-    prompts_file="$(get_script_dir)/../prompts.md"
+    local prompts_dir
+    context_prompts_dir prompts_dir
 
     # Check if PR already exists for this branch
     echo "Checking for existing PR..."
@@ -866,10 +1324,10 @@ cmd_action_upr() {
             pr_url=$(gh pr view --json url -q ".url")
             quiet gh pr view --web || true
 
-            prompt_start_instructions
-            # shellcheck disable=SC2034  # open_vars used via nameref in section_templ
+            prompt_start_instructions "results"
+            # shellcheck disable=SC2034  # open_vars used via nameref in emit_prompt
             declare -A open_vars=([pr_url]="$pr_url")
-            section_templ "$prompts_file" "upr_already_exists" open_vars
+            emit_prompt "$prompts_dir" "instr_upr_already_exists" open_vars
             return 0
         elif [[ "$pr_state" == "MERGED" ]]; then
             echo "PR #${pr_number} for this branch was already merged. Proceeding with new PR creation..."
@@ -998,16 +1456,16 @@ cmd_action_upr() {
     echo "Opening PR in browser..."
     quiet gh pr view --web || true
 
-    prompt_start_instructions
+    prompt_start_instructions "results"
 
     # Output success prompt
     if [[ -n "$pre_push_head" ]]; then
         declare -A vars=([pre_push_head]="$pre_push_head" [pr_url]="$pr_url")
-        section_templ "$prompts_file" "upr_success" vars
+        emit_prompt "$prompts_dir" "instr_upr_success" vars
     else
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A vars=([pr_url]="$pr_url")
-        section_templ "$prompts_file" "upr_success_no_squash" vars
+        emit_prompt "$prompts_dir" "instr_upr_success_no_squash" vars
     fi
 }
 
@@ -1016,8 +1474,7 @@ cmd_action_upr() {
 # archive WCF if active, attempt merge, handle failure, branch cleanup.
 cmd_action_umergepr() {
     local project_dir
-    project_dir=$(get_project_dir)
-    cd "$project_dir"
+    context_project_dir project_dir
 
     prompt_start_log
 
@@ -1046,21 +1503,21 @@ cmd_action_umergepr() {
 
     # Detect Working Change Folder
     local changes_folder_rel
-    changes_folder_rel=$(read_conf_param "changes_folder")
+    context_changes_folder changes_folder_rel
     local wcf_name
     wcf_name=$(changes_validate_single_wcf "$project_dir" "$changes_folder_rel" "$pr_remote" "$default_branch")
     echo "Working Change Folder: $wcf_name"
 
-    local prompts_file
-    prompts_file="$(get_script_dir)/../prompts.md"
+    local prompts_dir
+    context_prompts_dir prompts_dir
 
     # Check PR state
     echo "Checking PR state..."
     local pr_state pr_number
     if ! pr_state=$(gh pr view --json state -q ".state" 2>/dev/null); then
         # No PR found
-        prompt_start_instructions
-        section_templ "$prompts_file" "umergepr_no_pr"
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_umergepr_no_pr"
         return 0
     fi
 
@@ -1089,8 +1546,8 @@ cmd_action_umergepr() {
             [branch_name]="$current_branch"
             [branch_head]="$branch_head"
         )
-        prompt_start_instructions
-        section_templ "$prompts_file" "umergepr_not_open" vars
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_umergepr_not_open" vars
         return 0
     fi
 
@@ -1127,8 +1584,8 @@ cmd_action_umergepr() {
 
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A fail_vars=([pr_number]="$pr_number")
-        prompt_start_instructions
-        section_templ "$prompts_file" "umergepr_merge_failed" fail_vars
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_umergepr_merge_failed" fail_vars
         return 0
     fi
 
@@ -1148,7 +1605,7 @@ cmd_action_umergepr() {
     # immediately due to eventual consistency.
     if [[ "$pr_remote" == "upstream" ]]; then
         echo "Syncing local $default_branch with $pr_remote/$default_branch..."
-        cd "$project_dir"
+        # Already in project root
         # Ensure we are on the default branch (gh pr merge should have switched,
         # but be explicit to avoid accidentally fast-forwarding a wrong branch).
         quiet git checkout "$default_branch" || true
@@ -1193,9 +1650,8 @@ cmd_action_umergepr() {
         [branch_name]="$current_branch"
         [branch_head]="$branch_head"
     )
-    # shellcheck disable=SC2119
-    prompt_start_instructions
-    section_templ "$prompts_file" "umergepr_success" success_vars
+    prompt_start_instructions "results"
+    emit_prompt "$prompts_dir" "instr_umergepr_success" success_vars
 }
 
 main() {
@@ -1216,14 +1672,26 @@ main() {
             local keyword="$1"
             shift
             case "$keyword" in
+                uchange)
+                    cmd_action_uchange "$@"
+                    ;;
+                uimpl)
+                    cmd_action_uimpl "$@"
+                    ;;
+                uarchive)
+                    cmd_action_uarchive "$@"
+                    ;;
                 upr)
                     cmd_action_upr "$@"
                     ;;
                 umergepr)
                     cmd_action_umergepr "$@"
                     ;;
+                usync)
+                    cmd_action_usync "$@"
+                    ;;
                 *)
-                    error "Unknown action keyword: $keyword. Available: upr, umergepr"
+                    error "Unknown action keyword: $keyword. Available: uchange, uimpl, uarchive, upr, umergepr, usync"
                     ;;
             esac
             ;;
@@ -1235,36 +1703,11 @@ main() {
             shift
 
             case "$subcommand" in
-                new)
-                    cmd_change_new "$@"
-                    ;;
-                archive)
-                    cmd_change_archive "$@"
-                    ;;
-                archiveall)
-                    cmd_change_archiveall "$@"
+                list-wcf)
+                    cmd_change_list_wcf "$@"
                     ;;
                 *)
-                    error "Unknown change subcommand: $subcommand. Available: new, archive, archiveall"
-                    ;;
-            esac
-            ;;
-        pr)
-            if [ $# -lt 1 ]; then
-                error "Usage: softeng pr <subcommand> [args...]"
-            fi
-            local subcommand="$1"
-            shift
-
-            case "$subcommand" in
-                preflight)
-                    cmd_pr_preflight "$@"
-                    ;;
-                create)
-                    git_changepr "$@"
-                    ;;
-                *)
-                    error "Unknown pr subcommand: $subcommand. Available: preflight, create"
+                    error "Unknown change subcommand: $subcommand. Available: list-wcf"
                     ;;
             esac
             ;;
@@ -1277,26 +1720,25 @@ main() {
 
             case "$target" in
                 specs)
-                    git_diff specs "$@"
+                    local specs_folder_rel
+                    context_specs_folder specs_folder_rel
+                    git_diff "$specs_folder_rel" "$@"
+                    ;;
+                file)
+                    if [ $# -lt 1 ]; then
+                        error "Usage: softeng diff file <path>"
+                    fi
+                    local file_path="$1"
+                    shift
+                    local _pr_remote _default_branch _merge_base
+                    _pr_remote=$(determine_pr_remote)
+                    _default_branch=$(git_default_branch_name)
+                    quiet git fetch "$_pr_remote" "$_default_branch"
+                    _merge_base=$(git merge-base HEAD "${_pr_remote}/${_default_branch}")
+                    git diff "$_merge_base" HEAD -- "$file_path"
                     ;;
                 *)
-                    error "Unknown diff target: $target. Available: specs"
-                    ;;
-            esac
-            ;;
-        status)
-            if [ $# -lt 1 ]; then
-                error "Usage: softeng status <subcommand> [args...]"
-            fi
-            local subcommand="$1"
-            shift
-
-            case "$subcommand" in
-                ispr)
-                    cmd_status_ispr "$@"
-                    ;;
-                *)
-                    error "Unknown status subcommand: $subcommand. Available: ispr"
+                    error "Unknown diff target: $target. Available: specs, file"
                     ;;
             esac
             ;;

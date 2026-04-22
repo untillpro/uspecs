@@ -3,13 +3,14 @@
 Parallel test runner for bats tests.
 
 Usage:
-    python scripts/run-tests.py <folder> [pattern] [--workers N]
+    python tests/run-tests.py <folder> [pattern] [--workers N] [--per-file]
 
 Examples:
-    python scripts/run-tests.py tests/unit
-    python scripts/run-tests.py tests/unit "shell metacharacters"
-    python scripts/run-tests.py tests/unit --workers 4
-    python scripts/run-tests.py tests/unit "extracts section" --workers 1
+    python tests/run-tests.py tests/unit
+    python tests/run-tests.py tests/unit --workers 4
+    python tests/run-tests.py tests/unit --per-file
+    python tests/run-tests.py tests/unit "emit_prompt"
+    python tests/run-tests.py tests/unit "emit_prompt" --per-file
 """
 
 import argparse
@@ -19,13 +20,29 @@ import shutil
 import subprocess
 import sys
 import time
-
-IS_WINDOWS = sys.platform == "win32"
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from typing import TypedDict
+
+IS_WINDOWS = sys.platform == "win32"
 
 
-def discover_bats_files(folder):
+class TestResult(TypedDict):
+    file: str
+    test: str
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+class FileResult(TypedDict):
+    file: str
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def discover_bats_files(folder: str) -> list[Path]:
     """Recursively discover all .bats files in the given folder."""
     folder_path = Path(folder)
     if not folder_path.is_dir():
@@ -36,10 +53,10 @@ def discover_bats_files(folder):
     return sorted(bats_files)
 
 
-def extract_test_names(bats_file):
+def extract_test_names(bats_file: Path) -> list[str]:
     """Extract all @test names from a bats file."""
     test_pattern = re.compile(r'@test\s+"([^"]+)"')
-    tests = []
+    tests: list[str] = []
 
     try:
         with open(bats_file, "r", encoding="utf-8") as f:
@@ -53,9 +70,11 @@ def extract_test_names(bats_file):
     return tests
 
 
-def get_tests_to_run(bats_files, pattern):
+def get_tests_to_run(
+    bats_files: list[Path], pattern: str | None
+) -> list[tuple[Path, str]]:
     """Get list of (file, test_name) tuples to run, optionally filtered by pattern."""
-    tests = []
+    tests: list[tuple[Path, str]] = []
     for bats_file in bats_files:
         test_names = extract_test_names(bats_file)
         for test_name in test_names:
@@ -65,7 +84,7 @@ def get_tests_to_run(bats_files, pattern):
     return tests
 
 
-def ere_escape(text):
+def ere_escape(text: str) -> str:
     """Escape ERE metacharacters for bats -f filter.
 
     Unlike re.escape, does not escape spaces or other characters that are
@@ -75,7 +94,7 @@ def ere_escape(text):
     return re.sub(r"([.^$*+?{}\\|()\[\]])", r"\\\1", text)
 
 
-def run_bats_test(test_info):
+def run_bats_test(test_info: tuple[Path, str]) -> TestResult:
     """Run a single bats test and return the result."""
     bats_file, test_name = test_info
     try:
@@ -126,9 +145,53 @@ def run_bats_test(test_info):
         }
 
 
-def main():
+def run_bats_file(bats_file: Path) -> FileResult:
+    """Run all tests in a bats file and return the result."""
+    try:
+        bats_path = str(bats_file).replace("\\", "/")
+        bash_bin = shutil.which("bash") or "bash"
+        cmd = [
+            bash_bin,
+            "-c",
+            'exec bats --print-output-on-failure --tap "$1"',
+            "_",
+            bats_path,
+        ]
+
+        result = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=300,
+        )
+        return {
+            "file": str(bats_file),
+            "returncode": result.returncode,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "file": str(bats_file),
+            "returncode": 124,
+            "stdout": "",
+            "stderr": f"File timeout after 300 seconds",
+        }
+    except Exception as e:
+        return {
+            "file": str(bats_file),
+            "returncode": 1,
+            "stdout": "",
+            "stderr": str(e),
+        }
+
+
+def main() -> int:
     # Ensure each print() is written to terminal immediately
-    sys.stdout.reconfigure(write_through=True)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(write_through=True)  # type: ignore[union-attr]
 
     parser = argparse.ArgumentParser(
         description="Run bats tests in parallel",
@@ -137,7 +200,10 @@ def main():
     )
     parser.add_argument("folder", help="Folder to scan for .bats files")
     parser.add_argument(
-        "pattern", nargs="?", default=None, help="Optional pattern to filter test names"
+        "pattern",
+        nargs="?",
+        default=None,
+        help="Optional pattern to filter test names (or file paths with --per-file)",
     )
     parser.add_argument(
         "--workers",
@@ -145,14 +211,21 @@ def main():
         default=None,
         help="Number of parallel workers (default: auto-detect CPU cores)",
     )
+    parser.add_argument(
+        "--per-file",
+        action="store_true",
+        default=False,
+        help="Run tests per file instead of per test name",
+    )
 
     args = parser.parse_args()
 
     # Determine number of workers
-    workers = (
+    cpu_count = os.cpu_count() or 4
+    workers: int = (
         args.workers
         if args.workers
-        else min(os.cpu_count(), 10) if IS_WINDOWS else os.cpu_count()
+        else min(cpu_count, 10) if IS_WINDOWS else cpu_count
     )
 
     # Discover bats files
@@ -162,11 +235,126 @@ def main():
         print(f"No .bats files found in {args.folder}")
         return 0
 
+    if args.per_file:
+        return _run_per_file(bats_files, args.pattern, workers)
+    else:
+        return _run_per_test(bats_files, args.pattern, workers)
+
+
+def _parse_tap_output(file_path: str, stdout: str) -> list[tuple[str, bool, str]]:
+    """Parse TAP output and return list of (label, passed, error_output) tuples."""
+    results: list[tuple[str, bool, str]] = []
+    lines = stdout.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Match "ok N test name" or "not ok N test name"
+        if line.startswith("ok "):
+            # Extract test name (skip "ok N ")
+            parts = line.split(" ", 2)
+            test_name = parts[2] if len(parts) > 2 else "unknown"
+            label = f"{file_path}: {test_name}"
+            results.append((label, True, ""))
+        elif line.startswith("not ok "):
+            # Extract test name (skip "not ok N ")
+            parts = line.split(" ", 3)
+            test_name = parts[3] if len(parts) > 3 else "unknown"
+            label = f"{file_path}: {test_name}"
+            # Collect following comment lines as error output
+            error_lines = [line]
+            i += 1
+            while i < len(lines) and lines[i].startswith("#"):
+                error_lines.append(lines[i])
+                i += 1
+            results.append((label, False, "\n".join(error_lines)))
+            continue  # Skip the i += 1 at the end
+        i += 1
+    return results
+
+
+def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> int:
+    """Run tests per file: each .bats file is a single bats invocation."""
+    # Filter files by pattern (match against file path)
+    if pattern:
+        bats_files = [f for f in bats_files if pattern in str(f).replace("\\", "/")]
+
+    if not bats_files:
+        print(f"No files matching '{pattern}' found")
+        return 0
+
+    print(f"Running {len(bats_files)} file(s) with {workers} worker(s)...\n")
+
+    passed = 0
+    failed = 0
+    failures: list[tuple[str, str]] = []
+    start_time = time.monotonic()
+
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(run_bats_file, f): f for f in bats_files}
+        try:
+            for future in as_completed(futures):
+                result = future.result()
+                file_path = result["file"].replace("\\", "/")
+                # Parse TAP output to get per-test results
+                test_results = _parse_tap_output(file_path, result["stdout"])
+                if test_results:
+                    for label, test_passed, error_output in test_results:
+                        if test_passed:
+                            passed += 1
+                            print(f" ok {label}", flush=True)
+                        else:
+                            failed += 1
+                            failures.append((label, error_output))
+                            print(f" FAIL {label}", flush=True)
+                            if error_output:
+                                for line in error_output.splitlines():
+                                    print(f"   {line}", flush=True)
+                else:
+                    # No TAP output parsed - report file-level result
+                    if result["returncode"] == 0:
+                        passed += 1
+                        print(f" ok {file_path}", flush=True)
+                    else:
+                        failed += 1
+                        output = (result["stdout"] + result["stderr"]).strip()
+                        failures.append((file_path, output))
+                        print(f" FAIL {file_path}", flush=True)
+                        if output:
+                            for line in output.splitlines():
+                                print(f"   {line}", flush=True)
+        except KeyboardInterrupt:
+            print("\n\nInterrupted - cancelling pending tests...", flush=True)
+            for f in futures:
+                f.cancel()
+            executor.shutdown(wait=False, cancel_futures=True)
+            completed = passed + failed
+            print(f"\nAborted after {completed} tests", flush=True)
+            os._exit(130)
+
+    if failures:
+        print("\nFailed tests:", flush=True)
+        for label, output in failures:
+            print(f"  FAIL {label}", flush=True)
+            if output:
+                for line in output.splitlines():
+                    print(f"    {line}", flush=True)
+                print(flush=True)
+
+    elapsed = time.monotonic() - start_time
+    total = passed + failed
+    parts = [f"{total} tests", f"{failed} failures", f"{elapsed:.1f}s"]
+    print(f"\n{', '.join(parts)}", flush=True)
+
+    return 1 if failed > 0 else 0
+
+
+def _run_per_test(bats_files: list[Path], pattern: str | None, workers: int) -> int:
+    """Run tests per test name: each @test is a separate bats invocation."""
     # Get individual tests to run
-    tests = get_tests_to_run(bats_files, args.pattern)
+    tests = get_tests_to_run(bats_files, pattern)
 
     if not tests:
-        print(f"No tests matching '{args.pattern}' found")
+        print(f"No tests matching '{pattern}' found")
         return 0
 
     print(f"Running {len(tests)} test(s) with {workers} worker(s)...\n")
@@ -175,32 +363,43 @@ def main():
     passed = 0
     failed = 0
     skipped = 0
-    failures = []
+    failures: list[tuple[str, str]] = []
     start_time = time.monotonic()
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(run_bats_test, t): t for t in tests}
-        for future in as_completed(futures):
-            result = future.result()
-            file_path = result["file"].replace("\\", "/")
-            label = f"{file_path}: {result['test']}"
-            if result["returncode"] == 0:
-                passed += 1
-                print(f" ok {label}", flush=True)
-            elif (
-                "Executed 0 instead of expected 1 tests"
-                in result["stdout"] + result["stderr"]
-            ):
-                skipped += 1
-                print(f" skip {label}", flush=True)
-            else:
-                failed += 1
-                output = (result["stdout"] + result["stderr"]).strip()
-                failures.append((label, output))
-                print(f" FAIL {label}", flush=True)
-                if output:
-                    for line in output.splitlines():
-                        print(f"   {line}", flush=True)
+        try:
+            for future in as_completed(futures):
+                result = future.result()
+                file_path = result["file"].replace("\\", "/")
+                label = f"{file_path}: {result['test']}"
+                if result["returncode"] == 0:
+                    passed += 1
+                    print(f" ok {label}", flush=True)
+                elif (
+                    "Executed 0 instead of expected 1 tests"
+                    in result["stdout"] + result["stderr"]
+                ):
+                    skipped += 1
+                    print(f" skip {label}", flush=True)
+                else:
+                    failed += 1
+                    output = (result["stdout"] + result["stderr"]).strip()
+                    failures.append((label, output))
+                    print(f" FAIL {label}", flush=True)
+                    if output:
+                        for line in output.splitlines():
+                            print(f"   {line}", flush=True)
+        except KeyboardInterrupt:
+            print("\n\nInterrupted - cancelling pending tests...", flush=True)
+            for f in futures:
+                f.cancel()
+            executor.shutdown(wait=False, cancel_futures=True)
+            completed = passed + failed + skipped
+            print(f"\nAborted after {completed}/{len(tests)} tests", flush=True)
+            # os._exit bypasses atexit handlers that would block waiting
+            # for worker processes to finish
+            os._exit(130)
 
     if failures:
         print("\nFailed tests:", flush=True)
