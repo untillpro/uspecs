@@ -24,13 +24,13 @@ setup() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
 }
 
-# prompt contract: no parameter - default meta-instruction, auto-close
-@test "prompt contract: no parameter: emits default meta-instruction" {
+# prompt contract: results mode - emits results meta-instruction
+@test "prompt contract: results mode: emits results meta-instruction" {
     run bash -c "
         source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
         prompt_start_log
         echo 'some log output'
-        prompt_start_instructions
+        prompt_start_instructions 'results'
         echo 'Content here'
     "
     [ "$status" -eq 0 ]
@@ -40,21 +40,43 @@ setup() {
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
 }
 
-# prompt contract: custom meta-instruction replaces default
-@test "prompt contract: custom meta-instruction: replaces default" {
+# prompt contract: action mode - emits action meta-instruction
+@test "prompt contract: action mode: emits action meta-instruction" {
     run bash -c "
         source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
         prompt_start_log
         echo 'some log output'
-        prompt_start_instructions 'Ask user to choose an option.'
-        echo 'Option 1: foo'
-        echo 'Option 2: bar'
+        prompt_start_instructions 'action'
+        echo 'Artifact definition here'
+        echo 'Instructions here'
     "
     [ "$status" -eq 0 ]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"Ask user to choose an option."* ]]
+    [[ "$output" == *"See artifact definitions below, followed by instructions."* ]]
     [[ "$output" != *"Inform user about the results"* ]]
-    [[ "$output" == *"Option 1: foo"* ]]
+    [[ "$output" == *"Artifact definition here"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
+}
+
+# prompt contract: no parameter - error
+@test "prompt contract: no parameter: exits with error" {
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        prompt_start_log
+        echo 'some log output'
+        prompt_start_instructions
+    "
+    [ "$status" -ne 0 ]
+}
+
+# prompt contract: unknown mode - error
+@test "prompt contract: unknown mode: exits with error" {
+    run bash -c "
+        source '$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh'
+        prompt_start_log
+        echo 'some log output'
+        prompt_start_instructions 'unknown'
+    "
+    [ "$status" -ne 0 ]
 }
 

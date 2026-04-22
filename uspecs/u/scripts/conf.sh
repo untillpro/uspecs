@@ -671,6 +671,13 @@ cmd_apply() {
     mkdir -p "$project_dir/uspecs/u"
     replace_uspecs_u "$source_dir" "$project_dir"
 
+    # Copy Claude Code skills
+    if [[ -d "$source_dir/.claude/skills" ]]; then
+        echo "Installing Claude Code skills..."
+        mkdir -p "$project_dir/.claude/skills"
+        cp -r "$source_dir/.claude/skills/"* "$project_dir/.claude/skills/"
+    fi
+
     # Write metadata
     echo "Writing installation metadata..."
     write_metadata "$project_dir" "$version" "$invocation_methods_str" "$commit" "$commit_timestamp" "$installed_at"

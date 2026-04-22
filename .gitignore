@@ -4,3 +4,5 @@
 *.out.*
 *.tmp
 *.tmp.*
+!.claude
+__pycache__

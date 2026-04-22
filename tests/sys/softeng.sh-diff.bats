@@ -16,3 +16,21 @@ load 'helpers'
     [[ "$output" == *"new-spec.md"* ]]
 }
 
+
+@test "diff file outputs per-file diff against merge-base" {
+    cd "$PROJECT_ROOT"
+
+    git checkout -b diff-file-branch
+    echo "file content" > "$PROJECT_ROOT/my-source.txt"
+    echo "other content" > "$PROJECT_ROOT/other-file.txt"
+    git add .
+    git commit -q -m "add two files"
+
+    uspecs diff file my-source.txt
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"my-source.txt"* ]]
+    [[ "$output" == *"file content"* ]]
+    # Should not contain the other file
+    [[ "$output" != *"other-file.txt"* ]]
+}
+

@@ -16,7 +16,7 @@ uspecs components:
 
 - [_lib/utils.sh: bash library](../../../u/scripts/_lib/utils.sh)
   - Source-guarded (loaded once per shell)
-  - Provides: error, git_path, temp_create_dir, temp_create_file, sed_inplace, atexit cleanup, section_templ, md_read_frontmatter_field, md_read_title
+  - Provides: error, git_path, temp_create_dir, temp_create_file, sed_inplace, atexit cleanup, emit_prompt, md_read_frontmatter_field, md_read_title
 
 - uspecs.yml: installation metadata file, uspecs/u/uspecs.yml
   - Stores installation metadata (version, timestamps, invocation methods, commit info for alpha)

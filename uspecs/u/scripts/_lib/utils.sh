@@ -111,50 +111,163 @@ is_git_repo() {
     (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
 }
 
-# section_templ <file> <section_id> [vars_map]
-# Outputs the heading and body of a markdown section whose heading matches
-# "## section_id: ...". The output includes the heading line itself.
-# section_id may contain alphanumerics, hyphens and underscores.
-# The section ends before the next heading (any level) or EOF.
-# Subsections are NOT included.
-# Substitutes ${VAR} placeholders using the provided associative array.
-# Only variables from vars_map are substituted; shell/environment variables
-# are NOT expanded (safe against command injection via backticks or $()).
-# Fails if the file is missing, the section is not found, or an unsubstituted
-# ${VAR} placeholder remains.
-section_templ() {
-    local file="$1"
+# ---------------------------------------------------------------------------
+# emit_prompt: file-per-section prompt emission with dependency resolution
+# ---------------------------------------------------------------------------
+
+# Global state for emit_prompt
+declare -gA _EMIT_SEEN=()    # dedup: id -> 1
+declare -ga _EMIT_QUEUE=()   # ordered list of entries: "tag\x1fid\x1fdescr\x1fbody"
+
+# emit_prompt_reset
+# Clears dedup and queue state. Call before starting a new emission sequence.
+emit_prompt_reset() {
+    _EMIT_SEEN=()
+    _EMIT_QUEUE=()
+}
+
+# _emit_process_body <raw_body> <section_id> <file> [vars_map_name]
+# Shared processing: conditional lines, variable substitution.
+# Prints the processed body to stdout.
+_emit_process_body() {
+    local raw_body="$1"
     local section_id="$2"
+    local file="$3"
+    local vars_name="${4:-}"
 
-    [[ -f "$file" ]] || error "file not found: $file"
-
-    local raw
-    raw=$(sed -n "/^#\\{1,\\} ${section_id}:/,/^#/{/^#\\{1,\\} ${section_id}:/p;/^#\\{1,\\} ${section_id}:/!{/^#/!p}}" "$file")
-
-    [[ -n "$raw" ]] || error "section not found: $section_id in $file"
-
-    # Substitute ${KEY} patterns using awk (safe: no shell expansion of values)
-    local body="$raw"
-    if [[ -n "${3:-}" ]]; then
-        local -n _st_vars="$3"
-        local _st_key
-        for _st_key in "${!_st_vars[@]}"; do
-            export "_ST_VAL=${_st_vars[$_st_key]}"
-            body=$(printf '%s\n' "$body" | awk -v "pat=\${${_st_key}}" \
-                '{ val=ENVIRON["_ST_VAL"]
-                   idx=index($0,pat)
-                   while(idx>0){ $0=substr($0,1,idx-1) val substr($0,idx+length(pat)); idx=index($0,pat) }
-                   print }')
+    # Filter conditional lines: (?var) / (?!var)
+    local filtered=""
+    local _ep_cline _ep_negate _ep_cvar _ep_cval _ep_skip
+    while IFS= read -r _ep_cline || [[ -n "$_ep_cline" ]]; do
+        _ep_skip=0
+        while [[ "$_ep_cline" =~ \(\?(\!?)([a-zA-Z_][a-zA-Z0-9_]*)\)[[:space:]]*$ ]]; do
+            _ep_negate="${BASH_REMATCH[1]}"
+            _ep_cvar="${BASH_REMATCH[2]}"
+            _ep_cval=""
+            if [[ -n "$vars_name" ]]; then
+                local -n _ep_cond_map="$vars_name"
+                if [[ -v "_ep_cond_map[$_ep_cvar]" ]]; then
+                    _ep_cval="${_ep_cond_map[$_ep_cvar]}"
+                else
+                    error "unknown condition variable '${_ep_cvar}' in $section_id of $file (not in vars map '$vars_name')"
+                fi
+            else
+                error "conditional (?${_ep_negate}${_ep_cvar}) in $section_id of $file but no vars map provided"
+            fi
+            if [[ -n "$_ep_negate" ]]; then
+                [[ -z "$_ep_cval" ]] || _ep_skip=1
+            else
+                [[ -n "$_ep_cval" ]] || _ep_skip=1
+            fi
+            _ep_cline="${_ep_cline%"${BASH_REMATCH[0]}"}"
+            _ep_cline="${_ep_cline%"${_ep_cline##*[! ]}"}"
         done
-        unset _ST_VAL
+        (( _ep_skip )) && continue
+        filtered+="${_ep_cline}"$'\n'
+    done <<< "$raw_body"
+
+    # Substitute ${KEY} patterns using pure bash (no subshells, no awk)
+    local body="$filtered"
+    if [[ -n "$vars_name" ]]; then
+        local -n _ep_vars="$vars_name"
+        local _ep_key _ep_pat
+        for _ep_key in "${!_ep_vars[@]}"; do
+            _ep_pat="\${${_ep_key}}"
+            body="${body//"$_ep_pat"/"${_ep_vars[$_ep_key]}"}"
+        done
     fi
 
     # Check for remaining unsubstituted ${...} placeholders
     if [[ "$body" =~ \$\{[a-zA-Z_][a-zA-Z0-9_]*\} ]]; then
-        error "unbound variable in section $section_id of $file: ${BASH_REMATCH[0]}"
+        error "unbound variable in $section_id of $file: ${BASH_REMATCH[0]}"
     fi
 
-    printf '%s\n' "$body"
+    printf '%s' "$body"
+}
+
+# _emit_collect <prompts_dir> <section_id> [vars_map_name]
+# Recursively collects a prompt file and its @artdef_ dependencies.
+# Dependencies are collected first (depth-first), then self is appended.
+# Dedup via _EMIT_SEEN prevents double-emission.
+_emit_collect() {
+    local dir="$1"
+    local id="$2"
+    local vars_name="${3:-}"
+
+    # Dedup guard
+    [[ ! -v "_EMIT_SEEN[$id]" ]] || return 0
+    _EMIT_SEEN[$id]=1
+
+    local file="$dir/$id.md"
+    [[ -f "$file" ]] || error "prompt file not found: $file"
+
+    # Read file content
+    local content
+    content=$(< "$file")
+
+    # Extract description from first # heading
+    local descr=""
+    local _ep_hline
+    while IFS= read -r _ep_hline; do
+        if [[ "$_ep_hline" =~ ^#[[:space:]]+(.*) ]]; then
+            descr="${BASH_REMATCH[1]}"
+            break
+        fi
+    done <<< "$content"
+
+    # Extract body: everything after "## data" line
+    local body="" found_data=0
+    while IFS= read -r _ep_hline; do
+        if (( found_data )); then
+            body+="${_ep_hline}"$'\n'
+        elif [[ "$_ep_hline" =~ ^##[[:space:]]+data[[:space:]]*$ ]]; then
+            found_data=1
+        fi
+    done <<< "$content"
+
+    (( found_data )) || error "missing '## data' marker in $file"
+
+    # Process body (conditionals, vars, comments)
+    local processed
+    processed=$(_emit_process_body "$body" "$id" "$file" "$vars_name") || exit 1
+
+    # Scan for @artdef_ dependencies and collect them first
+    local _ep_scan="$processed"
+    while [[ "$_ep_scan" =~ \`@(artdef_[a-zA-Z0-9_-]+)\` ]]; do
+        local dep="${BASH_REMATCH[1]}"
+        _ep_scan="${_ep_scan#*"${BASH_REMATCH[0]}"}"
+        _emit_collect "$dir" "$dep" "$vars_name"
+    done
+
+    # Determine XML tag
+    local tag="instruction"
+    if [[ "$id" == artdef_* ]]; then
+        tag="artdef"
+    fi
+
+    # Append self to queue (after dependencies)
+    local sep=$'\x1f'
+    _EMIT_QUEUE+=("${tag}${sep}${id}${sep}${descr}${sep}${processed}")
+}
+
+# emit_prompt <prompts_dir> <section_id> [vars_map_name]
+# Entry point: resets state, collects the section and its dependencies,
+# then emits all collected entries (dependencies first, root last).
+emit_prompt() {
+    emit_prompt_reset
+    _emit_collect "$@"
+
+    # Flush queue
+    local entry tag id descr body sep=$'\x1f'
+    for entry in "${_EMIT_QUEUE[@]}"; do
+        tag="${entry%%"$sep"*}"; entry="${entry#*"$sep"}"
+        id="${entry%%"$sep"*}"; entry="${entry#*"$sep"}"
+        descr="${entry%%"$sep"*}"; body="${entry#*"$sep"}"
+
+        printf '%s\n' "<${tag} id=\"${id}\" descr=\"${descr}\">"
+        printf '%s\n' "$body"
+        printf '%s\n' "</${tag}>"
+    done
 }
 
 # md_read_frontmatter_field <file> <field_name>
@@ -262,7 +375,7 @@ _prompt_close_tags_on_exit() {
         echo "<AGENT_INSTRUCTIONS>"
         echo "The script exited with an error."
         echo "Describe what happened based on the log above."
-        echo "Suggest recovery options as a numbered list, include Abort as a last item."
+        echo "Suggest recovery options as a numbered list, include Cancel as a last item."
         echo "Do not take any further action until user explicitly chooses an option."
         echo "</AGENT_INSTRUCTIONS>"
     elif [[ "${_PROMPT_INSTR_OPEN:-0}" -eq 1 ]]; then
@@ -278,19 +391,29 @@ prompt_start_log() {
     echo "<LOG>"
 }
 
-# prompt_start_instructions [meta_instruction]
+# prompt_start_instructions <mode>
 # Closes the LOG block and opens an AGENT_INSTRUCTIONS block with a meta-instruction.
-# If meta_instruction is provided, emits it; otherwise emits the default.
+# mode: "results" - inform user about results
+#        "action"  - artifact definitions followed by instructions
 # The closing tag is emitted automatically on exit.
-# shellcheck disable=SC2120
 prompt_start_instructions() {
+    if [[ $# -eq 0 ]]; then
+        error "prompt_start_instructions requires a mode: results or action"
+    fi
+    local mode="$1"
     _PROMPT_LOG_OPEN=0
     _PROMPT_INSTR_OPEN=1
     echo "</LOG>"
     echo "<AGENT_INSTRUCTIONS>"
-    if [[ $# -gt 0 ]]; then
-        printf '%s\n' "$*"
-    else
-        echo "Inform user about the results, see below. Ignore the <LOG> content above."
-    fi
+    case "$mode" in
+        results)
+            echo "Inform user about the results, see below. Ignore the <LOG> content above."
+            ;;
+        action)
+            echo "See artifact definitions below, followed by instructions."
+            ;;
+        *)
+            error "prompt_start_instructions: unknown mode '$mode' (expected: results or action)"
+            ;;
+    esac
 }
