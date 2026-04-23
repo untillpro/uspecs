@@ -22,7 +22,7 @@ Do not use when: the change only involves specifications or provisioning/configu
 - Optional grouping: when items span 3+ distinct dependency categories, group under `###` headers ordered by dependency (foundational first, dependent after)
 - Tests
   - If not specified otherwise (prompt, skills, etc.), include test file items when explicitly requested or implied by the codebase's established patterns
-  - Tests first: include test file items at the beginning, before implementation items
+  - Tests first: always place test file items before all implementation items — when using `###` grouping headers, put tests in a leading `### Tests` group before all other groups
 - Optionally add a `## Quick start` section after Construction when the change introduces new features, APIs, CLI commands, or configuration that users need to learn. Skip for internal refactoring, bug fixes, or changes with no user-facing impact.
 
 ## Example

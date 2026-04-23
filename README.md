@@ -5,7 +5,7 @@
 For AGENTS.md (nlia), alpha version:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --alpha
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/bin/conf.sh | bash -s install --nlia --alpha
 ```
 
 <details>
@@ -14,19 +14,19 @@ curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scri
 For AGENTS.md (nlia), stable version:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/bin/conf.sh | bash -s install --nlia
 ```
 
 For CLAUDE.md (nlic):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlic
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/bin/conf.sh | bash -s install --nlic
 ```
 
 For both:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scripts/conf.sh | bash -s install --nlia --nlic
+curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/bin/conf.sh | bash -s install --nlia --nlic
 ```
 
 </details>
@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/untillpro/uspecs/main/uspecs/u/scri
 Update to the latest version:
 
 ```sh
-uspecs/u/scripts/conf.sh update
+bin/conf.sh update
 ```
 
 Behavior:
@@ -49,7 +49,7 @@ Behavior:
 Upgrade to the latest major version (stable versions only):
 
 ```sh
-uspecs/u/scripts/conf.sh upgrade
+bin/conf.sh upgrade
 ```
 
 ### Configure invocation methods
@@ -57,7 +57,7 @@ uspecs/u/scripts/conf.sh upgrade
 Add or remove invocation methods:
 
 ```sh
-uspecs/u/scripts/conf.sh it --add nlia
-uspecs/u/scripts/conf.sh it --remove nlic
-uspecs/u/scripts/conf.sh it --add nlia --add nlic
+bin/conf.sh it --add nlia
+bin/conf.sh it --remove nlic
+bin/conf.sh it --add nlia --add nlic
 ```

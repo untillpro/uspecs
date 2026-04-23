@@ -2,7 +2,7 @@
 
 ## Overview
 
-All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, and the `AI Agent` reads the corresponding `actn-u*.md` for workflow steps, fills in templates, reads/creates/updates artifact files, and runs shell commands via softeng.sh. The result is reported back to the Engineer.
+All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, the `AI Agent` runs `softeng.sh` to get workflow instructions, reads/creates/updates artifact files, and runs shell commands. The result is reported back to the Engineer.
 
 ## Key flows
 
@@ -14,20 +14,15 @@ All softeng actions follow the same pattern:
 sequenceDiagram
     actor engineer as 👤Engineer
     participant ai_agent as ⚙️AI Agent
-    participant actn as 🎯actn-u*.md
-    participant templates as 📄templates/
-    participant artifacts as 📁Artifacts
     participant softeng as ⚙️softeng.sh
+    participant artifacts as 📁Artifacts
 
     engineer->>ai_agent: u-keyword [instructions, parameters]
     activate ai_agent
-    par aa
-      actn -->> ai_agent: workflow steps
-      templates-->>ai_agent: templates
-      ai_agent->>artifacts: read/create/update
-      ai_agent ->> softeng: execute commands
-      deactivate ai_agent
-    end
+    ai_agent->>softeng: execute action command
+    softeng-->>ai_agent: workflow instructions
+    ai_agent->>artifacts: read/create/update
+    deactivate ai_agent
     ai_agent-->>engineer: report result
 ```
 
@@ -36,7 +31,7 @@ sequenceDiagram
 Non-exhaustive list of actions and their artifacts:
 
 - uchange
-  - action file: actn-uchange.md
+  - dispatch: softeng.sh action uchange
   - input: change description, optional issue URL
   - output: Active Change Folder with change.md
 
@@ -51,7 +46,7 @@ Non-exhaustive list of actions and their artifacts:
   - output: impl.md or change.md, spec files, codebase files
 
 - upr
-  - action file: actn-upr.md
+  - dispatch: softeng.sh action upr
   - input: Active Change Folder, change_branch
   - output: PR created on GitHub, pr_branch with squashed commits, change_branch deleted
 
@@ -61,6 +56,6 @@ Non-exhaustive list of actions and their artifacts:
   - output: Implementation Plan and specs aligned with source changes
 
 - umergepr
-  - action file: actn-umergepr.md (prompts via u/prompts.md)
+  - dispatch: softeng.sh action umergepr
   - input: Active Change Folder, open PR on current branch
   - output: PR squash-merged, branch deleted, WCF archived, Engineer notified

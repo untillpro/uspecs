@@ -11,7 +11,7 @@
 ## Execution instructions
 
 - When user input starts with {action} [options] {other-input} like `uchange --no-impl here is some prompt` then
-  - run `bash uspecs/u/scripts/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
+  - run `bash bin/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
     - Do not pass {other-input} verbatim to the command
   - Available commands: upr, umergepr, uimpl, uarchive, usync
   - For uchange

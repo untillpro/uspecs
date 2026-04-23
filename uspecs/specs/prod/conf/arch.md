@@ -4,21 +4,21 @@
 
 uspecs components:
 
-- [conf.sh: bash script](../../../u/scripts/conf.sh)
+- [conf.sh: bash script](../../../../bin/conf.sh)
   - Manages uspecs lifecycle (install, update, upgrade, invocation method configuration)
   - Orchestrates version detection, download, and apply
   - Commands: install, update, upgrade, im, apply (internal)
 
-- [_lib/git.sh: bash library](../../../u/scripts/_lib/git.sh)
+- [_lib/git.sh: bash library](../../../../bin/_lib/git.sh)
   - Sources utils.sh
   - Provides git workflow functions: git_pr_info, git_prbranch, git_ffdefault, git_pr, git_changepr, git_mergedef, git_diff
   - Sourced by conf.sh only when running from file (skipped in curl-pipe mode)
 
-- [_lib/utils.sh: bash library](../../../u/scripts/_lib/utils.sh)
+- [_lib/utils.sh: bash library](../../../../bin/_lib/utils.sh)
   - Source-guarded (loaded once per shell)
   - Provides: error, git_path, temp_create_dir, temp_create_file, sed_inplace, atexit cleanup, emit_prompt, md_read_frontmatter_field, md_read_title
 
-- uspecs.yml: installation metadata file, uspecs/u/uspecs.yml
+- uspecs.yml: installation metadata file, bin/uspecs.yml
   - Stores installation metadata (version, timestamps, invocation methods, commit info for alpha)
   - Single source of truth for installed uspecs state
 
@@ -56,7 +56,7 @@ Phase 1: self-contained (no local file dependencies)
     +-- exec downloaded conf.sh apply (runs from file)
 
 Phase 2: file-based (downloaded conf.sh apply)
-  bash "$temp_dir/uspecs/u/scripts/conf.sh" apply ...
+  bash "$temp_dir/bin/conf.sh" apply ...
     |
     +-- sources _lib/git.sh (which sources utils.sh)
     +-- full apply flow (copy files, write metadata, inject instructions)
@@ -131,8 +131,8 @@ conf.sh apply <install|update|upgrade> --project-dir <dir> --version <ver> [flag
   |     +-- create feature branch from default branch (git_prbranch)
   |
   +-- copy files
-  |     +-- install: remove uspecs.yml from archive, copy uspecs/u to project
-  |     +-- update/upgrade: delete old uspecs/u files, copy new uspecs/u from archive
+  |     +-- install: remove uspecs.yml from archive, copy uspecs/bin to project
+  |     +-- update/upgrade: delete old uspecs/bin files, copy new uspecs/bin from archive
   |
   +-- write/update uspecs.yml
   |     +-- version, timestamps, invocation_methods

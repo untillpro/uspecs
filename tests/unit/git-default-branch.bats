@@ -6,7 +6,7 @@ bats_require_minimum_version 1.5.0
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 
 setup() {
-    source "$REPO_ROOT/uspecs/u/scripts/_lib/git.sh"
+    source "$REPO_ROOT/bin/_lib/git.sh"
 
     # On Windows (MSYS/Cygwin), bash /tmp and git /tmp map to different Windows
     # directories. Convert to a mixed Windows path so both agree on the same location.

@@ -62,15 +62,15 @@ get_project_dir() {
     fi
     local script_dir
     script_dir=$(cd "$(dirname "$script_path")" && pwd)
-    # Go up 3 levels: scripts -> u -> uspecs -> project_dir
+    # Go up 1 level: bin -> project_dir
     local project_dir
-    project_dir=$(cd "$script_dir/../../.." && pwd)
+    project_dir=$(cd "$script_dir/.." && pwd)
     native_path "$project_dir"
 }
 
 check_not_installed() {
     local project_dir="$1"
-    if [[ -f "$project_dir/uspecs/u/uspecs.yml" ]]; then
+    if [[ -f "$project_dir/bin/uspecs.yml" ]]; then
         error "uspecs is already installed, use update instead"
     fi
 }
@@ -78,7 +78,7 @@ check_not_installed() {
 check_installed() {
     local project_dir
     project_dir=$(get_project_dir)
-    if [[ ! -f "$project_dir/uspecs/u/uspecs.yml" ]]; then
+    if [[ ! -f "$project_dir/bin/uspecs.yml" ]]; then
         error "uspecs is not installed"
     fi
 }
@@ -88,7 +88,7 @@ check_installed() {
 load_config() {
     local project_dir="$1"
     local -n _config_map="$2"
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+    local metadata_file="$project_dir/bin/uspecs.yml"
 
     if [[ ! -f "$metadata_file" ]]; then
         return 0
@@ -146,14 +146,14 @@ get_alpha_version() {
 get_local_version() {
     local script_dir
     script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    tr -d '[:space:]' < "$script_dir/../../../version.txt"
+    tr -d '[:space:]' < "$script_dir/../version.txt"
 }
 
 get_local_commit_info() {
     local script_dir
     script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     local repo_root
-    repo_root=$(native_path "$(cd "$script_dir/../../.." && pwd)")
+    repo_root=$(native_path "$(cd "$script_dir/.." && pwd)")
     local sha timestamp
     sha=$(git -C "$repo_root" log -1 --format="%H")
     timestamp=$(git -C "$repo_root" log -1 --format="%cI")
@@ -277,7 +277,7 @@ show_operation_plan() {
             fi
         fi
         echo "  Project folder: $project_dir"
-        echo "  uspecs core: uspecs/u"
+        echo "  uspecs core: bin"
 
         if [[ -n "$invocation_methods" ]]; then
             echo "  Natural language invocation files:"
@@ -351,15 +351,15 @@ replace_uspecs_u() {
     local source_dir="$1"
     local project_dir="$2"
     echo "Removing installation metadata file from archive..."
-    rm -f "$source_dir/uspecs/u/uspecs.yml"
-    echo "Removing old uspecs/u files..."
+    rm -f "$source_dir/bin/uspecs.yml"
+    echo "Removing old bin files..."
     # Delete only regular files, not directories. Removing directories while they
     # may still be in use causes "directory busy" errors on Windows (and with some
     # tools on other platforms). Leaving empty directories behind is harmless
     # because cp -r will overwrite or reuse them.
-    find "$project_dir/uspecs/u" -type f -delete
-    echo "Installing new uspecs/u..."
-    cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
+    find "$project_dir/bin" -type f -delete
+    echo "Installing new bin..."
+    cp -r "$source_dir/bin" "$project_dir/"
 }
 
 upgrade_markers() {
@@ -454,7 +454,7 @@ write_metadata() {
     local commit_timestamp="${5:-}"
     local installed_at="${6:-}"
 
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+    local metadata_file="$project_dir/bin/uspecs.yml"
     local timestamp
     timestamp=$(get_timestamp)
 
@@ -588,7 +588,7 @@ cmd_apply() {
     local script_dir
     script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     local source_dir
-    source_dir=$(cd "$script_dir/../../.." && pwd)
+    source_dir=$(cd "$script_dir/.." && pwd)
 
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
@@ -597,7 +597,7 @@ cmd_apply() {
     local version_string_branch
     version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
 
-    local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+    local metadata_file="$project_dir/bin/uspecs.yml"
 
     if [[ "$command_name" == "install" && "$override" != "true" && -f "$metadata_file" ]]; then
         error "uspecs is already installed, use update instead"
@@ -668,7 +668,7 @@ cmd_apply() {
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
 
-    mkdir -p "$project_dir/uspecs/u"
+    mkdir -p "$project_dir/bin"
     replace_uspecs_u "$source_dir" "$project_dir"
 
     # Copy Claude Code skills
@@ -810,7 +810,7 @@ cmd_install() {
         trap "rm -rf '$temp_dir'" EXIT
         echo "Downloading uspecs..."
         download_archive "$ref" "$temp_dir"
-        bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+        bash "$temp_dir/bin/conf.sh" apply "${apply_args[@]}"
     fi
 }
 
@@ -872,7 +872,7 @@ cmd_update_or_upgrade() {
     fi
 
     echo "Running ${command_name}..."
-    bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+    bash "$temp_dir/bin/conf.sh" apply "${apply_args[@]}"
 }
 
 cmd_im() {
@@ -982,7 +982,7 @@ cmd_im() {
 
     if [[ "$changed" == "true" ]]; then
         echo "Updating installation metadata..."
-        local metadata_file="$project_dir/uspecs/u/uspecs.yml"
+        local metadata_file="$project_dir/bin/uspecs.yml"
         local timestamp
         timestamp=$(get_timestamp)
 

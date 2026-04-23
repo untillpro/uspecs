@@ -5,7 +5,7 @@ load 'helpers'
 
 _write_uspecs_yml() {
     local project_dir="$1" version="$2"
-    cat > "$project_dir/uspecs/u/uspecs.yml" <<EOF
+    cat > "$project_dir/bin/uspecs.yml" <<EOF
 # uspecs installation metadata
 # DO NOT EDIT - managed by uspecs
 version: $version
@@ -30,7 +30,7 @@ EOF
     # Calling apply update with the same --version and --current-version triggers the
     # "already up to date" path: ffdefault switches to main first, then the version
     # check short-circuits and switches back to prev_branch.
-    run bash "$REPO_ROOT/uspecs/u/scripts/conf.sh" apply update \
+    run bash "$REPO_ROOT/bin/conf.sh" apply update \
         --project-dir "$PROJECT_ROOT" \
         --version "1.0.0" \
         --current-version "1.0.0" \

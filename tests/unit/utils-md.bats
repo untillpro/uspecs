@@ -6,7 +6,7 @@ bats_require_minimum_version 1.5.0
 REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
 
 setup() {
-    source "$REPO_ROOT/uspecs/u/scripts/_lib/utils.sh"
+    source "$REPO_ROOT/bin/_lib/utils.sh"
 
     TEST_TMPDIR="$BATS_TEST_TMPDIR"
     case "$OSTYPE" in
