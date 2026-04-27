@@ -131,8 +131,8 @@ _assert_uchange_base_output() {
     _assert_uchange_base_output
     # Specs folder created
     [ -d "$PROJECT_ROOT/uspecs/specs" ]
-    # FD label emitted in the artdef_impl_all_sections menu
-    [[ "$output" == *"  - Functional design section"* ]]
+    # FD label and its Required skill pointer emitted in the artdef_impl_all_sections menu
+    [[ "$output" == *"  - Functional design section"*"Required skill: uspecs-sec-fd"* ]]
 }
 
 @test "uchange: without --specs and no specs folder, FD label not emitted" {
@@ -142,8 +142,9 @@ _assert_uchange_base_output() {
     uspecs action uchange --kebab-name my-change
 
     _assert_uchange_base_output
-    # FD label not emitted
+    # FD label and its Required skill pointer not emitted
     [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
 }
 
 # --- cmd_change_new internals exercised via action uchange ---

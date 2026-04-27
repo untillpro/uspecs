@@ -1,6 +1,6 @@
 ---
 name: bats
-description: Use this skill when writing bats tests
+description: Use this skill when authoring or reviewing any `*.bats` file (Bats test).
 user-invocable: false
 ---
 

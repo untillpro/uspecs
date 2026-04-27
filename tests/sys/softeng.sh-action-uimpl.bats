@@ -203,55 +203,68 @@ _uimpl_with_sections() {
     # condition: all sections do not exist and are needed -> all 5 bullets present
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"  - Domain specifications section"* ]]
-    [[ "$output" == *"  - Functional design section"* ]]
-    [[ "$output" == *"  - Provisioning and configuration section"* ]]
-    [[ "$output" == *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" == *"  - Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"  - Functional design section"*"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"  - Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" == *"  - Technical design section"*"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # condition: Domain specifications exists -> domains absent, fd/prov/td/constr present
     _uimpl_with_sections domains
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
-    [[ "$output" == *"  - Functional design section"* ]]
-    [[ "$output" == *"  - Provisioning and configuration section"* ]]
-    [[ "$output" == *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"  - Functional design section"*"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"  - Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" == *"  - Technical design section"*"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # condition: Domains + Functional design specifications exist -> domains/fd absent, prov/td/constr present
     _uimpl_with_sections domains fd
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
-    [[ "$output" == *"  - Provisioning and configuration section"* ]]
-    [[ "$output" == *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"  - Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" == *"  - Technical design section"*"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # condition: Domains + FD + Provisioning exist -> domains/fd/prov absent, td/constr present
     _uimpl_with_sections domains fd prov
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" != *"  - Provisioning and configuration section"* ]]
-    [[ "$output" == *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" == *"  - Technical design section"*"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # condition: Domains + FD + Provisioning + TD exist -> only constr present
     _uimpl_with_sections domains fd prov td
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" != *"  - Provisioning and configuration section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-prov"* ]]
     [[ "$output" != *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # condition: Nothing of the above -> completed, no bullets
     _uimpl_with_sections domains fd prov td constr
     [ "$status" -eq 0 ]
     [[ "$output" == *"completed"* ]]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" != *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-constr"* ]]
 }
 
 @test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain specifications, Functional design specifications and Technical design specifications" {
@@ -265,19 +278,26 @@ _uimpl_with_sections() {
     _uimpl_with_sections
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
-    [[ "$output" == *"  - Provisioning and configuration section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"  - Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
     [[ "$output" != *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # Prov exists, no specs -> only constr present
     _uimpl_with_sections prov
     [ "$status" -eq 0 ]
     [[ "$output" != *"  - Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" != *"  - Provisioning and configuration section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-prov"* ]]
     [[ "$output" != *"  - Technical design section"* ]]
-    [[ "$output" == *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"  - Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
     # Prov+Constr exist, no specs -> completed
     _uimpl_with_sections prov constr
