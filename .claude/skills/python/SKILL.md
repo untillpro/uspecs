@@ -1,6 +1,6 @@
 ---
 name: python
-description: Use this skill when writing Python code
+description: Use this skill when authoring or reviewing any `*.py` file (Python source).
 user-invocable: false
 ---
 
