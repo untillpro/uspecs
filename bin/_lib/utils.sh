@@ -136,9 +136,8 @@ _emit_filter_body() {
     local vars_name="${4:-}"
 
     # Single nameref to the caller's vars map, when provided.
-    local -n _ep_map
     if [[ -n "$vars_name" ]]; then
-        _ep_map="$vars_name"
+        local -n _ep_map="$vars_name"
     fi
 
     # Filter conditional lines: (?var) / (?!var)
