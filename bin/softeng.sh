@@ -1,4 +1,28 @@
 #!/usr/bin/env bash
+
+# Re-exec under a modern Bash if the current interpreter is too old.
+# This script uses Bash 4.2+ features (declare -g, -gA). macOS still ships
+# /bin/bash 3.2, so an explicit `/bin/bash bin/softeng.sh` would otherwise fail.
+# The check below uses only Bash 3.2-safe syntax.
+if [ -z "${SOFTENG_BASH_REEXEC:-}" ] && \
+   { [ -z "${BASH_VERSINFO+x}" ] || [ "${BASH_VERSINFO[0]}" -lt 4 ] || \
+     { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 2 ]; }; }; then
+    for _candidate in /opt/homebrew/bin/bash /usr/local/bin/bash /usr/bin/bash; do
+        if [ -x "$_candidate" ]; then
+            _cand_major=$("$_candidate" -c 'echo ${BASH_VERSINFO[0]}')
+            _cand_minor=$("$_candidate" -c 'echo ${BASH_VERSINFO[1]}')
+            if [ "$_cand_major" -gt 4 ] || \
+               { [ "$_cand_major" -eq 4 ] && [ "$_cand_minor" -ge 2 ]; }; then
+                export SOFTENG_BASH_REEXEC=1
+                exec "$_candidate" "$0" "$@"
+            fi
+        fi
+    done
+    echo "Error: this script requires Bash 4.2+. Found Bash ${BASH_VERSION:-unknown}." >&2
+    echo "Install a modern Bash (e.g. 'brew install bash') and retry." >&2
+    exit 1
+fi
+
 set -Eeuo pipefail
 
 # softeng automation
