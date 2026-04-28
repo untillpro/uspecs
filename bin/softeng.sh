@@ -1436,18 +1436,23 @@ cmd_action_upr() {
         quiet git push
     fi
 
-    # Prepare PR body: strip YAML frontmatter --- delimiters (keep field lines as plain text).
-    # Fenced code blocks (```yaml / ```) are NOT used because GitHub interprets backtick
-    # sequences in the PR body incorrectly.
+    # Prepare PR body: wrap YAML frontmatter in a ```yaml code fence and emit only
+    # the Why, What and How sections from change.md.
     local pr_body_file
     temp_create_file pr_body_file
     local pr_body_max_lines=40
     local pr_body_max_chars=4000
     awk '
-        BEGIN { fm=0 }
-        /^---$/ && fm==0 { fm=1; next }
-        /^---$/ && fm==1 { fm=2; next }
-        { print }
+        BEGIN { fm=0; in_section=0 }
+        fm==0 && /^---$/ { fm=1; print "```yaml"; next }
+        fm==1 && /^---$/ { fm=2; print "```"; next }
+        fm==1 { print; next }
+        fm==2 {
+            if (/^## /) {
+                in_section = ($0 ~ /^## (Why|What|How)[[:space:]]*$/) ? 1 : 0
+            }
+            if (in_section) print
+        }
     ' "$change_file" > "$pr_body_file"
     local pr_body_truncated=false
     local pr_body_lines

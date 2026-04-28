@@ -9,6 +9,7 @@
   - Technical design section. Required skill: uspecs-sec-td (?specs_maybe)(?!td_exists)
   - Construction and Quick start sections. Required skill: uspecs-sec-constr (?!constr_exists)
 
-Important: include exactly one implementation artifact from the list above. Use the first one from the list above that matches the change request. Do not combine multiple implementation artifacts.
+Rules:
 
-Reinforcing rule: if the change requires changing project technology, installing software or adding dependencies, then Provisioning and configuration section matches -- even if the change also involves source file changes.
+- Include exactly one implementation artifact from the list above. Use the first one from the list above that matches the change request. Do not combine multiple implementation artifacts
+- Reinforcing rule: if the change requires changing project technology, installing software or adding dependencies, then Provisioning and configuration section matches -- even if the change also involves source file changes

@@ -50,7 +50,7 @@ Feature: Create pull request from current branch
     And <issue_condition>
     When Engineer invokes upr action
     Then PR title is <title_format>
-    And pr_body is content of change.md with YAML frontmatter --- delimiters stripped (fields kept as plain text)
+    And pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block, followed by the Why, What and How sections
     And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
     And see_details_line is "See change.md for details"
     And when squashing (multiple commits), commit message is <message_format>
