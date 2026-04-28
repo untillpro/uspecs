@@ -17,7 +17,7 @@ _setup_usync_branch() {
 # Rule: Core behavior
 # ---------------------------------------------------------------------------
 
-@test "usync: scn: Core output: small diff emits artdef_usync_diff and instr_usync" {
+@test "usync: scn: Core output: small diff emits artifact usync_diff and instr_usync" {
     # Then WCF Implementation Plan in change.md or impl.md (if exists) is updated to reflect changes in diff_scope vs baseline
     _setup_usync_branch
 
@@ -26,12 +26,35 @@ _setup_usync_branch() {
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"artdef_usync_diff"* ]]
+    [[ "$output" == *'<artifact id="usync_diff"'* ]]
+    [[ "$output" == *"</artifact>"* ]]
     [[ "$output" == *"instr_usync"* ]]
     [[ "$output" == *"src-file.txt"* ]]
     # Verify template vars are substituted
     [[ "$output" == *"uspecs/changes/2601010000-test-change"* ]]
     [[ "$output" == *"uspecs/specs"* ]]
+}
+
+@test "usync: scn: Core output: diff payload entity-escaped" {
+    # End-to-end: source bytes containing & < > must surface as XML entities
+    # inside the <artifact id="usync_diff"> body, never as raw chars.
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-test-change"
+    cat > "$PROJECT_ROOT/markup.html" <<'EOF'
+<div class="x">a & b</div>
+EOF
+    git add .
+    git commit -q -m "source change with markup"
+
+    uspecs action usync
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<artifact id="usync_diff"'* ]]
+    [[ "$output" == *"&lt;div"* ]]
+    [[ "$output" == *"a &amp; b"* ]]
+    [[ "$output" == *"&lt;/div&gt;"* ]]
+    # Raw `+<div` from the diff must not appear -- it must be entity-escaped
+    [[ "$output" != *"+<div class"* ]]
 }
 
 @test "usync: scn: Core output: impl.md detected when present" {
@@ -68,7 +91,8 @@ _setup_usync_branch() {
 
     uspecs action usync
     [ "$status" -eq 0 ]
-    [[ "$output" == *"artdef_usync_diff"* ]]
+    [[ "$output" == *'<artifact id="usync_diff"'* ]]
+    [[ "$output" == *"</artifact>"* ]]
     [[ "$output" == *"instr_usync"* ]]
     [[ "$output" == *"Diff size: 0 bytes"* ]]
 }
@@ -117,7 +141,8 @@ _setup_usync_branch() {
 
     uspecs action usync -y
     [ "$status" -eq 0 ]
-    [[ "$output" == *"artdef_usync_file_list"* ]]
+    [[ "$output" == *'<artifact id="usync_file_list"'* ]]
+    [[ "$output" == *"</artifact>"* ]]
     [[ "$output" == *"instr_usync"* ]]
     [[ "$output" == *"large-file.txt"* ]]
     [[ "$output" == *"src-file.txt"* ]]

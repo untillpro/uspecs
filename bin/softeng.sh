@@ -1263,9 +1263,9 @@ cmd_action_usync() {
             [issue_exists]="$issue_exists"
             [is_large_diff]="1"
             [softeng_sh]="$softeng_sh"
-            [file_list]="$file_list"
         )
         prompt_start_instructions "action"
+        emit_artifact "usync_file_list" "$file_list" "Changed files since baseline"
         emit_prompt "$prompts_dir" "instr_usync" usync_vars
     else
         # Normal diff (including empty): emit diff + instruction
@@ -1278,9 +1278,9 @@ cmd_action_usync() {
             [impl_exists]="$impl_exists"
             [issue_exists]="$issue_exists"
             [is_large_diff]=""
-            [diff]="$diff_content"
         )
         prompt_start_instructions "action"
+        emit_artifact "usync_diff" "$diff_content" "Diff since baseline"
         emit_prompt "$prompts_dir" "instr_usync" usync_vars
     fi
 }
