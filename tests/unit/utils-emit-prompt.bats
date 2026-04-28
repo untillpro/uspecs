@@ -181,6 +181,46 @@ EOF
     [[ "$output" == *"unbound variable"* ]]
 }
 
+@test "emit_prompt: substituted value containing dollar-brace literal is not flagged as unbound" {
+    cat > "$PROMPTS_DIR/instr_diff.md" <<'EOF'
+# Diff embedding
+
+## data
+
+```diff
+${diff}
+```
+EOF
+    # The substituted value contains a literal ${impl_file} that must not be
+    # mistaken for an unbound template placeholder.
+    # shellcheck disable=SC2034
+    declare -A vars=([diff]=$'-foo ${impl_file}\n+bar ${impl_file}')
+    run emit_prompt "$PROMPTS_DIR" "instr_diff" vars
+    [ "$status" -eq 0 ]
+    # shellcheck disable=SC2016
+    [[ "$output" == *'${impl_file}'* ]]
+}
+
+@test "emit_prompt: substituted value containing @artdef reference does not trigger dep collection" {
+    cat > "$PROMPTS_DIR/instr_diff_dep.md" <<'EOF'
+# Diff embedding
+
+## data
+
+```diff
+${diff}
+```
+EOF
+    # The substituted value contains a literal `@artdef_nonexistent` that must
+    # not be picked up by the dependency scanner. If it were, _emit_collect
+    # would fail with "prompt file not found".
+    # shellcheck disable=SC2034,SC2016
+    declare -A vars=([diff]='+ See `@artdef_nonexistent` for details.')
+    run emit_prompt "$PROMPTS_DIR" "instr_diff_dep" vars
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'<artdef id="artdef_nonexistent"'* ]]
+}
+
 # ---------------------------------------------------------------------------
 # Conditional lines
 # ---------------------------------------------------------------------------
