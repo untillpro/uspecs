@@ -507,3 +507,74 @@ _uimpl_with_sections() {
     # gamma in a later section is excluded
     [[ "$todos_block" != *'gamma.yaml'* ]]
 }
+
+# ---------------------------------------------------------------------------
+# scn: permissive heading detection (regression for canonical short forms)
+# ---------------------------------------------------------------------------
+
+# Helper: write impl.md with given verbatim heading lines, run uimpl
+# Usage: _uimpl_with_headings "## Functional design" "### Construction"
+# Each heading is followed by a checked placeholder item so the file has no
+# unchecked todos and uimpl emits the next-section menu.
+_uimpl_with_headings() {
+    local impl_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    {
+        echo '# Implementation plan: Test'
+        echo ''
+        for heading in "$@"; do
+            echo "$heading"
+            echo ''
+            echo '- [x] placeholder item'
+            echo ''
+        done
+    } > "$impl_path"
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+}
+
+@test "uimpl: permissive heading detection: canonical short forms" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Canonical short FD heading produced by the uspecs-sec-fd skill.
+    # Original bug: `## Functional design` was not detected because the
+    # case pattern required the trailing word "specifications".
+    _uimpl_with_headings '## Functional design'
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
+
+    # Canonical short TD heading produced by the uspecs-sec-td skill.
+    _uimpl_with_headings '## Technical design'
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"  - Technical design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-td"* ]]
+}
+
+@test "uimpl: permissive heading detection: deeper heading levels" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # h3 Construction heading must still be detected; menu collapses to "completed".
+    _uimpl_with_headings '### Construction'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"completed"* ]]
+    [[ "$output" != *"  - Construction and Quick start sections"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-constr"* ]]
+}
+
+@test "uimpl: permissive heading detection: non-canonical trailing words" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Trailing words after the canonical name must still match (locks in `*` glob).
+    _uimpl_with_headings '## Functional design notes'
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"  - Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
+}

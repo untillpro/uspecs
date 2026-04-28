@@ -126,14 +126,20 @@ emit_prompt_reset() {
     _EMIT_QUEUE=()
 }
 
-# _emit_process_body <raw_body> <section_id> <file> [vars_map_name]
-# Shared processing: conditional lines, variable substitution.
-# Prints the processed body to stdout.
-_emit_process_body() {
+# _emit_filter_body <raw_body> <section_id> <file> [vars_map_name]
+# Filters conditional lines and checks for unbound ${KEY} placeholders.
+# Does NOT substitute. Prints the filtered body to stdout.
+_emit_filter_body() {
     local raw_body="$1"
     local section_id="$2"
     local file="$3"
     local vars_name="${4:-}"
+
+    # Single nameref to the caller's vars map, when provided.
+    local -n _ep_map
+    if [[ -n "$vars_name" ]]; then
+        _ep_map="$vars_name"
+    fi
 
     # Filter conditional lines: (?var) / (?!var)
     local filtered=""
@@ -145,9 +151,8 @@ _emit_process_body() {
             _ep_cvar="${BASH_REMATCH[2]}"
             _ep_cval=""
             if [[ -n "$vars_name" ]]; then
-                local -n _ep_cond_map="$vars_name"
-                if [[ -v "_ep_cond_map[$_ep_cvar]" ]]; then
-                    _ep_cval="${_ep_cond_map[$_ep_cvar]}"
+                if [[ -v "_ep_map[$_ep_cvar]" ]]; then
+                    _ep_cval="${_ep_map[$_ep_cvar]}"
                 else
                     error "unknown condition variable '${_ep_cvar}' in $section_id of $file (not in vars map '$vars_name')"
                 fi
@@ -166,20 +171,36 @@ _emit_process_body() {
         filtered+="${_ep_cline}"$'\n'
     done <<< "$raw_body"
 
-    # Substitute ${KEY} patterns using pure bash (no subshells, no awk)
-    local body="$filtered"
+    # Strip known ${KEY} placeholders so any survivor is, by definition, unbound.
+    # Done before substitution -- post-substitution checks would falsely flag
+    # dollar-brace literals carried inside substituted values (e.g. `${diff}`
+    # containing `${impl_file}` text).
+    local _ep_check="$filtered"
+    local _ep_key
     if [[ -n "$vars_name" ]]; then
-        local -n _ep_vars="$vars_name"
-        local _ep_key _ep_pat
-        for _ep_key in "${!_ep_vars[@]}"; do
-            _ep_pat="\${${_ep_key}}"
-            body="${body//"$_ep_pat"/"${_ep_vars[$_ep_key]}"}"
+        for _ep_key in "${!_ep_map[@]}"; do
+            _ep_check="${_ep_check//"\${${_ep_key}}"/}"
         done
     fi
-
-    # Check for remaining unsubstituted ${...} placeholders
-    if [[ "$body" =~ \$\{[a-zA-Z_][a-zA-Z0-9_]*\} ]]; then
+    if [[ "$_ep_check" =~ \$\{[a-zA-Z_][a-zA-Z0-9_]*\} ]]; then
         error "unbound variable in $section_id of $file: ${BASH_REMATCH[0]}"
+    fi
+
+    printf '%s' "$filtered"
+}
+
+# _emit_substitute_body <filtered_body> [vars_map_name]
+# Substitutes ${KEY} patterns from the vars map. Prints the result to stdout.
+_emit_substitute_body() {
+    local body="$1"
+    local vars_name="${2:-}"
+
+    if [[ -n "$vars_name" ]]; then
+        local -n _ep_map="$vars_name"
+        local _ep_key
+        for _ep_key in "${!_ep_map[@]}"; do
+            body="${body//"\${${_ep_key}}"/"${_ep_map[$_ep_key]}"}"
+        done
     fi
 
     printf '%s' "$body"
@@ -227,17 +248,23 @@ _emit_collect() {
 
     (( found_data )) || error "missing '## data' marker in $file"
 
-    # Process body (conditionals, vars, comments)
-    local processed
-    processed=$(_emit_process_body "$body" "$id" "$file" "$vars_name") || exit 1
+    # Filter conditionals + check unbound vars (no substitution yet).
+    local filtered
+    filtered=$(_emit_filter_body "$body" "$id" "$file" "$vars_name") || exit 1
 
-    # Scan for @artdef_ dependencies and collect them first
-    local _ep_scan="$processed"
+    # Scan for @artdef_ dependencies on the pre-substitution body. Scanning
+    # post-substitution would pick up `@artdef_*` literals carried inside
+    # substituted values (e.g. a `${diff}` value referencing `@artdef_X`).
+    local _ep_scan="$filtered"
     while [[ "$_ep_scan" =~ \`@(artdef_[a-zA-Z0-9_-]+)\` ]]; do
         local dep="${BASH_REMATCH[1]}"
         _ep_scan="${_ep_scan#*"${BASH_REMATCH[0]}"}"
         _emit_collect "$dir" "$dep" "$vars_name"
     done
+
+    # Substitute ${KEY} patterns now that deps have been collected.
+    local processed
+    processed=$(_emit_substitute_body "$filtered" "$vars_name") || exit 1
 
     # Determine XML tag
     local tag="instruction"
