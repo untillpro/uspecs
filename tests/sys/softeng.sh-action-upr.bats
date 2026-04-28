@@ -364,6 +364,49 @@ _assert_pr_body_format() {
     (( body_size < 4200 ))
 }
 
+# change.md without YAML frontmatter -> PR body has no code fence and only emits Why/What/How
+@test "action upr: No PR for current branch: change.md without frontmatter" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b no-frontmatter-branch
+    local folder_name="2601010000-no-frontmatter"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '# Change request: No frontmatter change'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+        echo ''
+        echo '## What'
+        echo ''
+        echo 'What narrative.'
+        echo ''
+        echo '## How'
+        echo ''
+        echo 'How narrative.'
+        echo ''
+        echo '## Functional design'
+        echo ''
+        echo 'SENTINEL_FILTERED_OUT'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add no-frontmatter change"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome "squash"
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## What"*"What narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
+    [[ "$gh_body" != *'```yaml'* ]]
+    [[ "$gh_body" != *'```'* ]]
+    [[ "$gh_body" != *"---"* ]]
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" != *"## Functional design"* ]]
+}
+
 # --- Edge cases ---
 
 @test "action upr: Validation rejects, no changes since branching from default branch" {
