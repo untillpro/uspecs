@@ -21,6 +21,22 @@ _make_upr_change() {
         echo '---'
         echo ''
         echo "# Change request: $title"
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+        echo ''
+        echo '## What'
+        echo ''
+        echo 'What narrative.'
+        echo ''
+        echo '## How'
+        echo ''
+        echo 'How narrative.'
+        echo ''
+        echo '## Functional design'
+        echo ''
+        echo 'SENTINEL_FILTERED_OUT'
     } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
 
     git -C "$PROJECT_ROOT" add .
@@ -71,13 +87,15 @@ _assert_no_pr_base_outcome() {
     [ "$count" -eq 1 ]
 }
 
-# Helper: assert PR body format invariants (frontmatter stripped, no backticks).
+# Helper: assert PR body format invariants (frontmatter wrapped in YAML code fence,
+# non-Why/What/How sections filtered out).
 _assert_pr_body_format() {
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"change_id:"* ]]
-    [[ "$gh_body" != *'```'* ]]
+    [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
     [[ "$gh_body" != *"---"* ]]
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" != *"## Functional design"* ]]
 }
 
 # --- PR already exists ---
@@ -243,10 +261,12 @@ _assert_pr_body_format() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"[42] Fix the bug"* ]]
 
-    # gh pr create body contains change.md content with frontmatter delimiters stripped
+    # gh pr create body contains the Why, What and How sections from change.md
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"Change request: Fix the bug"* ]]
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## What"*"What narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
     _assert_pr_body_format
 }
 
@@ -261,14 +281,16 @@ _assert_pr_body_format() {
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"--title Add feature"* ]]
 
-    # gh pr create body contains change.md content with frontmatter delimiters stripped
+    # gh pr create body contains the Why, What and How sections from change.md
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"Change request: Add feature"* ]]
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## What"*"What narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
     _assert_pr_body_format
 }
 
-# 60 short lines after frontmatter stripping -> line limit (40) truncates
+# 60 short lines inside Why section -> line limit (40) truncates
 @test "action upr: No PR for current branch: PR body truncated by line limit" {
     cd "$PROJECT_ROOT"
     git checkout -q -b large-body-branch
@@ -282,7 +304,9 @@ _assert_pr_body_format() {
         echo ''
         echo '# Change request: Large change'
         echo ''
-        # 3 header lines + 57 filler = 60 body lines after frontmatter stripping
+        echo '## Why'
+        echo ''
+        # 57 filler lines under ## Why -> well past the 40-line cut
         for i in $(seq 1 57); do
             echo "Line $i: short filler"
         done
@@ -316,7 +340,9 @@ _assert_pr_body_format() {
         echo ''
         echo '# Change request: Large chars change'
         echo ''
-        # 3 lines above + 10 below = 13 body lines, well under 40 but over 4000 chars
+        echo '## Why'
+        echo ''
+        # 10 long lines under ## Why -> ~5000 chars, over 4000 char limit
         for i in $(seq 1 10); do
             printf 'Line %d: ' "$i"
             printf '%0.s_' $(seq 1 500)
@@ -336,6 +362,49 @@ _assert_pr_body_format() {
     local body_size
     body_size=${#gh_body}
     (( body_size < 4200 ))
+}
+
+# change.md without YAML frontmatter -> PR body has no code fence and only emits Why/What/How
+@test "action upr: No PR for current branch: change.md without frontmatter" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b no-frontmatter-branch
+    local folder_name="2601010000-no-frontmatter"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '# Change request: No frontmatter change'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+        echo ''
+        echo '## What'
+        echo ''
+        echo 'What narrative.'
+        echo ''
+        echo '## How'
+        echo ''
+        echo 'How narrative.'
+        echo ''
+        echo '## Functional design'
+        echo ''
+        echo 'SENTINEL_FILTERED_OUT'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add no-frontmatter change"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome "squash"
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## What"*"What narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
+    [[ "$gh_body" != *'```yaml'* ]]
+    [[ "$gh_body" != *'```'* ]]
+    [[ "$gh_body" != *"---"* ]]
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" != *"## Functional design"* ]]
 }
 
 # --- Edge cases ---

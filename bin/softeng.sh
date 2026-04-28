@@ -9,7 +9,9 @@ if [ -z "${SOFTENG_BASH_REEXEC:-}" ] && \
      { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 2 ]; }; }; then
     for _candidate in /opt/homebrew/bin/bash /usr/local/bin/bash /usr/bin/bash; do
         if [ -x "$_candidate" ]; then
+            # shellcheck disable=SC2016
             _cand_major=$("$_candidate" -c 'echo ${BASH_VERSINFO[0]}')
+            # shellcheck disable=SC2016
             _cand_minor=$("$_candidate" -c 'echo ${BASH_VERSINFO[1]}')
             if [ "$_cand_major" -gt 4 ] || \
                { [ "$_cand_major" -eq 4 ] && [ "$_cand_minor" -ge 2 ]; }; then
@@ -1436,18 +1438,26 @@ cmd_action_upr() {
         quiet git push
     fi
 
-    # Prepare PR body: strip YAML frontmatter --- delimiters (keep field lines as plain text).
-    # Fenced code blocks (```yaml / ```) are NOT used because GitHub interprets backtick
-    # sequences in the PR body incorrectly.
+    # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
+    # ```yaml code fence and emit only the Why, What and How sections from change.md.
+    # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
+    # are emitted, and an orphan opening fence is closed in END.
     local pr_body_file
     temp_create_file pr_body_file
     local pr_body_max_lines=40
     local pr_body_max_chars=4000
     awk '
-        BEGIN { fm=0 }
-        /^---$/ && fm==0 { fm=1; next }
-        /^---$/ && fm==1 { fm=2; next }
-        { print }
+        BEGIN { in_frontmatter=0; in_why_what_how=0 }
+        NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
+        in_frontmatter && /^---$/ { in_frontmatter=0; print "```"; next }
+        in_frontmatter { print; next }
+        {
+            if (/^## /) {
+                in_why_what_how = ($0 ~ /^## (Why|What|How)[[:space:]]*$/) ? 1 : 0
+            }
+            if (in_why_what_how) print
+        }
+        END { if (in_frontmatter) print "```" }
     ' "$change_file" > "$pr_body_file"
     local pr_body_truncated=false
     local pr_body_lines
