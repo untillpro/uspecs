@@ -148,6 +148,16 @@ emit_artifact() {
     local payload="$2"
     local descr="${3:-}"
     local sep=$'\x1f'
+    # TODO id/descr are interpolated into XML attributes at flush time without
+    # escaping or validation. Current callers pass hard-coded ASCII literals so
+    # this is safe, but a future caller passing values containing ", <, >, & or
+    # newline would break the wrapper tag. Options: validate at queue time
+    # (reject id outside [A-Za-z0-9_-]+ and descr containing " < > & or newline),
+    # or escape attributes uniformly across artdef/instruction/artifact.
+    # TODO emit_artifact stores the payload in _EMIT_QUEUE using \x1f as a field
+    # separator, so a truly opaque payload containing that byte would corrupt
+    # parsing at flush time. If artifacts are meant to be arbitrary bytes, this
+    # delimiter-based framing seems fragile.
     _EMIT_QUEUE+=("artifact${sep}${id}${sep}${descr}${sep}${payload}")
 }
 
