@@ -120,10 +120,45 @@ declare -gA _EMIT_SEEN=()    # dedup: id -> 1
 declare -ga _EMIT_QUEUE=()   # ordered list of entries: "tag\x1fid\x1fdescr\x1fbody"
 
 # emit_prompt_reset
-# Clears dedup and queue state. Call before starting a new emission sequence.
+# Clears dedup and queue state. Not called from emit_prompt's entry: emit_prompt
+# only resets _EMIT_SEEN (per-walk dedup) and lets caller-queued artifacts
+# survive into the flush. Exported for tests and defensive use.
 emit_prompt_reset() {
     _EMIT_SEEN=()
     _EMIT_QUEUE=()
+}
+
+# _emit_xml_escape <string>
+# Prints the input with XML entity substitutions applied in fixed order:
+# `&` -> `&amp;` (first), then `<` -> `&lt;`, then `>` -> `&gt;`. The `&`-first
+# ordering avoids double-escaping the entities introduced by the later passes.
+# Uses sed where `\&` is the portable literal-ampersand escape, sidestepping
+# bash 5.2's patsub_replacement quirk in parameter-expansion substitution.
+_emit_xml_escape() {
+    printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
+# emit_artifact <id> <payload> [descr]
+# Queues an opaque payload for emission. The payload bypasses templating
+# (no conditional filtering, no ${VAR} substitution, no @artdef_* dep scan)
+# and is XML-entity-escaped at flush time inside <artifact id="..." descr="...">.
+# Must be called before emit_prompt; the queue survives emit_prompt's entry.
+emit_artifact() {
+    local id="$1"
+    local payload="$2"
+    local descr="${3:-}"
+    local sep=$'\x1f'
+    # TODO id/descr are interpolated into XML attributes at flush time without
+    # escaping or validation. Current callers pass hard-coded ASCII literals so
+    # this is safe, but a future caller passing values containing ", <, >, & or
+    # newline would break the wrapper tag. Options: validate at queue time
+    # (reject id outside [A-Za-z0-9_-]+ and descr containing " < > & or newline),
+    # or escape attributes uniformly across artdef/instruction/artifact.
+    # TODO emit_artifact stores the payload in _EMIT_QUEUE using \x1f as a field
+    # separator, so a truly opaque payload containing that byte would corrupt
+    # parsing at flush time. If artifacts are meant to be arbitrary bytes, this
+    # delimiter-based framing seems fragile.
+    _EMIT_QUEUE+=("artifact${sep}${id}${sep}${descr}${sep}${payload}")
 }
 
 # _emit_filter_body <raw_body> <section_id> <file> [vars_map_name]
@@ -277,23 +312,34 @@ _emit_collect() {
 }
 
 # emit_prompt <prompts_dir> <section_id> [vars_map_name]
-# Entry point: resets state, collects the section and its dependencies,
-# then emits all collected entries (dependencies first, root last).
+# Entry point: resets per-walk dedup state, collects the section and its
+# dependencies, then emits all queued entries (caller-queued artifacts first,
+# then collected dependencies, root last). _EMIT_QUEUE is preserved across
+# entry so that emit_artifact calls placed before emit_prompt survive into
+# the flush, and cleared after flush so the next cycle starts empty.
 emit_prompt() {
-    emit_prompt_reset
+    _EMIT_SEEN=()
     _emit_collect "$@"
 
     # Flush queue
     local entry tag id descr body sep=$'\x1f'
-    for entry in "${_EMIT_QUEUE[@]}"; do
+    for entry in "${_EMIT_QUEUE[@]+"${_EMIT_QUEUE[@]}"}"; do
         tag="${entry%%"$sep"*}"; entry="${entry#*"$sep"}"
         id="${entry%%"$sep"*}"; entry="${entry#*"$sep"}"
         descr="${entry%%"$sep"*}"; body="${entry#*"$sep"}"
 
-        printf '%s\n' "<${tag} id=\"${id}\" descr=\"${descr}\">"
-        printf '%s\n' "$body"
-        printf '%s\n' "</${tag}>"
+        if [[ "$tag" == "artifact" ]]; then
+            printf '<artifact id="%s" descr="%s">\n' "$id" "$descr"
+            _emit_xml_escape "$body"
+            printf '\n</artifact>\n'
+        else
+            printf '%s\n' "<${tag} id=\"${id}\" descr=\"${descr}\">"
+            printf '%s\n' "$body"
+            printf '%s\n' "</${tag}>"
+        fi
     done
+
+    _EMIT_QUEUE=()
 }
 
 # md_read_frontmatter_field <file> <field_name>
@@ -436,7 +482,7 @@ prompt_start_instructions() {
             echo "Inform user about the results, see below. Ignore the <LOG> content above."
             ;;
         action)
-            echo "See artifact definitions below, followed by instructions."
+            echo "See artifact and artifact definitions (artdef) below, followed by instructions."
             ;;
         *)
             error "prompt_start_instructions: unknown mode '$mode' (expected: results or action)"

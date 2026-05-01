@@ -222,6 +222,87 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# emit_artifact (opaque payload emission)
+# ---------------------------------------------------------------------------
+
+@test "emit_artifact: round-trip with descr" {
+    cat > "$PROMPTS_DIR/instr_root.md" <<'EOF'
+# Root
+
+## data
+
+Use `@artifact_my` for context.
+EOF
+    emit_artifact "my" "raw payload bytes" "some descr"
+    run emit_prompt "$PROMPTS_DIR" "instr_root"
+    [ "$status" -eq 0 ]
+
+    [[ "$output" == *'<artifact id="my" descr="some descr">'* ]]
+    [[ "$output" == *"raw payload bytes"* ]]
+    [[ "$output" == *"</artifact>"* ]]
+}
+
+@test "emit_artifact: entity escape (& < > and literal </artifact>)" {
+    cat > "$PROMPTS_DIR/instr_root.md" <<'EOF'
+# Root
+
+## data
+
+body.
+EOF
+    emit_artifact "esc" 'a & b <c> d </artifact> e' "d"
+    run emit_prompt "$PROMPTS_DIR" "instr_root"
+    [ "$status" -eq 0 ]
+
+    [[ "$output" == *'a &amp; b &lt;c&gt; d &lt;/artifact&gt; e'* ]]
+    # No double-escape of `&` introduced by the later substitutions.
+    [[ "$output" != *'&amp;lt;'* ]]
+    [[ "$output" != *'&amp;gt;'* ]]
+    # The only literal `</artifact>` in the output is the wrapper's close.
+    local count
+    count=$(printf '%s\n' "$output" | grep -c '</artifact>')
+    [ "$count" -eq 1 ]
+}
+
+@test "emit_artifact + emit_prompt: queue lifecycle (survives entry, cleared after flush)" {
+    cat > "$PROMPTS_DIR/artdef_dep.md" <<'EOF'
+# Dep
+
+## data
+
+Dep body.
+EOF
+    cat > "$PROMPTS_DIR/instr_root.md" <<'EOF'
+# Root
+
+## data
+
+Use `@artdef_dep` and `@artifact_pre`.
+EOF
+    # Capture output via redirect (not `run`) so _EMIT_QUEUE mutations
+    # performed by emit_prompt persist across the two calls in this shell.
+    local out_file="$PROMPTS_DIR/_out1.txt"
+    emit_artifact "pre" "pre payload" "p"
+    emit_prompt "$PROMPTS_DIR" "instr_root" > "$out_file"
+    local out1; out1=$(<"$out_file")
+
+    # Order: artifact (caller-queued) -> artdef dep -> instruction root.
+    local art_pos dep_pos instr_pos
+    art_pos=$(printf '%s\n' "$out1" | grep -n '<artifact id="pre"' | head -1 | cut -d: -f1)
+    dep_pos=$(printf '%s\n' "$out1" | grep -n '<artdef id="artdef_dep"' | head -1 | cut -d: -f1)
+    instr_pos=$(printf '%s\n' "$out1" | grep -n '<instruction id="instr_root"' | head -1 | cut -d: -f1)
+    [ "$art_pos" -lt "$dep_pos" ]
+    [ "$dep_pos" -lt "$instr_pos" ]
+
+    # Second emission with no artifact queued: the first artifact must not reappear.
+    local out_file2="$PROMPTS_DIR/_out2.txt"
+    emit_prompt "$PROMPTS_DIR" "instr_root" > "$out_file2"
+    local out2; out2=$(<"$out_file2")
+    [[ "$out2" != *'<artifact id="pre"'* ]]
+    [[ "$out2" != *'pre payload'* ]]
+}
+
+# ---------------------------------------------------------------------------
 # Conditional lines
 # ---------------------------------------------------------------------------
 
