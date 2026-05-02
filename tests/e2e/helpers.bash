@@ -53,6 +53,16 @@ _plugin_version() {
         "$MKT_REPO/uspecs/.claude-plugin/plugin.json"
 }
 
+# _core_version: returns the SemVer core (X.Y.Z) read from $REPO_ROOT/version.txt,
+# matching the stripping logic in deliver.sh.
+_core_version() {
+    local raw
+    raw="$(tr -d '[:space:]' < "$REPO_ROOT/version.txt")"
+    raw="${raw%%-*}"
+    raw="${raw%%+*}"
+    printf '%s' "$raw"
+}
+
 # _commit_count: returns the number of commits on HEAD in MKT_REPO.
 _commit_count() {
     git -C "$MKT_REPO" rev-list --count HEAD

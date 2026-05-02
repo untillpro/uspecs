@@ -73,14 +73,15 @@ load 'helpers'
     # And plugin version is "<version>"
     # agent: claude
     # release_repo: uspecs/uspecs-plugins-claude
-    # version: 2.2.0
+    local core
+    core="$(_core_version)"
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver
     ver="$(_plugin_version)"
-    [ "$ver" = "2.2.0" ]
+    [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
-    [[ "$output" == *"Done: 2.2.0"* ]]
+    [[ "$output" == *"Done: $core"* ]]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: augment" {
@@ -88,14 +89,15 @@ load 'helpers'
     # And plugin version is "<version>"
     # agent: augment
     # release_repo: uspecs/uspecs-plugins-augment
-    # version: 2.2.0
+    local core
+    core="$(_core_version)"
     deliver --agent augment --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver
     ver="$(_plugin_version)"
-    [ "$ver" = "2.2.0" ]
+    [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
-    [[ "$output" == *"Done: 2.2.0"* ]]
+    [[ "$output" == *"Done: $core"* ]]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: codex" {
@@ -103,14 +105,15 @@ load 'helpers'
     # And plugin version is "<version>"
     # agent: codex
     # release_repo: uspecs/uspecs-plugins-codex
-    # version: 2.2.0
+    local core
+    core="$(_core_version)"
     deliver --agent codex --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver
     ver="$(_plugin_version)"
-    [ "$ver" = "2.2.0" ]
+    [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
-    [[ "$output" == *"Done: 2.2.0"* ]]
+    [[ "$output" == *"Done: $core"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -157,6 +160,9 @@ load 'helpers'
 # ---------------------------------------------------------------------------
 
 @test "deliver --release skips on second run when version matches and repo is clean" {
+    local core
+    core="$(_core_version)"
+
     # First run: generate, commit, push
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release
     [ "$status" -eq 0 ]
@@ -165,8 +171,8 @@ load 'helpers'
     # Second run: should skip
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Skipping claude: already at 2.2.0 and clean"* ]]
-    [[ "$output" == *"Done: 2.2.0"* ]]
+    [[ "$output" == *"Skipping claude: already at $core and clean"* ]]
+    [[ "$output" == *"Done: $core"* ]]
 }
 
 # ---------------------------------------------------------------------------
