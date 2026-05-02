@@ -10,10 +10,10 @@ Agents:
   augment -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
   codex   -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
 
-Version is read from <uspecs-repo>/version.txt unless --version is provided.
+Version must be supplied via --version (this script does not read version.txt).
 
 Usage:
-    python gen-uspecs-market.py --agent claude|augment|codex --uspecs-repo <uspecs-repo> --marketplace-repo <marketplace-repo> [--version <ver>]
+    python gen-uspecs-market.py --agent claude|augment|codex --uspecs-repo <uspecs-repo> --marketplace-repo <marketplace-repo> --version <ver>
 
 See also: gen-claude.sh, gen-augment.sh (convenience wrappers).
 """
@@ -427,11 +427,7 @@ def main() -> None:
     parser.add_argument(
         "--marketplace-repo", required=True, help="Path to output marketplace repo"
     )
-    parser.add_argument(
-        "--version",
-        default=None,
-        help="Version string (default: read from uspecs-repo/version.txt)",
-    )
+    parser.add_argument("--version", required=True, help="Version string")
     args: argparse.Namespace = parser.parse_args()
 
     config: AgentConfig = AGENT_CONFIGS[args.agent]
@@ -445,18 +441,7 @@ def main() -> None:
         print(f"error: --uspecs-repo directory not found: {source}", file=sys.stderr)
         sys.exit(1)
 
-    version: str = args.version or ""
-    if not version:
-        version_file: Path = source / "version.txt"
-        if version_file.is_file():
-            version = version_file.read_text(encoding="utf-8").strip()
-        else:
-            print(
-                f"error: no --version and no version.txt in --uspecs-repo {source}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
+    version: str = args.version
     market_name, plugin_name = resolve_names(config, version)
     upstream_commit: str = get_upstream_commit(source)
     generated_at: str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
