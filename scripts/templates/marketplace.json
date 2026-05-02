@@ -1,0 +1,11 @@
+{
+  "name": "{{market_name}}",
+  "description": "{{market_description}}",
+  "version": "{{version}}",
+  "plugins": [
+    {
+      "name": "{{plugin_name}}",
+      "source": "uspecs"
+    }
+  ]
+}

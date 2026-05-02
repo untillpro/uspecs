@@ -1,0 +1,11 @@
+action: uchange
+raw_text: |
+  Parse user input as `[options] {description}`:
+
+  - Determine `kebab-name` from {description}: kebab-case, max 40 chars (ideal 15-30), descriptive, safe to use as a git branch name
+  - If {description} contains a URL, add `--issue-url {URL}` option
+  - If the user asks to derive specifications from the codebase, add `--specs` option
+  - {{dispatch}} and follow the instructions in the output how to process {description}.
+  - Do not pass {description} verbatim to the command
+options: "`--kebab-name <name>` (required), `--no-impl`, `--branch`,
+  `--no-branch`, `--issue-url <url>`, `--specs`"

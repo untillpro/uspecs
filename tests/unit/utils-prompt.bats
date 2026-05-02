@@ -52,7 +52,7 @@ setup() {
     "
     [ "$status" -eq 0 ]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"See artifact definitions below, followed by instructions."* ]]
+    [[ "$output" == *"See artifact and artifact definitions (artdef) below, followed by instructions."* ]]
     [[ "$output" != *"Inform user about the results"* ]]
     [[ "$output" == *"Artifact definition here"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]

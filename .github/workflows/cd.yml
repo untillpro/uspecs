@@ -1,0 +1,74 @@
+name: Continuous Delivery
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent: [ claude, augment, codex ]
+    steps:
+      - name: Checkout uspecs
+        uses: actions/checkout@v4
+        with:
+          path: uspecs
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install PyYAML
+
+      - name: Determine routing
+        id: routing
+        shell: bash
+        run: |
+          VERSION=$(cat uspecs/version.txt)
+          if [[ "$VERSION" =~ - ]]; then
+            # Pre-release suffix exists -> Dev stream
+            echo "mode=dev" >> $GITHUB_OUTPUT
+            case "${{ matrix.agent }}" in
+              claude)  echo "repo=uspecs-dev-plugins-claude"  >> $GITHUB_OUTPUT ;;
+              augment) echo "repo=uspecs-dev-plugins-augment" >> $GITHUB_OUTPUT ;;
+              codex)   echo "repo=uspecs-dev-plugins-codex"   >> $GITHUB_OUTPUT ;;
+            esac
+          else
+            # Stable version -> Release stream
+            echo "mode=release" >> $GITHUB_OUTPUT
+            case "${{ matrix.agent }}" in
+              claude)  echo "repo=uspecs-plugins-claude"  >> $GITHUB_OUTPUT ;;
+              augment) echo "repo=uspecs-plugins-augment" >> $GITHUB_OUTPUT ;;
+              codex)   echo "repo=uspecs-plugins-codex"   >> $GITHUB_OUTPUT ;;
+            esac
+          fi
+
+      - name: Checkout marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: uspecs/${{ steps.routing.outputs.repo }}
+          token: ${{ secrets.USPECS_DELIVERY_TOKEN }}
+          path: marketplace
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deliver
+        run: |
+          ARGS="--agent ${{ matrix.agent }} --uspecs-repo uspecs --marketplace-repo marketplace"
+          if [ "${{ steps.routing.outputs.mode }}" = "release" ]; then
+            ARGS="$ARGS --release"
+          fi
+          bash uspecs/scripts/deliver.sh $ARGS

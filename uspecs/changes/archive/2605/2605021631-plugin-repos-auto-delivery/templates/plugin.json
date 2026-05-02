@@ -1,0 +1,8 @@
+{
+  "name": "uspecs",
+  "description": "{{plugin_description}}",
+  "version": "{{version}}",
+  "author": {
+    "name": "unTill Software Development Group B.V."
+  }
+}

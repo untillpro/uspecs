@@ -16,12 +16,12 @@ set -Eeuo pipefail
 #
 # Workflow:
 #   Phase 1: Create release tag
-#     1. Read current version from version.txt (X.Y.Z-aN)
+#     1. Read current version from version.txt (X.Y.Z-dev)
 #     2. Create temporary branch with version.txt set to X.Y.Z
 #     3. Create and push tag vX.Y.Z
 #     4. Delete temporary branch
 #   Phase 2: Create version bump PR
-#     5. Create branch with version.txt set to X.Y+1.0-a0
+#     5. Create branch with version.txt set to X.Y+1.0-dev
 #     6. Create PR to main
 
 error() {
@@ -31,14 +31,14 @@ error() {
 
 validate_version() {
     local version="$1"
-    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-a[0-9]+)?$ ]]; then
-        error "Invalid version format: $version (expected X.Y.Z or X.Y.Z-aN)"
+    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$ ]]; then
+        error "Invalid version format: $version (expected X.Y.Z or X.Y.Z-dev)"
     fi
 }
 
 get_release_version() {
     local version="$1"
-    echo "${version%-a*}"
+    echo "${version%-dev}"
 }
 
 get_next_dev_version() {
@@ -50,7 +50,7 @@ get_next_dev_version() {
     IFS='.' read -r major minor _patch <<< "$release_version"
 
     minor=$((minor + 1))
-    echo "${major}.${minor}.0-a0"
+    echo "${major}.${minor}.0-dev"
 }
 
 check_gh_cli() {
