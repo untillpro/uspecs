@@ -474,7 +474,7 @@ def main() -> None:
             )
             sys.exit(1)
 
-    plugin_dir: Path = output / "uspecs"
+    plugin_dir: Path = output / plugin_name
     plugin_dir.mkdir()
     root_claude: Path = output / ".claude-plugin"
     readme_path: Path = output / "README.md"

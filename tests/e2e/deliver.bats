@@ -17,9 +17,10 @@ load 'helpers'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated claude (--local: no commit, no push)"* ]]
     [[ "$output" == *"Done:"* ]]
-    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ -f "$MKT_REPO/uspecs-dev/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs" ]
     local ver
-    ver="$(_plugin_version)"
+    ver="$(_plugin_version uspecs-dev)"
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
@@ -27,7 +28,9 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
-    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
@@ -40,9 +43,10 @@ load 'helpers'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated augment (--local: no commit, no push)"* ]]
     [[ "$output" == *"Done:"* ]]
-    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ -f "$MKT_REPO/uspecs-dev/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs" ]
     local ver
-    ver="$(_plugin_version)"
+    ver="$(_plugin_version uspecs-dev)"
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
@@ -50,7 +54,9 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
-    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -63,9 +69,10 @@ load 'helpers'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated codex (--local: no commit, no push)"* ]]
     [[ "$output" == *"Done:"* ]]
-    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ -f "$MKT_REPO/uspecs-dev/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs" ]
     local ver
-    ver="$(_plugin_version)"
+    ver="$(_plugin_version uspecs-dev)"
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
@@ -73,7 +80,9 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
-    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
 }
 
 # ---------------------------------------------------------------------------
@@ -97,6 +106,10 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
@@ -117,6 +130,10 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
@@ -137,6 +154,10 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+    [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 

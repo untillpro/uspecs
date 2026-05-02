@@ -47,10 +47,13 @@ deliver() {
     run --separate-stderr bash "$REPO_ROOT/scripts/deliver.sh" "$@"
 }
 
-# _plugin_version: reads the version field from plugin.json in MKT_REPO.
+# _plugin_version [plugin-folder]: reads the version field from plugin.json
+# in MKT_REPO. plugin-folder defaults to "uspecs" (stable); pass "uspecs-dev"
+# for dev builds.
 _plugin_version() {
+    local plugin_folder="${1:-uspecs}"
     python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" \
-        "$MKT_REPO/uspecs/.claude-plugin/plugin.json"
+        "$MKT_REPO/$plugin_folder/.claude-plugin/plugin.json"
 }
 
 # _marketplace_field <python-index-expr>: reads a nested field from
@@ -60,11 +63,13 @@ _marketplace_field() {
         "$MKT_REPO/.claude-plugin/marketplace.json"
 }
 
-# _plugin_field <python-index-expr>: reads a nested field from plugin.json.
-# Example: _plugin_field "['author']['name']"
+# _plugin_field <python-index-expr> [plugin-folder]: reads a nested field
+# from plugin.json. Example: _plugin_field "['author']['name']"
+# plugin-folder defaults to "uspecs"; pass "uspecs-dev" for dev builds.
 _plugin_field() {
+    local plugin_folder="${2:-uspecs}"
     python3 -c "import json,sys; print(json.load(open(sys.argv[1]))$1)" \
-        "$MKT_REPO/uspecs/.claude-plugin/plugin.json"
+        "$MKT_REPO/$plugin_folder/.claude-plugin/plugin.json"
 }
 
 # _core_version: returns the SemVer core (X.Y.Z) read from $REPO_ROOT/version.txt,
