@@ -225,11 +225,13 @@ load 'helpers'
 # Case 8: marketplace-repo guard - bootstrap files vs non-bootstrap files
 # ---------------------------------------------------------------------------
 
-@test "deliver accepts a marketplace repo bootstrapped with README.md and .gitignore" {
-    # Simulate a freshly-created GitHub repo initialised with a README.
+@test "deliver accepts a marketplace repo bootstrapped with README.md, .gitignore and LICENSE" {
+    # Simulate a freshly-created GitHub repo initialised with a README,
+    # .gitignore, and LICENSE (typical "create repo" defaults).
     echo "# placeholder" > "$MKT_REPO/README.md"
     printf '*.log\n' > "$MKT_REPO/.gitignore"
-    git -C "$MKT_REPO" add README.md .gitignore
+    echo "MIT" > "$MKT_REPO/LICENSE"
+    git -C "$MKT_REPO" add README.md .gitignore LICENSE
     git -C "$MKT_REPO" commit -q -m "bootstrap"
 
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local

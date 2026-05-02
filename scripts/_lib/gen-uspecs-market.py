@@ -112,7 +112,7 @@ _MARKETPLACE_NAME_PATTERN: re.Pattern[str] = re.compile(r"^uspecs.*plugin")
 # Bootstrap files tolerated in an otherwise-empty destination repo (e.g. a
 # freshly created GitHub repo initialised with a README). Anything outside
 # this set blocks the wipe.
-_BOOTSTRAP_ALLOWED: frozenset[str] = frozenset({"README.md", ".gitignore"})
+_BOOTSTRAP_ALLOWED: frozenset[str] = frozenset({"README.md", ".gitignore", "LICENSE"})
 
 
 def validate_marketplace_repo(output: Path) -> None:
@@ -121,7 +121,7 @@ def validate_marketplace_repo(output: Path) -> None:
     Safe means one of:
       - The path does not exist yet (will be created empty).
       - The directory contains only .git and/or bootstrap files
-        (README.md, .gitignore).
+        (README.md, .gitignore, LICENSE).
       - .claude-plugin/marketplace.json parses and its `name` matches
         the marketplace name pattern (proof of prior generation).
     """
