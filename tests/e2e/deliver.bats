@@ -154,3 +154,25 @@ load 'helpers'
     [[ "$output" != *"Skipping"* ]]
     [[ "$output" == *"Generating claude marketplace"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Case 7: source validation - invalid feature title
+# ---------------------------------------------------------------------------
+
+@test "deliver fails when feature title contains invalid YAML plain scalar sequence" {
+    # Create a temp copy of the uspecs repo so we can mutate a feature file
+    local tmp_repo="$BATS_TEST_TMPDIR/uspecs-invalid-feature"
+    cp -r "$REPO_ROOT" "$tmp_repo"
+    case "$OSTYPE" in
+        msys*|cygwin*) tmp_repo=$(cygpath -m "$tmp_repo") ;;
+    esac
+
+    # Inject ': ' into a feature title (invalid in unquoted YAML)
+    local feature_file="$tmp_repo/uspecs/specs/prod/softeng/upr.feature"
+    sed -i '1s/.*/Feature: Create pull request: from current branch/' "$feature_file"
+
+    deliver --agent claude --uspecs-repo "$tmp_repo" --marketplace-repo "$MKT_REPO" --local
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"feature title contains ': '"* ]]
+    [[ "${stderr:-}" == *"Fix the .feature file"* ]]
+}

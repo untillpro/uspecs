@@ -225,7 +225,16 @@ def read_feature_description(source: Path, action: str) -> str:
             file=sys.stderr,
         )
         sys.exit(1)
-    return first_line[len(prefix) :].strip()
+    description: str = first_line[len(prefix) :].strip()
+    for seq in _YAML_PLAIN_FORBIDDEN:
+        if seq in description:
+            print(
+                f"error: {feature_path}: feature title contains '{seq}' "
+                f"which is invalid in unquoted YAML. Fix the .feature file.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    return description
 
 
 def load_actions(source: Path) -> list[ActionData]:
@@ -485,14 +494,15 @@ def main() -> None:
 
     # Copy knowledge skills (uspecs-* only, from .claude/skills/)
     src_skills: Path = source / ".claude" / "skills"
+
+    # Validate knowledge skill frontmatter at source
+    validate_skill_frontmatter(src_skills)
+
     dst_skills: Path = plugin_dir / "skills"
     dst_skills.mkdir()
     for skill_dir in sorted(src_skills.iterdir()):
         if skill_dir.is_dir() and skill_dir.name.startswith("uspecs-"):
             shutil.copytree(skill_dir, dst_skills / skill_dir.name)
-
-    # Validate SKILL.md frontmatter: plain scalar values must not contain ": "
-    validate_skill_frontmatter(dst_skills)
 
     # Load template and actions
     tpl_path: Path = TEMPLATES_DIR / config.action_template
