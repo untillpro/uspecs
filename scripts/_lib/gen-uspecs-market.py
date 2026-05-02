@@ -109,13 +109,19 @@ FEATURES_REL: str = "uspecs/specs/prod/softeng"
 # `uspecs-dev-plugins-augment`, etc.
 _MARKETPLACE_NAME_PATTERN: re.Pattern[str] = re.compile(r"^uspecs.*plugin")
 
+# Bootstrap files tolerated in an otherwise-empty destination repo (e.g. a
+# freshly created GitHub repo initialised with a README). Anything outside
+# this set blocks the wipe.
+_BOOTSTRAP_ALLOWED: frozenset[str] = frozenset({"README.md", ".gitignore"})
+
 
 def validate_marketplace_repo(output: Path) -> None:
     """Refuse to wipe --marketplace-repo unless it looks safe.
 
     Safe means one of:
       - The path does not exist yet (will be created empty).
-      - The directory is empty apart from .git.
+      - The directory contains only .git and/or bootstrap files
+        (README.md, .gitignore).
       - .claude-plugin/marketplace.json parses and its `name` matches
         the marketplace name pattern (proof of prior generation).
     """
@@ -154,11 +160,15 @@ def validate_marketplace_repo(output: Path) -> None:
             sys.exit(1)
         return
 
-    children: list[str] = sorted(c.name for c in output.iterdir() if c.name != ".git")
-    if children:
+    extras: list[str] = sorted(
+        c.name
+        for c in output.iterdir()
+        if c.name != ".git" and c.name not in _BOOTSTRAP_ALLOWED
+    )
+    if extras:
         print(
             f"error: --marketplace-repo {output}: not a recognised marketplace "
-            f"and not empty (found: {children}); refusing to wipe",
+            f"and contains non-bootstrap files (found: {extras}); refusing to wipe",
             file=sys.stderr,
         )
         sys.exit(1)

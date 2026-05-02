@@ -220,3 +220,31 @@ load 'helpers'
     [[ "${stderr:-}" == *"feature title contains ': '"* ]]
     [[ "${stderr:-}" == *"Fix the .feature file"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Case 8: marketplace-repo guard - bootstrap files vs non-bootstrap files
+# ---------------------------------------------------------------------------
+
+@test "deliver accepts a marketplace repo bootstrapped with README.md and .gitignore" {
+    # Simulate a freshly-created GitHub repo initialised with a README.
+    echo "# placeholder" > "$MKT_REPO/README.md"
+    printf '*.log\n' > "$MKT_REPO/.gitignore"
+    git -C "$MKT_REPO" add README.md .gitignore
+    git -C "$MKT_REPO" commit -q -m "bootstrap"
+
+    deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
+    [ "$status" -eq 0 ]
+    [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
+}
+
+@test "deliver refuses to wipe a marketplace repo containing non-bootstrap files" {
+    # Anything outside the bootstrap allowlist must block the wipe.
+    mkdir -p "$MKT_REPO/src"
+    echo "print('hi')" > "$MKT_REPO/src/main.py"
+
+    deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"not a recognised marketplace"* ]]
+    [[ "${stderr:-}" == *"non-bootstrap files"* ]]
+    [[ "${stderr:-}" == *"src"* ]]
+}
