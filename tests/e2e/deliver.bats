@@ -4,10 +4,15 @@ set -Eeuo pipefail
 load 'helpers'
 
 # ---------------------------------------------------------------------------
-# Case 1: --local default (dev) build, per agent
+# cd.feature: Routing by version.txt -- Pre-release routes to Dev Plugin Repos
 # ---------------------------------------------------------------------------
 
-@test "deliver --local dev build for claude" {
+@test "cd: scn: Pre-release version routes to Dev Plugin Repositories: claude" {
+    # Then plugin is delivered to "<dev_repo>"
+    # And plugin version is "<core>-dev+<TS>.<SHORT_SHA>"
+    # agent: claude
+    # dev_repo: uspecs/uspecs-dev-plugins-claude
+    # core: 2.2.0
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --local
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated claude (--local: no commit, no push)"* ]]
@@ -18,9 +23,15 @@ load 'helpers'
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
+    _assert_dev_install_block "claude" "claude"
 }
 
-@test "deliver --local dev build for augment" {
+@test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
+    # Then plugin is delivered to "<dev_repo>"
+    # And plugin version is "<core>-dev+<TS>.<SHORT_SHA>"
+    # agent: augment
+    # dev_repo: uspecs/uspecs-dev-plugins-augment
+    # core: 2.2.0
     deliver --agent augment --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --local
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated augment (--local: no commit, no push)"* ]]
@@ -31,9 +42,15 @@ load 'helpers'
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
+    _assert_dev_install_block "augment" "augment"
 }
 
-@test "deliver --local dev build for codex" {
+@test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
+    # Then plugin is delivered to "<dev_repo>"
+    # And plugin version is "<core>-dev+<TS>.<SHORT_SHA>"
+    # agent: codex
+    # dev_repo: uspecs/uspecs-dev-plugins-codex
+    # core: 2.2.0
     deliver --agent codex --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --local
     [ "$status" -eq 0 ]
     [[ "$output" == *"Generated codex (--local: no commit, no push)"* ]]
@@ -44,13 +61,19 @@ load 'helpers'
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
+    _assert_dev_install_block "codex" "codex"
 }
 
 # ---------------------------------------------------------------------------
-# Case 2: --release --local per agent
+# cd.feature: Routing by version.txt -- Stable routes to Release Plugin Repos
 # ---------------------------------------------------------------------------
 
-@test "deliver --release --local for claude" {
+@test "cd: scn: Stable version routes to Release Plugin Repositories: claude" {
+    # Then plugin is delivered to "<release_repo>"
+    # And plugin version is "<version>"
+    # agent: claude
+    # release_repo: uspecs/uspecs-plugins-claude
+    # version: 2.2.0
     deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver
@@ -60,7 +83,12 @@ load 'helpers'
     [[ "$output" == *"Done: 2.2.0"* ]]
 }
 
-@test "deliver --release --local for augment" {
+@test "cd: scn: Stable version routes to Release Plugin Repositories: augment" {
+    # Then plugin is delivered to "<release_repo>"
+    # And plugin version is "<version>"
+    # agent: augment
+    # release_repo: uspecs/uspecs-plugins-augment
+    # version: 2.2.0
     deliver --agent augment --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver
@@ -70,7 +98,12 @@ load 'helpers'
     [[ "$output" == *"Done: 2.2.0"* ]]
 }
 
-@test "deliver --release --local for codex" {
+@test "cd: scn: Stable version routes to Release Plugin Repositories: codex" {
+    # Then plugin is delivered to "<release_repo>"
+    # And plugin version is "<version>"
+    # agent: codex
+    # release_repo: uspecs/uspecs-plugins-codex
+    # version: 2.2.0
     deliver --agent codex --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --release --local
     [ "$status" -eq 0 ]
     local ver

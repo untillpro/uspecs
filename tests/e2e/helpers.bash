@@ -57,3 +57,14 @@ _plugin_version() {
 _commit_count() {
     git -C "$MKT_REPO" rev-list --count HEAD
 }
+
+# _assert_dev_install_block <cli> <agent>: asserts README.md install block
+# references the dev marketplace consistently for the given agent.
+_assert_dev_install_block() {
+    local cli="$1"
+    local agent="$2"
+    local market_name="uspecs-dev-plugins-$agent"
+    local readme="$MKT_REPO/README.md"
+    [[ "$(cat "$readme")" == *"$cli plugin marketplace add uspecs/$market_name"* ]]
+    [[ "$(cat "$readme")" == *"$cli plugin install uspecs-dev@$market_name"* ]]
+}

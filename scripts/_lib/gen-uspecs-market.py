@@ -54,7 +54,6 @@ class AgentConfig:
     dispatch: str
     host: str
     cli: str
-    repo_path: str
 
 
 @dataclass
@@ -81,7 +80,6 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch="run `bash softeng.sh action {{action}} [options]`",
         host="Claude Code",
         cli="claude",
-        repo_path="uspecs/uspecs-plugins-claude",
     ),
     "augment": AgentConfig(
         market_name="uspecs-plugins-augment",
@@ -91,7 +89,6 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch=_DISPATCH_PLUGIN_ROOT,
         host="Augment Code",
         cli="augment",
-        repo_path="uspecs/uspecs-plugins-augment",
     ),
     "codex": AgentConfig(
         market_name="uspecs-plugins-codex",
@@ -101,7 +98,6 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch=_DISPATCH_REL_BIN,
         host="Codex",
         cli="codex",
-        repo_path="uspecs/uspecs-plugins-codex",
     ),
 }
 
@@ -371,9 +367,11 @@ def render_install_block(
     config: AgentConfig, market_name: str, plugin_name: str
 ) -> str:
     """Per-agent install commands (matches scripts/INSTALL.md format)."""
+    # Derive repo path from market_name (already dev-adjusted when needed)
+    repo_path: str = f"uspecs/{market_name}"
     return (
         "```sh\n"
-        f"{config.cli} plugin marketplace add {config.repo_path}\n"
+        f"{config.cli} plugin marketplace add {repo_path}\n"
         f"{config.cli} plugin install {plugin_name}@{market_name}\n"
         "```"
     )
