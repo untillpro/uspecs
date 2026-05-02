@@ -1,0 +1,16 @@
+{
+  "name": "{{market_name}}",
+  "owner": {
+    "name": "unTill Software Development Group B.V."
+  },
+  "metadata": {
+    "description": "{{market_description}}",
+    "version": "{{version}}"
+  },
+  "plugins": [
+    {
+      "name": "{{plugin_name}}",
+      "source": "./uspecs"
+    }
+  ]
+}

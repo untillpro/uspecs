@@ -25,16 +25,16 @@ Developer -> release.yml (workflow_dispatch)
                v
            release.sh
                |
-               +-- reads version.txt (X.Y.Z-aN)
+               +-- reads version.txt (X.Y.Z-dev)
                +-- creates tag vX.Y.Z (version.txt set to X.Y.Z)
                +-- pushes tag to remote
-               +-- creates PR "X.Y+1.0-a0" to main (version.txt set to X.Y+1.0-a0)
+               +-- creates PR "X.Y+1.0-dev" to main (version.txt set to X.Y+1.0-dev)
 ```
 
 ## Key data models
 
 ### Version transformation
 
-- Given version X.Y.Z-aN:
+- Given version X.Y.Z-dev:
   - Tag: vX.Y.Z (strip pre-release identifier, version.txt set to X.Y.Z)
-  - PR: X.Y+1.0-a0 (bump minor, reset patch, version.txt set to X.Y+1.0-a0)
+  - PR: X.Y+1.0-dev (bump minor, reset patch, version.txt set to X.Y+1.0-dev)
