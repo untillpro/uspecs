@@ -373,7 +373,7 @@ def render_plugin_json(version: str, plugin_name: str) -> str:
 def render_install_block(
     config: AgentConfig, market_name: str, plugin_name: str
 ) -> str:
-    """Per-agent install commands (matches scripts/INSTALL.md format)."""
+    """Per-agent install commands."""
     # Derive repo path from market_name (already dev-adjusted when needed)
     repo_path: str = f"uspecs/{market_name}"
     return (
