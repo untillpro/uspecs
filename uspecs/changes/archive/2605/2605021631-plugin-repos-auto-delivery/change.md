@@ -59,32 +59,32 @@ Feature Technical Design for cd.feature is needed:
 
 Align the existing release feature with the `-dev` scheme so that `version.txt` on `main` always carries `-dev` (instead of the current `-aN` alpha scheme):
 
-- [release.feature](../../../../../../../../specs/devops/dev/release.feature): scenario uses `-dev` for current and bumped dev versions
-- [release--td.md](../../../../../../../../specs/devops/dev/release--td.md): "Version transformation" describes `X.Y.Z-dev` and bump target `X.Y+1.0-dev`
-- [release.sh](../../../../../../../../../scripts/release.sh): `validate_version` regex accepts `-dev`; `get_release_version` strips `-dev`; `get_next_dev_version` produces `X.Y+1.0-dev`
+- [release.feature](../../../../specs/devops/dev/release.feature): scenario uses `-dev` for current and bumped dev versions
+- [release--td.md](../../../../specs/devops/dev/release--td.md): "Version transformation" describes `X.Y.Z-dev` and bump target `X.Y+1.0-dev`
+- [release.sh](../../../../../scripts/release.sh): `validate_version` regex accepts `-dev`; `get_release_version` strips `-dev`; `get_next_dev_version` produces `X.Y+1.0-dev`
 
 References:
 
-- [.github/workflows/release.yml](../../../../../../../../../.github/workflows/release.yml)
-- [scripts/release.sh](../../../../../../../../../scripts/release.sh)
-- [version.txt](../../../../../../../../../version.txt)
-- [.claude/skills](../../../../../../../../../.claude/skills)
-- [uspecs/specs/devops/domain.md](../../../../../../../../specs/devops/domain.md)
-- [uspecs/specs/devops/dev/release.feature](../../../../../../../../specs/devops/dev/release.feature)
-- [uspecs/specs/devops/dev/release--td.md](../../../../../../../../specs/devops/dev/release--td.md)
+- [.github/workflows/release.yml](../../../../../.github/workflows/release.yml)
+- [scripts/release.sh](../../../../../scripts/release.sh)
+- [version.txt](../../../../../version.txt)
+- [.claude/skills](../../../../../.claude/skills)
+- [uspecs/specs/devops/domain.md](../../../../specs/devops/domain.md)
+- [uspecs/specs/devops/dev/release.feature](../../../../specs/devops/dev/release.feature)
+- [uspecs/specs/devops/dev/release--td.md](../../../../specs/devops/dev/release--td.md)
 
 ## Domain specifications
 
-- [x] update: [devops/domain.md](../../../../../../../../specs/devops/domain.md)
+- [x] update: [devops/domain.md](../../../../specs/devops/domain.md)
   - add: `## Concepts` section between `## External actors` and `## Contexts`
   - add: "Dev Plugin Repository" concept - per-agent external GitHub repository holding the development stream of the plugin, updated automatically from `main` while `version.txt` carries a `-dev` suffix
   - add: "Release Plugin Repository" concept - per-agent external GitHub repository holding the stable release stream of the plugin, updated automatically when a stable `version.txt` is tagged
 
 ## Functional design
 
-- [x] create: [devops/dev/cd.feature](../../../../../../../../specs/devops/dev/cd.feature)
+- [x] create: [devops/dev/cd.feature](../../../../specs/devops/dev/cd.feature)
   - Feature specification for continuous delivery of plugins to per-agent external repositories
-- [x] update: [devops/dev/release.feature](../../../../../../../../specs/devops/dev/release.feature)
+- [x] update: [devops/dev/release.feature](../../../../specs/devops/dev/release.feature)
   - update: replace alpha scheme (`-aN`, e.g. `1.7.0-a4`, `1.8.0-a0`) with development scheme (`-dev`, e.g. `1.7.0-dev`, `1.8.0-dev`) in "Developer triggers release via GitHub Action" scenario
 
 ## Provisioning and configuration
@@ -96,24 +96,24 @@ References:
 
 ## Technical design
 
-- [x] create: [devops/dev/cd--td.md](../../../../../../../../specs/devops/dev/cd--td.md)
+- [x] create: [devops/dev/cd--td.md](../../../../specs/devops/dev/cd--td.md)
   - Feature Technical Design: GitHub Actions workflow, deliver.sh logic, URL mapping, authentication
-- [x] update: [devops/dev/release--td.md](../../../../../../../../specs/devops/dev/release--td.md)
+- [x] update: [devops/dev/release--td.md](../../../../specs/devops/dev/release--td.md)
   - update: replace alpha scheme (`-aN`, e.g. `X.Y.Z-aN`, `X.Y+1.0-a0`) with development scheme (`-dev`, e.g. `X.Y.Z-dev`, `X.Y+1.0-dev`) in "Version transformation" section
 
 ## Construction
 
-- [x] create: [.github/workflows/cd.yml](../../../../../../../../../.github/workflows/cd.yml)
+- [x] create: [.github/workflows/cd.yml](../../../../../.github/workflows/cd.yml)
   - GitHub Actions workflow for continuous delivery
   - Matrix over agents (claude, augment, codex)
   - Routing logic based on `version.txt` (dev vs release)
-- [x] create: [scripts/deliver.sh](../../../../../../../../../scripts/deliver.sh)
+- [x] create: [scripts/deliver.sh](../../../../../scripts/deliver.sh)
   - adopt from [deploy.sh](deploy.sh)
-- [x] create: [scripts/_lib/gen-uspecs-market.py](../../../../../../../../../scripts/_lib/gen-uspecs-market.py)
+- [x] create: [scripts/_lib/gen-uspecs-market.py](../../../../../scripts/_lib/gen-uspecs-market.py)
   - adopt from [gen-uspecs-market.py](gen-uspecs-market.py)
-- [x] create: [scripts/templates/](../../../../../../../../../scripts/templates/)
+- [x] create: [scripts/templates/](../../../../../scripts/templates/)
   - adopt from [templates/](templates)
-- [x] update: [scripts/release.sh](../../../../../../../../../scripts/release.sh)
+- [x] update: [scripts/release.sh](../../../../../scripts/release.sh)
   - update: `validate_version` regex to accept `-dev`
   - update: `get_release_version` to strip `-dev`
   - update: `get_next_dev_version` to produce `X.Y+1.0-dev`
