@@ -200,9 +200,14 @@ load 'helpers'
         msys*|cygwin*) tmp_repo=$(cygpath -m "$tmp_repo") ;;
     esac
 
-    # Inject ': ' into a feature title (invalid in unquoted YAML)
+    # Inject ': ' into a feature title (invalid in unquoted YAML).
+    # Replace line 1 portably (avoid GNU/BSD `sed -i` differences).
     local feature_file="$tmp_repo/uspecs/specs/prod/softeng/upr.feature"
-    sed -i '1s/.*/Feature: Create pull request: from current branch/' "$feature_file"
+    {
+        echo "Feature: Create pull request: from current branch"
+        tail -n +2 "$feature_file"
+    } > "$feature_file.tmp"
+    mv "$feature_file.tmp" "$feature_file"
 
     deliver --agent claude --uspecs-repo "$tmp_repo" --marketplace-repo "$MKT_REPO" --local
     [ "$status" -ne 0 ]
