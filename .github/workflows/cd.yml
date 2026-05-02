@@ -17,13 +17,13 @@ jobs:
         agent: [ claude, augment, codex ]
     steps:
       - name: Checkout uspecs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: uspecs
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
@@ -54,7 +54,7 @@ jobs:
           fi
 
       - name: Checkout marketplace
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: uspecs/${{ steps.routing.outputs.repo }}
           token: ${{ secrets.USPECS_DELIVERY_TOKEN }}

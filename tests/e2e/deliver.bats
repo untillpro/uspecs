@@ -27,6 +27,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
@@ -49,6 +50,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -71,6 +73,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 # ---------------------------------------------------------------------------
@@ -94,6 +97,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: augment" {
@@ -113,6 +117,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: codex" {
@@ -132,6 +137,7 @@ load 'helpers'
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
+    [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
 }
 
 # ---------------------------------------------------------------------------
