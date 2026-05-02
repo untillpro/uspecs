@@ -53,6 +53,13 @@ _plugin_version() {
         "$MKT_REPO/uspecs/.claude-plugin/plugin.json"
 }
 
+# _marketplace_field <python-index-expr>: reads a nested field from
+# marketplace.json. Example: _marketplace_field "['owner']['name']"
+_marketplace_field() {
+    python3 -c "import json,sys; print(json.load(open(sys.argv[1]))$1)" \
+        "$MKT_REPO/.claude-plugin/marketplace.json"
+}
+
 # _core_version: returns the SemVer core (X.Y.Z) read from $REPO_ROOT/version.txt,
 # matching the stripping logic in deliver.sh.
 _core_version() {

@@ -24,6 +24,9 @@ load 'helpers'
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
     _assert_dev_install_block "claude" "claude"
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
@@ -43,6 +46,9 @@ load 'helpers'
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
     _assert_dev_install_block "augment" "augment"
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -62,6 +68,9 @@ load 'helpers'
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
     _assert_dev_install_block "codex" "codex"
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
 }
 
 # ---------------------------------------------------------------------------
@@ -82,6 +91,9 @@ load 'helpers'
     [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
     [[ "$output" == *"Done: $core"* ]]
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: augment" {
@@ -98,6 +110,9 @@ load 'helpers'
     [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
     [[ "$output" == *"Done: $core"* ]]
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: codex" {
@@ -114,6 +129,9 @@ load 'helpers'
     [ "$ver" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
     [[ "$output" == *"Done: $core"* ]]
+    [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
+    [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
 }
 
 # ---------------------------------------------------------------------------

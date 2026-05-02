@@ -1,7 +1,12 @@
 {
   "name": "{{market_name}}",
-  "description": "{{market_description}}",
-  "version": "{{version}}",
+  "owner": {
+    "name": "unTill Software Development Group B.V."
+  },
+  "metadata": {
+    "description": "{{market_description}}",
+    "version": "{{version}}"
+  },
   "plugins": [
     {
       "name": "{{plugin_name}}",
