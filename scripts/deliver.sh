@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # Regenerate one uspecs marketplace.
 #
 # Default mode: dev build. Version = <CORE>-dev+YYYYMMDD-HHMM.<SHORT_SHA> (UTC),
-# where CORE is the SemVer core read from version.txt with any
+# where CORE is the SemVer core read from <uspecs-repo>/version.txt with any
 # pre-release / build suffix stripped, and SHORT_SHA is the first 12
 # characters of the HEAD commit hash from --uspecs-repo.
 #
@@ -77,8 +77,7 @@ if [ -z "$MARKETPLACE_REPO" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION_FILE="$REPO_ROOT/version.txt"
+VERSION_FILE="$USPECS_REPO/version.txt"
 
 if [ ! -f "$VERSION_FILE" ]; then
   echo "error: version.txt not found at $VERSION_FILE" >&2
