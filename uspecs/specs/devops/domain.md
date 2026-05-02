@@ -25,9 +25,9 @@ Systems:
     - https://github.com/uspecs/uspecs-dev-plugins-codex
 - Release Plugin Repository: per-agent external GitHub repository that holds the stable release stream of the plugin, updated automatically when a stable `version.txt` is tagged
   - Examples
-    - https://github.com/uspecs/uspecs-release-plugins-claude
-    - https://github.com/uspecs/uspecs-release-plugins-augment
-    - https://github.com/uspecs/uspecs-release-plugins-codex
+    - https://github.com/uspecs/uspecs-plugins-claude
+    - https://github.com/uspecs/uspecs-plugins-augment
+    - https://github.com/uspecs/uspecs-plugins-codex
   
 ## Contexts
 
