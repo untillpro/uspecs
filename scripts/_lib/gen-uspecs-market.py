@@ -182,7 +182,14 @@ def validate_skill_frontmatter(skills_dir: Path) -> None:
         text: str = skill_md.read_text(encoding="utf-8")
         if not text.startswith("---\n"):
             continue
-        end: int = text.index("\n---", 1)
+        end: int = text.find("\n---", 1)
+        if end == -1:
+            print(
+                f"error: {skill_md}: frontmatter is missing a closing '---' "
+                f"terminator.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         frontmatter: str = text[4:end]
         for line_no, line in enumerate(frontmatter.split("\n"), start=2):
             # Match "key: value" lines (skip continuation lines, blank lines)
