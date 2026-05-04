@@ -29,8 +29,9 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
@@ -55,8 +56,9 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -81,8 +83,9 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs-dev" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs-dev" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -107,10 +110,11 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs" ]
     [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
     [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']")" != *"development build"* ]]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: augment" {
@@ -131,10 +135,11 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs" ]
     [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
     [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']")" != *"development build"* ]]
 }
 
 @test "cd: scn: Stable version routes to Release Plugin Repositories: codex" {
@@ -155,10 +160,11 @@ load 'helpers'
     [[ "$(_marketplace_field "['metadata']['description']")" != *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$core" ]
     [ "$(_marketplace_field "['plugins'][0]['name']")" = "uspecs" ]
-    [ "$(_marketplace_field "['plugins'][0]['source']")" = "uspecs" ]
+    [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs" ]
     [ -f "$MKT_REPO/uspecs/.claude-plugin/plugin.json" ]
     [ ! -d "$MKT_REPO/uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']")" = "unTill Software Development Group B.V." ]
+    [[ "$(_plugin_field "['description']")" != *"development build"* ]]
 }
 
 # ---------------------------------------------------------------------------

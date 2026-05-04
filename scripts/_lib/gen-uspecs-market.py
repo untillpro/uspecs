@@ -319,6 +319,13 @@ def resolve_description(config: AgentConfig, version: str) -> str:
     return config.market_description
 
 
+def resolve_plugin_description(version: str) -> str:
+    """Return plugin description, with a dev-build suffix for dev versions."""
+    if is_dev_version(version):
+        return f"{PLUGIN_DESCRIPTION} (development build)"
+    return PLUGIN_DESCRIPTION
+
+
 def get_upstream_commit(source: Path) -> str:
     """Return source repo HEAD SHA, with `-dirty` if working tree is dirty."""
     try:
@@ -372,7 +379,7 @@ def render_plugin_json(version: str, plugin_name: str) -> str:
     plugin: dict[str, object] = cast("dict[str, object]", parsed)
 
     plugin["name"] = plugin_name
-    plugin["description"] = PLUGIN_DESCRIPTION
+    plugin["description"] = resolve_plugin_description(version)
     plugin["version"] = version
 
     return json.dumps(plugin, indent=2, ensure_ascii=False) + "\n"
