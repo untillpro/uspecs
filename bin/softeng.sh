@@ -1451,7 +1451,7 @@ cmd_action_upr() {
 
         # Force-push
         echo "Force-pushing squashed commit..."
-        quiet git push --force
+        quiet git push --force-with-lease
 
         # Force-push succeeded -- remove restoration handler
         atexit_pop

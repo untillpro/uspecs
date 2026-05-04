@@ -7,8 +7,9 @@ PR has been created: ${pr_url}
 To restore branch to its pre-squash state, if needed:
 
 ```text
-git reset --hard ${pre_push_head}
-git push --force
+# Run from the PR branch with a clean working tree:
+git reset --keep ${pre_push_head}
+git push --force-with-lease
 ```
 
 Next steps:
