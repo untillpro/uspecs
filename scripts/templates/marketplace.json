@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "{{plugin_name}}",
-      "source": "{{plugin_name}}"
+      "source": "./{{plugin_name}}"
     }
   ]
 }
