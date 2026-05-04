@@ -1436,23 +1436,22 @@ cmd_action_upr() {
     echo "PR title: $pr_title"
     echo "Commits since merge-base: $commit_count"
 
-    # Record pre-push HEAD for branch restoration
+    # Record pre-rewrite HEAD and register restoration handler covering the
+    # whole rewrite window (reset, commit, force-push)
     local pre_push_head
     pre_push_head=$(git rev-parse HEAD)
+    atexit_push "git reset --hard ${pre_push_head}"
 
     # Squash branch into single commit
     echo "Squashing $commit_count commit(s) into one..."
     quiet git reset --soft "$merge_base"
     quiet git commit -m "$commit_message"
 
-    # Register branch restoration handler in case force-push fails
-    atexit_push "git reset --hard ${pre_push_head}"
-
     # Force-push
     echo "Force-pushing squashed commit..."
     quiet git push --force-with-lease
 
-    # Force-push succeeded -- remove restoration handler
+    # Rewrite + push succeeded -- remove restoration handler
     atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
