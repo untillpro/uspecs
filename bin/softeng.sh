@@ -1582,27 +1582,47 @@ cmd_action_umergepr() {
 
     echo "PR #$pr_number state: $pr_state"
 
-    if [[ "$pr_state" != "OPEN" ]]; then
-        # PR is not in OPEN state
+    if [[ "$pr_state" == "MERGED" ]]; then
+        # PR was merged outside the action -- full cleanup
         quiet gh pr view --web || true
 
         local branch_head
         branch_head=$(git rev-parse HEAD)
 
-        # Delete local branch, upstream and remote tracking ref (errors ignored)
+        # Delete local branch and upstream tracking ref (errors ignored)
         quiet git checkout "$default_branch" || true
         git branch -D "$current_branch" >/dev/null 2>&1 || true
         git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
+
+        # Delete origin branch if it still exists
+        if git_remote_branch_exists origin "$current_branch"; then
+            echo "Deleting branch $current_branch from origin..."
+            quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
+        fi
+
+        # shellcheck disable=SC2034  # vars used via nameref
+        declare -A vars=(
+            [pr_number]="$pr_number"
+            [branch_name]="$current_branch"
+            [branch_head]="$branch_head"
+        )
+        prompt_start_instructions "results"
+        emit_prompt "$prompts_dir" "instr_umergepr_merged" vars
+        return 0
+    fi
+
+    if [[ "$pr_state" != "OPEN" ]]; then
+        # PR is in a non-OPEN, non-MERGED state (e.g. CLOSED) -- inform only
+        quiet gh pr view --web || true
 
         # shellcheck disable=SC2034  # vars used via nameref
         declare -A vars=(
             [pr_number]="$pr_number"
             [pr_state]="$pr_state"
             [branch_name]="$current_branch"
-            [branch_head]="$branch_head"
         )
         prompt_start_instructions "results"
-        emit_prompt "$prompts_dir" "instr_umergepr_not_open" vars
+        emit_prompt "$prompts_dir" "instr_umergepr_not_merged" vars
         return 0
     fi
 
@@ -1649,7 +1669,7 @@ cmd_action_umergepr() {
     # gh pr merge --delete-branch switches to default branch and deletes local branch,
     # but in fork workflows (crossRepoPR) it skips remote branch deletion by design.
     # Explicitly delete the branch on origin (the fork) and clean up tracking ref.
-    if git ls-remote --exit-code --heads origin "$current_branch" >/dev/null 2>&1; then
+    if git_remote_branch_exists origin "$current_branch"; then
         echo "Deleting branch $current_branch from origin..."
         quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
     fi

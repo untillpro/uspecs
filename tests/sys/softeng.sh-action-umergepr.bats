@@ -211,7 +211,7 @@ _setup_umergepr_branch() {
 }
 
 
-@test "action umergepr: PR not in OPEN state" {
+@test "action umergepr: PR in MERGED state" {
     # shellcheck disable=SC2119  # No arguments needed, uses defaults
     _setup_umergepr_branch
     # shellcheck disable=SC2030,SC2031
@@ -227,7 +227,7 @@ _setup_umergepr_branch() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    [[ "$output" == *"umergepr_not_open"* ]]
+    [[ "$output" == *"umergepr_merged"* ]]
     [[ "$output" == *"PR #42 is in MERGED state"* ]]
     [[ "$output" == *"git branch my-feature"* ]]
 
@@ -235,6 +235,50 @@ _setup_umergepr_branch() {
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
     [[ "$gh_calls" == *"pr view --web"* ]]
+
+    # Verify origin branch was deleted
+    run git -C "$PROJECT_ROOT" ls-remote --heads origin my-feature
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "action umergepr: PR in non-MERGED, non-OPEN state" {
+    # shellcheck disable=SC2119  # No arguments needed, uses defaults
+    _setup_umergepr_branch
+    # shellcheck disable=SC2030,SC2031
+    export GH_STUB_PR_EXISTS=1
+    # shellcheck disable=SC2030,SC2031
+    export GH_STUB_PR_JSON='{"number":42,"state":"CLOSED","url":"https://github.com/org/repo/pull/42"}'
+
+    uspecs action umergepr
+    [ "$status" -eq 0 ]
+
+    # Verify structured output tags and informational message
+    [[ "$output" == *"<LOG>"* ]]
+    [[ "$output" == *"</LOG>"* ]]
+    [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
+    [[ "$output" == *"PR #42 is in CLOSED state"* ]]
+    # No restore instructions because nothing was deleted
+    [[ "$output" != *"git branch my-feature"* ]]
+
+    # Verify gh pr view --web was called
+    local gh_calls
+    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
+    [[ "$gh_calls" == *"pr view --web"* ]]
+
+    # Verify local branch is preserved
+    run git -C "$PROJECT_ROOT" rev-parse --verify --quiet refs/heads/my-feature
+    [ "$status" -eq 0 ]
+
+    # Verify upstream tracking ref is preserved
+    run git -C "$PROJECT_ROOT" rev-parse --verify --quiet refs/remotes/origin/my-feature
+    [ "$status" -eq 0 ]
+
+    # Verify origin branch is preserved
+    run git -C "$PROJECT_ROOT" ls-remote --heads origin my-feature
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"refs/heads/my-feature"* ]]
 }
 
 # Git validations#Project inside Git working tree

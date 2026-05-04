@@ -32,6 +32,23 @@ determine_pr_remote() {
     fi
 }
 
+# git_remote_branch_exists <remote> <branch>
+# Returns 0 if branch exists on <remote>, 1 if not.
+# Exits via error() if git ls-remote fails for any other reason
+# (network, auth, missing remote, ...) so real failures are not silenced.
+git_remote_branch_exists() {
+    local remote="$1" branch="$2"
+    local err rc=0
+    err=$(mktemp)
+    git ls-remote --exit-code --heads "$remote" "$branch" >/dev/null 2>"$err" || rc=$?
+    case "$rc" in
+        0) rm -f "$err"; return 0 ;;
+        2) rm -f "$err"; return 1 ;;
+        *) local msg; msg=$(<"$err"); rm -f "$err"
+           error "git ls-remote $remote $branch failed (exit $rc): $msg" ;;
+    esac
+}
+
 gh_create_pr() {
     # Usage: printf '%s' "$body" | gh_create_pr <pr_remote> <default_branch> <head_branch> <title>
     # Creates a PR via GitHub CLI and outputs the PR URL. Reads body from stdin.
