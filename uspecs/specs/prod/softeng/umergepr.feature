@@ -6,14 +6,21 @@ Feature: Merge pull request
     When Engineer invokes umergepr action
     Then message "No open PR found for the current branch" is displayed
 
-  Scenario: PR not in OPEN state
-    Given PR associated with the current branch is not in OPEN state
+  Scenario: PR in MERGED state
+    Given PR associated with the current branch is in MERGED state
     When Engineer invokes umergepr action
     Then PR is opened in the browser
-    And local branch, upstream and remote tracking ref are deleted, errors are ignored
+    And local branch, upstream tracking ref and origin branch are deleted, errors are ignored
     And Engineer is informed about state and how to restore local branch if needed
 
-  Rule: PR in OPEN state
+  Scenario: PR in non-MERGED, non-OPEN state
+    Given PR associated with the current branch is in a non-OPEN, non-MERGED state
+    When Engineer invokes umergepr action
+    Then PR is opened in the browser
+    And no local or remote branches are deleted
+    And Engineer is informed about state
+
+  Rule: Handling PR in OPEN state
 
     Background:
       Given PR associated with the current branch is in OPEN state
@@ -49,7 +56,7 @@ Feature: Merge pull request
       And default_branch is pushed to origin after fast-forward
       And errors are logged but do not block completion
 
-  Rule: Edge cases
+  Rule: Working with edge cases
 
     Scenario Outline: Validation
       Given <condition>
