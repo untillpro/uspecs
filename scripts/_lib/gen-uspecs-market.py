@@ -14,8 +14,6 @@ Version must be supplied via --version (this script does not read version.txt).
 
 Usage:
     python gen-uspecs-market.py --agent claude|augment|codex --uspecs-repo <uspecs-repo> --marketplace-repo <marketplace-repo> --version <ver>
-
-See also: gen-claude.sh, gen-augment.sh (convenience wrappers).
 """
 
 from __future__ import annotations

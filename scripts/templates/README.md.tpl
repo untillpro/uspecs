@@ -1,12 +1,13 @@
-# {{market_name}}
+# This repository holds uspecs framework plugins for {{host}}
 
 {{is_dev_banner}}
 
-This repository holds the external plugin distribution for **{{host}}**.
+> This repository is auto-generated.
+> Please report issues and open pull requests at the upstream repository:
+> [{{upstream_url}}]({{upstream_url}}).
 
 - Version: `{{version}}`
 - Generated at: `{{generated_at}}`
-- Upstream: [{{upstream_url}}]({{upstream_url}})
 - Upstream commit: `{{upstream_commit}}`
 
 ## Installation
