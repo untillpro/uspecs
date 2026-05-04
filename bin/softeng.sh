@@ -27,6 +27,8 @@ fi
 
 set -Eeuo pipefail
 
+USPECS_VERSION="0.0.0-source"
+
 # softeng automation
 #
 # Usage:
@@ -36,6 +38,7 @@ set -Eeuo pipefail
 #   softeng action upr [--no-archive]
 #   softeng action umergepr
 #   softeng action usync [-y]
+#   softeng action uversion
 #   softeng change list-wcf
 #   softeng diff specs
 #   softeng diff file <path>
@@ -1706,6 +1709,27 @@ cmd_action_umergepr() {
     emit_prompt "$prompts_dir" "instr_umergepr_success" success_vars
 }
 
+# cmd_action_uversion
+# Emits an instruction prompt asking the agent to display the plugin version.
+# USPECS_VERSION is rewritten by gen-uspecs-market.py during marketplace build;
+# in the source repo it stays at the sentinel "0.0.0-source".
+cmd_action_uversion() {
+    if [ $# -gt 0 ]; then
+        error "Unknown argument: $1"
+    fi
+
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    prompt_start_log
+    echo "Action: uversion"
+
+    # shellcheck disable=SC2034  # version_vars used via nameref in emit_prompt
+    declare -A version_vars=([version]="$USPECS_VERSION")
+    prompt_start_instructions "results"
+    emit_prompt "$prompts_dir" "instr_uversion" version_vars
+}
+
 main() {
     git_path
 
@@ -1742,8 +1766,11 @@ main() {
                 usync)
                     cmd_action_usync "$@"
                     ;;
+                uversion)
+                    cmd_action_uversion "$@"
+                    ;;
                 *)
-                    error "Unknown action keyword: $keyword. Available: uchange, uimpl, uarchive, upr, umergepr, usync"
+                    error "Unknown action keyword: $keyword. Available: uchange, uimpl, uarchive, upr, umergepr, usync, uversion"
                     ;;
             esac
             ;;

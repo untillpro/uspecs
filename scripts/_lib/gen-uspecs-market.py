@@ -497,6 +497,25 @@ def main() -> None:
     # Copy bin/
     shutil.copytree(source / "bin", plugin_dir / "bin")
 
+    # Substitute USPECS_VERSION sentinel in the copied softeng.sh
+    softeng_path: Path = plugin_dir / "bin" / "softeng.sh"
+    softeng_text: str = softeng_path.read_text(encoding="utf-8")
+    softeng_text, n_subs = re.subn(
+        r"^USPECS_VERSION=.*$",
+        f'USPECS_VERSION="{version}"',
+        softeng_text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if n_subs != 1:
+        print(
+            f"error: {softeng_path}: expected exactly one USPECS_VERSION=... "
+            f"line to substitute, found {n_subs}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    softeng_path.write_text(softeng_text, encoding="utf-8")
+
     # Copy knowledge skills (uspecs-* only, from .claude/skills/)
     src_skills: Path = source / ".claude" / "skills"
 

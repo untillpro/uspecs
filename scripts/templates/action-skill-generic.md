@@ -1,5 +1,5 @@
 ---
-name: uspecs-{{action}}
+name: {{action}}
 description: {{description}}
 ---
 
