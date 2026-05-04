@@ -6,7 +6,7 @@ with action definitions (scripts/templates/actions/*.yaml) and host-specific
 templates, and writes a complete marketplace to the marketplace repo.
 
 Agents:
-  claude  -- commands/ + knowledge skills, dispatch: bare `bash softeng.sh`
+  claude  -- commands/ + knowledge skills, dispatch: bare `softeng.sh`
   augment -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
   codex   -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
 
@@ -75,7 +75,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         market_description="uspecs framework plugins for Claude Code",
         action_template="action-command-claude.md",
         output_kind="commands",
-        dispatch="run `bash softeng.sh action {{action}} [options]`",
+        dispatch="run `softeng.sh action {{action}} [options]`",
         host="Claude Code",
         cli="claude",
     ),
