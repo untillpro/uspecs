@@ -1424,7 +1424,7 @@ cmd_action_upr() {
         fi
     fi
 
-    # Count commits since merge-base to decide whether to squash
+    # Count commits since merge-base (informational)
     local commit_count
     commit_count=$(git rev-list --count "$merge_base"..HEAD)
 
@@ -1436,30 +1436,24 @@ cmd_action_upr() {
     echo "PR title: $pr_title"
     echo "Commits since merge-base: $commit_count"
 
-    local pre_push_head=""
-    if [[ "$commit_count" -gt 1 ]]; then
-        # Record pre-push HEAD for branch restoration
-        pre_push_head=$(git rev-parse HEAD)
+    # Record pre-push HEAD for branch restoration
+    local pre_push_head
+    pre_push_head=$(git rev-parse HEAD)
 
-        # Squash branch into single commit
-        echo "Squashing $commit_count commits into one..."
-        quiet git reset --soft "$merge_base"
-        quiet git commit -m "$commit_message"
+    # Squash branch into single commit
+    echo "Squashing $commit_count commit(s) into one..."
+    quiet git reset --soft "$merge_base"
+    quiet git commit -m "$commit_message"
 
-        # Register branch restoration handler in case force-push fails
-        atexit_push "git reset --hard ${pre_push_head}"
+    # Register branch restoration handler in case force-push fails
+    atexit_push "git reset --hard ${pre_push_head}"
 
-        # Force-push
-        echo "Force-pushing squashed commit..."
-        quiet git push --force-with-lease
+    # Force-push
+    echo "Force-pushing squashed commit..."
+    quiet git push --force-with-lease
 
-        # Force-push succeeded -- remove restoration handler
-        atexit_pop
-    else
-        # Already a single commit -- skip squash and force-push
-        echo "Single commit, pushing..."
-        quiet git push
-    fi
+    # Force-push succeeded -- remove restoration handler
+    atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
     # ```yaml code fence and emit only the Why, What and How sections from change.md.
@@ -1514,14 +1508,9 @@ cmd_action_upr() {
     prompt_start_instructions "results"
 
     # Output success prompt
-    if [[ -n "$pre_push_head" ]]; then
-        declare -A vars=([pre_push_head]="$pre_push_head" [pr_url]="$pr_url")
-        emit_prompt "$prompts_dir" "instr_upr_success" vars
-    else
-        # shellcheck disable=SC2034  # vars used via nameref
-        declare -A vars=([pr_url]="$pr_url")
-        emit_prompt "$prompts_dir" "instr_upr_success_no_squash" vars
-    fi
+    # shellcheck disable=SC2034  # vars used via nameref
+    declare -A vars=([pre_push_head]="$pre_push_head" [pr_url]="$pr_url")
+    emit_prompt "$prompts_dir" "instr_upr_success" vars
 }
 
 # cmd_action_umergepr
