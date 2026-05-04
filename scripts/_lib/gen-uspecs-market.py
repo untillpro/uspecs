@@ -497,6 +497,18 @@ def main() -> None:
     # Copy bin/
     shutil.copytree(source / "bin", plugin_dir / "bin")
 
+    # Substitute USPECS_VERSION sentinel in the copied softeng.sh
+    softeng_path: Path = plugin_dir / "bin" / "softeng.sh"
+    softeng_text: str = softeng_path.read_text(encoding="utf-8")
+    softeng_text = re.sub(
+        r"^USPECS_VERSION=.*$",
+        f'USPECS_VERSION="{version}"',
+        softeng_text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    softeng_path.write_text(softeng_text, encoding="utf-8")
+
     # Copy knowledge skills (uspecs-* only, from .claude/skills/)
     src_skills: Path = source / ".claude" / "skills"
 

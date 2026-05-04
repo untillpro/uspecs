@@ -22,6 +22,7 @@ load 'helpers'
     local ver
     ver="$(_plugin_version uspecs-dev)"
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
+    [ "$(_softeng_version uspecs-dev)" = "$ver" ]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
     _assert_dev_install_block "claude" "claude"
@@ -59,6 +60,9 @@ load 'helpers'
     [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
+    # Action skill folder name and frontmatter name match the bare action
+    [ -f "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md" ]
+    [[ "$(head -n 4 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -86,6 +90,9 @@ load 'helpers'
     [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
+    # Action skill folder name and frontmatter name match the bare action
+    [ -f "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md" ]
+    [[ "$(head -n 4 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -104,6 +111,7 @@ load 'helpers'
     local ver
     ver="$(_plugin_version)"
     [ "$ver" = "$core" ]
+    [ "$(_softeng_version)" = "$core" ]
     [ "$(_commit_count)" -eq 1 ]
     [[ "$output" == *"Done: $core"* ]]
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]

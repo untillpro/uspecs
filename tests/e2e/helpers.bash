@@ -87,6 +87,18 @@ _commit_count() {
     git -C "$MKT_REPO" rev-list --count HEAD
 }
 
+# _softeng_version [plugin-folder]: reads the USPECS_VERSION literal from
+# bin/softeng.sh in MKT_REPO. plugin-folder defaults to "uspecs".
+_softeng_version() {
+    local plugin_folder="${1:-uspecs}"
+    local line
+    line="$(grep -m1 '^USPECS_VERSION=' "$MKT_REPO/$plugin_folder/bin/softeng.sh")"
+    line="${line#USPECS_VERSION=}"
+    line="${line%\"}"
+    line="${line#\"}"
+    printf '%s' "$line"
+}
+
 # _assert_dev_install_block <cli> <agent>: asserts README.md install block
 # references the dev marketplace consistently for the given agent.
 _assert_dev_install_block() {
