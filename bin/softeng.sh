@@ -366,15 +366,32 @@ changes_archive() {
     local change_name
     change_name=$(extract_change_name "$folder_basename")
 
-    local change_file="$abs_change/change.md"
+    local archive_dir="$abs_changes/archive"
 
-    local timestamp
-    timestamp=$(get_timestamp)
+    local date_prefix
+    date_prefix=$(date -u +"%y%m%d%H%M")
+
+    local yymm="${date_prefix:0:4}"
+
+    local archive_sub="$archive_dir/$yymm"
+    mkdir -p "$archive_sub"
+
+    local dest="$archive_sub/${date_prefix}-${change_name}"
+
+    if [ -d "$dest" ]; then
+        error "Archive folder already exists: $dest"
+    fi
+
+    move_folder "$abs_change" "$dest" "$project_dir"
+
+    local rel_dest="${dest#"$project_dir/"}"
 
     # Insert archived_at into YAML front matter (before closing ---)
+    local change_file="$dest/change.md"
+    local timestamp
+    timestamp=$(get_timestamp)
     local temp_file
     temp_create_file temp_file
-    # // TODO archived_at may already exists...
     awk -v ts="$timestamp" '
         /^---$/ {
             if (count == 0) {
@@ -395,34 +412,10 @@ changes_archive() {
         error "failed to update $change_file"
     fi
 
-    # Add ../ prefix to relative links for archive folder depth
-    if ! convert_links_to_relative "$abs_change"; then
+    # Add ../../ prefix to relative links for archive folder depth
+    if ! convert_links_to_relative "$dest"; then
         error "failed to convert links to relative paths"
     fi
-
-    local archive_dir="$abs_changes/archive"
-
-    local date_prefix
-    date_prefix=$(date -u +"%y%m%d%H%M")
-
-    local yymm="${date_prefix:0:4}"
-
-    local archive_sub="$archive_dir/$yymm"
-    mkdir -p "$archive_sub"
-
-    local dest="$archive_sub/${date_prefix}-${change_name}"
-
-    if [ -d "$dest" ]; then
-        error "Archive folder already exists: $dest"
-    fi
-
-    if [[ "$is_git" == "1" ]]; then
-        quiet git add "$change_folder"
-    fi
-
-    move_folder "$abs_change" "$dest" "$project_dir"
-
-    local rel_dest="${dest#"$project_dir/"}"
 
     if [[ "$is_git" == "1" ]]; then
         quiet git add "$rel_dest"
