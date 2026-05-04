@@ -238,6 +238,7 @@ _setup_umergepr_branch() {
 
     # Verify origin branch was deleted
     run git -C "$PROJECT_ROOT" ls-remote --heads origin my-feature
+    [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
 
@@ -276,7 +277,8 @@ _setup_umergepr_branch() {
 
     # Verify origin branch is preserved
     run git -C "$PROJECT_ROOT" ls-remote --heads origin my-feature
-    [ -n "$output" ]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"refs/heads/my-feature"* ]]
 }
 
 # Git validations#Project inside Git working tree

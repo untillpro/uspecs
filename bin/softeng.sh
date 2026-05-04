@@ -1595,7 +1595,7 @@ cmd_action_umergepr() {
         git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
 
         # Delete origin branch if it still exists
-        if git ls-remote --exit-code --heads origin "$current_branch" >/dev/null 2>&1; then
+        if git_remote_branch_exists origin "$current_branch"; then
             echo "Deleting branch $current_branch from origin..."
             quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
         fi
@@ -1669,7 +1669,7 @@ cmd_action_umergepr() {
     # gh pr merge --delete-branch switches to default branch and deletes local branch,
     # but in fork workflows (crossRepoPR) it skips remote branch deletion by design.
     # Explicitly delete the branch on origin (the fork) and clean up tracking ref.
-    if git ls-remote --exit-code --heads origin "$current_branch" >/dev/null 2>&1; then
+    if git_remote_branch_exists origin "$current_branch"; then
         echo "Deleting branch $current_branch from origin..."
         quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
     fi

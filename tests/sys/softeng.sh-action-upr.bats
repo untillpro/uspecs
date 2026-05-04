@@ -69,7 +69,7 @@ _assert_no_pr_base_outcome() {
     if [[ "$mode" == "squash" ]]; then
         [[ "$output" == *"upr_success"* ]]
         [[ "$output" != *"upr_success_no_squash"* ]]
-        [[ "$output" == *"git reset --hard"* ]]
+        [[ "$output" == *"git reset --keep"* ]]
     else
         [[ "$output" == *"upr_success_no_squash"* ]]
     fi
