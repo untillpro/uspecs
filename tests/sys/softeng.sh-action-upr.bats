@@ -56,23 +56,16 @@ _setup_upr_branch() {
 }
 
 # Helper: assert outcome from the "No PR for current branch" scenario.
-# Usage: _assert_no_pr_base_outcome [squash|nosquash]
-# squash: multiple commits were squashed (restore instructions shown).
-# nosquash (default): single commit, no squash.
+# Branch is always squashed into a single commit and force-pushed.
 _assert_no_pr_base_outcome() {
-    local mode="${1:-nosquash}"
     [ "$status" -eq 0 ]
     [[ "$output" == *"<LOG>"* ]]
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
-    if [[ "$mode" == "squash" ]]; then
-        [[ "$output" == *"upr_success"* ]]
-        [[ "$output" != *"upr_success_no_squash"* ]]
-        [[ "$output" == *"git reset --keep"* ]]
-    else
-        [[ "$output" == *"upr_success_no_squash"* ]]
-    fi
+    [[ "$output" == *"upr_success"* ]]
+    [[ "$output" != *"upr_success_no_squash"* ]]
+    [[ "$output" == *"git reset --keep"* ]]
     # PR was created programmatically (not --web) and then opened in browser
     local gh_calls
     gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
@@ -128,7 +121,7 @@ _assert_pr_body_format() {
     export GH_STUB_PR_JSON='{"number":42,"state":"CLOSED","url":"https://github.com/org/repo/pull/42"}'
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
     [[ "$output" != *"upr_already_exists"* ]]
     [[ "$output" != *"upr_already_merged"* ]]
 }
@@ -141,7 +134,7 @@ _assert_pr_body_format() {
     export GH_STUB_PR_JSON='{"number":42,"state":"MERGED","url":"https://github.com/org/repo/pull/42"}'
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
     [[ "$output" == *"PR #42 for this branch was already merged"* ]]
     [[ "$output" != *"upr_already_exists"* ]]
 }
@@ -153,7 +146,7 @@ _assert_pr_body_format() {
     _setup_upr_branch
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 }
 
 # Verifies: multiple commits are squashed, force-pushed, restore instructions shown
@@ -168,7 +161,7 @@ _assert_pr_body_format() {
     git -C "$PROJECT_ROOT" commit -q -m "second commit"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 }
 
 # Verifies WCF is archived by default when engineer creates a PR
@@ -188,7 +181,7 @@ _assert_pr_body_format() {
     archived=$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*active-wcf" | wc -l)
     [ "$archived" -ge 1 ]
 
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 }
 
 # Verifies --no-archive keeps WCF active
@@ -205,7 +198,7 @@ _assert_pr_body_format() {
     [ ! -d "$PROJECT_ROOT/uspecs/changes/archive" ] || \
         [ "$(find "$PROJECT_ROOT/uspecs/changes/archive" -type d -name "*no-archive-wcf" | wc -l)" -eq 0 ]
 
-    _assert_no_pr_base_outcome "nosquash"
+    _assert_no_pr_base_outcome
 }
 
 # Verifies tracking is set before squash/force-push
@@ -222,7 +215,7 @@ _assert_pr_body_format() {
     tracking=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || true)
     [[ "$tracking" == "origin/no-upstream-upr-branch" ]]
 
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 }
 
 @test "action upr: No PR for current branch: WCF already archived" {
@@ -245,7 +238,7 @@ _assert_pr_body_format() {
     git commit -q -m "archived WCF"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "nosquash"
+    _assert_no_pr_base_outcome
 }
 
 # --- PR title and commit message ---
@@ -254,7 +247,7 @@ _assert_pr_body_format() {
     _setup_upr_branch "2601010000-issue-change" "Fix the bug" "https://github.com/org/repo/issues/42"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 
     # gh pr create was called with title containing issue id
     local gh_calls
@@ -274,7 +267,7 @@ _assert_pr_body_format() {
     _setup_upr_branch "2601010000-no-issue" "Add feature"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 
     # gh pr create was called with title = change_title only
     local gh_calls
@@ -315,7 +308,7 @@ _assert_pr_body_format() {
     git commit -q -m "add large change"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
@@ -353,7 +346,7 @@ _assert_pr_body_format() {
     git commit -q -m "add large chars change"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
@@ -393,7 +386,7 @@ _assert_pr_body_format() {
     git commit -q -m "add no-frontmatter change"
 
     uspecs action upr
-    _assert_no_pr_base_outcome "squash"
+    _assert_no_pr_base_outcome
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
