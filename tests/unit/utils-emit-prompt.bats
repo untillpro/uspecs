@@ -328,6 +328,75 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# Include expansion (textual pre-pass)
+# ---------------------------------------------------------------------------
+
+@test "emit_prompt: @include_ splices body, conditionals applied after splice" {
+    cat > "$PROMPTS_DIR/include_bullets.md" <<'EOF'
+# Shared bullets
+
+## data
+- alpha (?show_a)
+- beta (?show_b)
+EOF
+    cat > "$PROMPTS_DIR/instr_host.md" <<'EOF'
+# Host
+
+## data
+
+Header line.
+`@include_bullets`
+
+Footer line.
+EOF
+    # shellcheck disable=SC2034
+    declare -A vars=([show_a]="1" [show_b]="")
+    run emit_prompt "$PROMPTS_DIR" "instr_host" vars
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"- alpha"* ]]
+    [[ "$output" != *"- beta"* ]]
+    [[ "$output" != *"@include_bullets"* ]]
+}
+
+@test "emit_prompt: @include_ cycle detected" {
+    cat > "$PROMPTS_DIR/include_a.md" <<'EOF'
+# A
+
+## data
+A then `@include_b`
+EOF
+    cat > "$PROMPTS_DIR/include_b.md" <<'EOF'
+# B
+
+## data
+B then `@include_a`
+EOF
+    cat > "$PROMPTS_DIR/instr_cyc.md" <<'EOF'
+# Cyc
+
+## data
+
+`@include_a`
+EOF
+    run emit_prompt "$PROMPTS_DIR" "instr_cyc"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"include cycle"* ]]
+}
+
+@test "emit_prompt: @include_ missing file errors" {
+    cat > "$PROMPTS_DIR/instr_bad.md" <<'EOF'
+# Bad
+
+## data
+
+`@include_missing`
+EOF
+    run emit_prompt "$PROMPTS_DIR" "instr_bad"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"include file not found"* ]]
+}
+
+# ---------------------------------------------------------------------------
 # Error cases
 # ---------------------------------------------------------------------------
 

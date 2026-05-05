@@ -3,7 +3,7 @@
 Parallel test runner for bats tests.
 
 Usage:
-    python tests/run-tests.py <folder> [pattern] [--workers N] [--per-file]
+    python tests/run-tests.py <folder> [pattern] [--workers N] [--per-file] [--prof]
 
 Examples:
     python tests/run-tests.py tests/unit
@@ -11,6 +11,7 @@ Examples:
     python tests/run-tests.py tests/unit --per-file
     python tests/run-tests.py tests/unit "emit_prompt"
     python tests/run-tests.py tests/unit "emit_prompt" --per-file
+    python tests/run-tests.py tests/unit --prof
 """
 
 import argparse
@@ -33,6 +34,7 @@ class TestResult(TypedDict):
     returncode: int
     stdout: str
     stderr: str
+    duration: float
 
 
 class FileResult(TypedDict):
@@ -40,6 +42,7 @@ class FileResult(TypedDict):
     returncode: int
     stdout: str
     stderr: str
+    duration: float
 
 
 def discover_bats_files(folder: str) -> list[Path]:
@@ -97,6 +100,7 @@ def ere_escape(text: str) -> str:
 def run_bats_test(test_info: tuple[Path, str]) -> TestResult:
     """Run a single bats test and return the result."""
     bats_file, test_name = test_info
+    t0 = time.monotonic()
     try:
         bats_path = str(bats_file).replace("\\", "/")
         filter_re = f"^{ere_escape(test_name)}$"
@@ -126,6 +130,7 @@ def run_bats_test(test_info: tuple[Path, str]) -> TestResult:
             "returncode": result.returncode,
             "stdout": result.stdout,
             "stderr": result.stderr,
+            "duration": time.monotonic() - t0,
         }
     except subprocess.TimeoutExpired:
         return {
@@ -134,6 +139,7 @@ def run_bats_test(test_info: tuple[Path, str]) -> TestResult:
             "returncode": 124,
             "stdout": "",
             "stderr": f"Test timeout after 60 seconds",
+            "duration": time.monotonic() - t0,
         }
     except Exception as e:
         return {
@@ -142,18 +148,20 @@ def run_bats_test(test_info: tuple[Path, str]) -> TestResult:
             "returncode": 1,
             "stdout": "",
             "stderr": str(e),
+            "duration": time.monotonic() - t0,
         }
 
 
 def run_bats_file(bats_file: Path) -> FileResult:
     """Run all tests in a bats file and return the result."""
+    t0 = time.monotonic()
     try:
         bats_path = str(bats_file).replace("\\", "/")
         bash_bin = shutil.which("bash") or "bash"
         cmd = [
             bash_bin,
             "-c",
-            'exec bats --print-output-on-failure --tap "$1"',
+            'exec bats --print-output-on-failure --tap --timing "$1"',
             "_",
             bats_path,
         ]
@@ -171,6 +179,7 @@ def run_bats_file(bats_file: Path) -> FileResult:
             "returncode": result.returncode,
             "stdout": result.stdout,
             "stderr": result.stderr,
+            "duration": time.monotonic() - t0,
         }
     except subprocess.TimeoutExpired:
         return {
@@ -178,6 +187,7 @@ def run_bats_file(bats_file: Path) -> FileResult:
             "returncode": 124,
             "stdout": "",
             "stderr": f"File timeout after 300 seconds",
+            "duration": time.monotonic() - t0,
         }
     except Exception as e:
         return {
@@ -185,6 +195,7 @@ def run_bats_file(bats_file: Path) -> FileResult:
             "returncode": 1,
             "stdout": "",
             "stderr": str(e),
+            "duration": time.monotonic() - t0,
         }
 
 
@@ -217,6 +228,12 @@ def main() -> int:
         default=False,
         help="Run tests per file instead of per test name",
     )
+    parser.add_argument(
+        "--prof",
+        action="store_true",
+        default=False,
+        help="On success, print the top 10 slowest tests with their durations",
+    )
 
     args = parser.parse_args()
 
@@ -236,14 +253,27 @@ def main() -> int:
         return 0
 
     if args.per_file:
-        return _run_per_file(bats_files, args.pattern, workers)
+        return _run_per_file(bats_files, args.pattern, workers, args.prof)
     else:
-        return _run_per_test(bats_files, args.pattern, workers)
+        return _run_per_test(bats_files, args.pattern, workers, args.prof)
 
 
-def _parse_tap_output(file_path: str, stdout: str) -> list[tuple[str, bool, str]]:
-    """Parse TAP output and return list of (label, passed, error_output) tuples."""
-    results: list[tuple[str, bool, str]] = []
+_TIMING_RE = re.compile(r"\s+in (\d+)ms\s*$")
+
+
+def _strip_timing(name: str) -> tuple[str, float]:
+    """Strip trailing ' in NNNms' from a bats --timing TAP name; return (name, duration_s)."""
+    m = _TIMING_RE.search(name)
+    if m:
+        return name[: m.start()].rstrip(), int(m.group(1)) / 1000.0
+    return name, 0.0
+
+
+def _parse_tap_output(
+    file_path: str, stdout: str
+) -> list[tuple[str, bool, str, float]]:
+    """Parse TAP output: returns list of (label, passed, error_output, duration_s)."""
+    results: list[tuple[str, bool, str, float]] = []
     lines = stdout.splitlines()
     i = 0
     while i < len(lines):
@@ -253,12 +283,14 @@ def _parse_tap_output(file_path: str, stdout: str) -> list[tuple[str, bool, str]
             # Extract test name (skip "ok N ")
             parts = line.split(" ", 2)
             test_name = parts[2] if len(parts) > 2 else "unknown"
+            test_name, duration = _strip_timing(test_name)
             label = f"{file_path}: {test_name}"
-            results.append((label, True, ""))
+            results.append((label, True, "", duration))
         elif line.startswith("not ok "):
             # Extract test name (skip "not ok N ")
             parts = line.split(" ", 3)
             test_name = parts[3] if len(parts) > 3 else "unknown"
+            test_name, duration = _strip_timing(test_name)
             label = f"{file_path}: {test_name}"
             # Collect following comment lines as error output
             error_lines = [line]
@@ -266,13 +298,15 @@ def _parse_tap_output(file_path: str, stdout: str) -> list[tuple[str, bool, str]
             while i < len(lines) and lines[i].startswith("#"):
                 error_lines.append(lines[i])
                 i += 1
-            results.append((label, False, "\n".join(error_lines)))
+            results.append((label, False, "\n".join(error_lines), duration))
             continue  # Skip the i += 1 at the end
         i += 1
     return results
 
 
-def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> int:
+def _run_per_file(
+    bats_files: list[Path], pattern: str | None, workers: int, prof: bool
+) -> int:
     """Run tests per file: each .bats file is a single bats invocation."""
     # Filter files by pattern (match against file path)
     if pattern:
@@ -287,6 +321,7 @@ def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> 
     passed = 0
     failed = 0
     failures: list[tuple[str, str]] = []
+    timings: list[tuple[str, float]] = []
     start_time = time.monotonic()
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
@@ -298,9 +333,10 @@ def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> 
                 # Parse TAP output to get per-test results
                 test_results = _parse_tap_output(file_path, result["stdout"])
                 if test_results:
-                    for label, test_passed, error_output in test_results:
+                    for label, test_passed, error_output, duration in test_results:
                         if test_passed:
                             passed += 1
+                            timings.append((label, duration))
                             print(f" ok {label}", flush=True)
                         else:
                             failed += 1
@@ -313,6 +349,7 @@ def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> 
                     # No TAP output parsed - report file-level result
                     if result["returncode"] == 0:
                         passed += 1
+                        timings.append((file_path, result["duration"]))
                         print(f" ok {file_path}", flush=True)
                     else:
                         failed += 1
@@ -345,10 +382,15 @@ def _run_per_file(bats_files: list[Path], pattern: str | None, workers: int) -> 
     parts = [f"{total} tests", f"{failed} failures", f"{elapsed:.1f}s"]
     print(f"\n{', '.join(parts)}", flush=True)
 
+    if prof and not failed:
+        _print_top_slowest(timings)
+
     return 1 if failed > 0 else 0
 
 
-def _run_per_test(bats_files: list[Path], pattern: str | None, workers: int) -> int:
+def _run_per_test(
+    bats_files: list[Path], pattern: str | None, workers: int, prof: bool
+) -> int:
     """Run tests per test name: each @test is a separate bats invocation."""
     # Get individual tests to run
     tests = get_tests_to_run(bats_files, pattern)
@@ -364,6 +406,7 @@ def _run_per_test(bats_files: list[Path], pattern: str | None, workers: int) -> 
     failed = 0
     skipped = 0
     failures: list[tuple[str, str]] = []
+    timings: list[tuple[str, float]] = []
     start_time = time.monotonic()
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
@@ -375,6 +418,7 @@ def _run_per_test(bats_files: list[Path], pattern: str | None, workers: int) -> 
                 label = f"{file_path}: {result['test']}"
                 if result["returncode"] == 0:
                     passed += 1
+                    timings.append((label, result["duration"]))
                     print(f" ok {label}", flush=True)
                 elif (
                     "Executed 0 instead of expected 1 tests"
@@ -419,7 +463,20 @@ def _run_per_test(bats_files: list[Path], pattern: str | None, workers: int) -> 
     parts = [f"{total} tests", fail_str, f"{elapsed:.1f}s"]
     print(f"\n{', '.join(parts)}", flush=True)
 
+    if prof and not total_failed:
+        _print_top_slowest(timings)
+
     return 1 if total_failed > 0 else 0
+
+
+def _print_top_slowest(timings: list[tuple[str, float]], limit: int = 10) -> None:
+    """Print the slowest tests by duration (descending)."""
+    if not timings:
+        return
+    timings = sorted(timings, key=lambda x: x[1], reverse=True)[:limit]
+    print(f"\nTop {len(timings)} slowest tests:", flush=True)
+    for label, duration in timings:
+        print(f"  {duration:6.2f}s  {label}", flush=True)
 
 
 if __name__ == "__main__":

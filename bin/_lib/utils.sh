@@ -240,6 +240,24 @@ _emit_substitute_body() {
     printf '%s' "$body"
 }
 
+# _emit_read_data_body <file>
+# Reads <file> and prints everything after the "## data" line.
+# Errors if the marker is missing.
+_emit_read_data_body() {
+    local file="$1"
+    local content body="" _ep_dline found_data=0
+    content=$(< "$file")
+    while IFS= read -r _ep_dline; do
+        if (( found_data )); then
+            body+="${_ep_dline}"$'\n'
+        elif [[ "$_ep_dline" =~ ^##[[:space:]]+data[[:space:]]*$ ]]; then
+            found_data=1
+        fi
+    done <<< "$content"
+    (( found_data )) || error "missing '## data' marker in $file"
+    printf '%s' "$body"
+}
+
 # _emit_collect <prompts_dir> <section_id> [vars_map_name]
 # Recursively collects a prompt file and its @artdef_ dependencies.
 # Dependencies are collected first (depth-first), then self is appended.
@@ -271,16 +289,22 @@ _emit_collect() {
     done <<< "$content"
 
     # Extract body: everything after "## data" line
-    local body="" found_data=0
-    while IFS= read -r _ep_hline; do
-        if (( found_data )); then
-            body+="${_ep_hline}"$'\n'
-        elif [[ "$_ep_hline" =~ ^##[[:space:]]+data[[:space:]]*$ ]]; then
-            found_data=1
-        fi
-    done <<< "$content"
+    local body
+    body=$(_emit_read_data_body "$file") || exit 1
 
-    (( found_data )) || error "missing '## data' marker in $file"
+    # Inline includes: textual pre-pass, no conditionals/vars applied here.
+    # Each `@include_xxx` is replaced with the body of include_xxx.md.
+    local -A _inc_seen=()
+    while [[ "$body" =~ \`@(include_[a-zA-Z0-9_-]+)\` ]]; do
+        local inc_id="${BASH_REMATCH[1]}"
+        [[ ! -v "_inc_seen[$inc_id]" ]] || error "include cycle: $inc_id"
+        _inc_seen[$inc_id]=1
+        local inc_file="$dir/$inc_id.md"
+        [[ -f "$inc_file" ]] || error "include file not found: $inc_file"
+        local inc_body
+        inc_body=$(_emit_read_data_body "$inc_file") || exit 1
+        body="${body//"\`@${inc_id}\`"/$inc_body}"
+    done
 
     # Filter conditionals + check unbound vars (no substitution yet).
     local filtered

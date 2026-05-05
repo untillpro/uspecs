@@ -706,16 +706,19 @@ cmd_action_uchange() {
 
     # Cascade `_maybe` flags collapse here because `cmd_uchange` has no impl
     # file: spec-tier flags follow `specs_maybe`; prov/constr are always on.
+    # `--no-impl` suppresses every section bullet at once.
+    local impl_maybe=""
+    [[ -z "$opt_no_impl" ]] && impl_maybe="1"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_file]="$change_file"
         [specs_folder]="$specs_folder_rel"
         [no_impl]="$opt_no_impl"
-        [domains_maybe]="$specs_maybe"
-        [fd_maybe]="$specs_maybe"
-        [prov_maybe]="1"
-        [td_maybe]="$specs_maybe"
-        [constr_maybe]="1"
+        [domains_maybe]="${impl_maybe:+$specs_maybe}"
+        [fd_maybe]="${impl_maybe:+$specs_maybe}"
+        [prov_maybe]="$impl_maybe"
+        [td_maybe]="${impl_maybe:+$specs_maybe}"
+        [constr_maybe]="$impl_maybe"
         [change_file_rel_path]="$change_file"
     )
 

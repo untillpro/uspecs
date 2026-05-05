@@ -2,7 +2,8 @@
 """Check prompt reference integrity.
 
 - Every emit_prompt call in softeng.sh must reference an existing prompt file.
-- Every @artdef_ reference in prompt files must reference an existing prompt file (transitive).
+- Every @artdef_ and @include_ reference in prompt files must reference an
+  existing prompt file (transitive).
 - Every prompt file must be reachable from roots (no orphans).
 
 Usage: check_prompt_refs.py <repo_root>
@@ -21,10 +22,10 @@ def collect_roots(softeng_sh: Path) -> set[str]:
     return set(re.findall(r'emit_prompt\s+"\$prompts_dir"\s+"([^"]+)"', text))
 
 
-def collect_artdef_refs(prompt_file: Path) -> set[str]:
-    """Extract @artdef_ references from a single prompt .md file."""
+def collect_refs(prompt_file: Path) -> set[str]:
+    """Extract @artdef_ and @include_ references from a single prompt .md file."""
     text = prompt_file.read_text(encoding="utf-8")
-    return set(re.findall(r"`@(artdef_[a-zA-Z0-9_-]+)`", text))
+    return set(re.findall(r"`@((?:artdef|include)_[a-zA-Z0-9_-]+)`", text))
 
 
 def walk_refs(prompts_dir: Path, roots: set[str]) -> tuple[set[str], list[str]]:
@@ -41,7 +42,7 @@ def walk_refs(prompts_dir: Path, roots: set[str]) -> tuple[set[str], list[str]]:
         if not ref_file.is_file():
             errors.append(f"missing file: {ref_file.name} (referenced as {ref_id})")
             continue
-        for dep in collect_artdef_refs(ref_file):
+        for dep in collect_refs(ref_file):
             if dep not in reachable:
                 queue.append(dep)
     return reachable, errors

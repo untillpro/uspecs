@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from check_prompt_refs import (
     check_orphans,
-    collect_artdef_refs,
+    collect_refs,
     collect_roots,
     walk_refs,
 )
@@ -34,27 +34,34 @@ class TestCollectRoots(unittest.TestCase):
         self.assertEqual(result, set())
 
 
-class TestCollectArtdefRefs(unittest.TestCase):
+class TestCollectRefs(unittest.TestCase):
     def test_extracts_refs(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("Use `@artdef_change_why_what` and `@artdef_change_how`\n")
             f.flush()
-            result = collect_artdef_refs(Path(f.name))
+            result = collect_refs(Path(f.name))
         self.assertEqual(result, {"artdef_change_why_what", "artdef_change_how"})
 
     def test_no_refs(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("# Just a heading\n\nNo refs here.\n")
             f.flush()
-            result = collect_artdef_refs(Path(f.name))
+            result = collect_refs(Path(f.name))
         self.assertEqual(result, set())
 
     def test_ignores_non_artdef(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("Use `@something_else` and `@artdef_real`\n")
             f.flush()
-            result = collect_artdef_refs(Path(f.name))
+            result = collect_refs(Path(f.name))
         self.assertEqual(result, {"artdef_real"})
+
+    def test_extracts_include_refs(self) -> None:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("Use `@artdef_a` and `@include_b`\n")
+            f.flush()
+            result = collect_refs(Path(f.name))
+        self.assertEqual(result, {"artdef_a", "include_b"})
 
 
 def _make_prompt(prompts_dir: Path, name: str, content: str) -> None:
