@@ -169,66 +169,19 @@ extract_issue_id() {
     fi
 }
 
-# TODO: this is a part of obsoleted approach, refactor
-cmd_change_new() {
-    local change_name=""
-    local issue_url=""
-    local opt_branch=""
-    local opt_no_branch=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --issue-url)
-                if [[ $# -lt 2 || -z "$2" ]]; then
-                    error "--issue-url requires a URL argument"
-                fi
-                issue_url="$2"
-                shift 2
-                ;;
-            --branch)
-                opt_branch="1"
-                shift
-                ;;
-            --no-branch)
-                opt_no_branch="1"
-                shift
-                ;;
-            *)
-                if [ -z "$change_name" ]; then
-                    change_name="$1"
-                    shift
-                else
-                    error "Unknown argument: $1"
-                fi
-                ;;
-        esac
-    done
-
-    if [ -n "$opt_branch" ] && [ -n "$opt_no_branch" ]; then
-        error "--branch and --no-branch are mutually exclusive"
-    fi
-
-    local is_new_branch="1"
-    if [ -n "$opt_no_branch" ]; then
-        is_new_branch=""
-    elif [ -z "$opt_branch" ]; then
-        # Skip branch creation when not on the default branch (unless --branch forces it)
-        local _is_git
-        context_is_git_repo _is_git
-        if [[ "$_is_git" == "1" ]]; then
-            local current_branch_name
-            current_branch_name=$(git symbolic-ref --short HEAD)
-            local def_branch
-            def_branch=$(git_default_branch_name || echo "")
-            if [ "$current_branch_name" != "$def_branch" ]; then
-                is_new_branch=""
-            fi
-        fi
-    fi
-
-    if [ -z "$change_name" ]; then
-        error "change-name is required"
-    fi
+# _uchange_compute <change_name> <issue_url> <create_branch_flag>
+#     <out_change_folder_rel> <out_frontmatter> <out_branch_name>
+# Side-effect-free except for ensuring the parent uspecs/changes/ directory exists.
+# Computes the timestamped Change Folder path, the YAML frontmatter, and the
+# branch name (when applicable). Does NOT create the Change Folder, does NOT
+# write change.md, does NOT run git checkout.
+_uchange_compute() {
+    local change_name="$1"
+    local issue_url="$2"
+    local create_branch_flag="$3"
+    local -n _out_folder_rel="$4"
+    local -n _out_frontmatter="$5"
+    local -n _out_branch_name="$6"
 
     if [[ ! "$change_name" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
         error "change-name must be kebab-case (lowercase letters, numbers, hyphens): $change_name"
@@ -240,62 +193,52 @@ cmd_change_new() {
     local project_dir
     context_project_dir project_dir
 
-    local changes_folder="$project_dir/$changes_folder_rel"
-
+    mkdir -p "$project_dir/$changes_folder_rel"
 
     local timestamp
     timestamp=$(date -u +"%y%m%d%H%M")
 
     local folder_name="${timestamp}-${change_name}"
-    local change_folder="$changes_folder/$folder_name"
-
-    if [ -d "$change_folder" ]; then
-        error "Change folder already exists: $change_folder"
-    fi
-
-    mkdir -p "$change_folder"
+    _out_folder_rel="$changes_folder_rel/$folder_name"
 
     local registered_at baseline
     registered_at=$(get_timestamp)
     baseline=$(get_baseline "$project_dir")
 
-    local frontmatter="---"$'\n'
-    frontmatter+="registered_at: $registered_at"$'\n'
-    frontmatter+="change_id: $folder_name"$'\n'
+    # Local var names here must NOT collide with the caller-supplied target
+    # names of the namerefs above (Bash dynamic scoping makes a same-name local
+    # turn the nameref into a self-reference).
+    local _fm="---"$'\n'
+    _fm+="registered_at: $registered_at"$'\n'
+    _fm+="change_id: $folder_name"$'\n'
 
     if [ -n "$baseline" ]; then
-        frontmatter+="baseline: $baseline"$'\n'
+        _fm+="baseline: $baseline"$'\n'
     fi
 
     if [ -n "$issue_url" ]; then
-        frontmatter+="issue_url: $issue_url"$'\n'
+        _fm+="issue_url: $issue_url"$'\n'
     fi
 
-    frontmatter+="---"
+    _fm+="---"
+    _out_frontmatter="$_fm"
 
-    printf '%s\n' "$frontmatter" > "$change_folder/change.md"
-
-    if [ -n "$is_new_branch" ]; then
+    _out_branch_name=""
+    if [ -n "$create_branch_flag" ]; then
         local _is_git
         context_is_git_repo _is_git
         if [[ "$_is_git" == "1" ]]; then
-            local branch_name="$change_name"
+            local _bn="$change_name"
             if [ -n "$issue_url" ]; then
                 local issue_id
                 issue_id=$(extract_issue_id "$issue_url")
                 if [ -n "$issue_id" ]; then
-                    branch_name="${issue_id}-${change_name}"
+                    _bn="${issue_id}-${change_name}"
                 fi
             fi
-            if ! git checkout -b "$branch_name"; then
-                echo "Warning: Failed to create branch '$branch_name'" >&2
-            fi
-        else
-            echo "Warning: Not a git repository, cannot create branch" >&2
+            _out_branch_name="$_bn"
         fi
     fi
-
-    echo "$changes_folder_rel/$folder_name"
 }
 
 convert_links_to_relative() {
@@ -616,8 +559,10 @@ changes_validate_todos_completed() {
 
 
 # cmd_action_uchange --kebab-name <name> [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
-# Creates Change Folder via cmd_change_new, then emits AGENT_INSTRUCTIONS
-# telling the agent to append sections to the created change.md.
+# Side-effect-free with respect to the Change Folder: bash only ensures the
+# parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
+# the agent to create the Change Folder, write change.md from the supplied
+# frontmatter artifact, and (when applicable) create the git branch.
 cmd_action_uchange() {
     local opt_no_impl=""
     local opt_specs=""
@@ -625,7 +570,6 @@ cmd_action_uchange() {
     local opt_no_branch=""
     local issue_url=""
     local change_name=""
-    local change_new_args=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -647,12 +591,10 @@ cmd_action_uchange() {
                 ;;
             --branch)
                 opt_branch="1"
-                change_new_args+=("--branch")
                 shift
                 ;;
             --no-branch)
                 opt_no_branch="1"
-                change_new_args+=("--no-branch")
                 shift
                 ;;
             --issue-url)
@@ -660,7 +602,6 @@ cmd_action_uchange() {
                     error "--issue-url requires a URL argument"
                 fi
                 issue_url="$2"
-                change_new_args+=("--issue-url" "$2")
                 shift 2
                 ;;
             *)
@@ -677,9 +618,33 @@ cmd_action_uchange() {
         error "--branch and --no-branch are mutually exclusive"
     fi
 
-    # Create Change Folder and change.md via cmd_change_new
-    local change_folder_rel
-    change_folder_rel=$(cmd_change_new "$change_name" "${change_new_args[@]+"${change_new_args[@]}"}")
+    # Resolve the create-branch decision (default: true; --no-branch clears it;
+    # implicit skip when not on the default branch unless --branch forces it).
+    local create_branch="1"
+    if [ -n "$opt_no_branch" ]; then
+        create_branch=""
+    elif [ -z "$opt_branch" ]; then
+        local _is_git
+        context_is_git_repo _is_git
+        if [[ "$_is_git" == "1" ]]; then
+            local current_branch_name
+            current_branch_name=$(git symbolic-ref --short HEAD)
+            local def_branch
+            def_branch=$(git_default_branch_name || echo "")
+            if [ "$current_branch_name" != "$def_branch" ]; then
+                create_branch=""
+            fi
+        fi
+    fi
+
+    local change_folder_rel="" frontmatter="" branch_name=""
+    _uchange_compute "$change_name" "$issue_url" "$create_branch" \
+        change_folder_rel frontmatter branch_name
+
+    # _uchange_compute clears branch_name when not in a git repo; mirror that
+    # back into create_branch so the conditional in the prompt template stays
+    # consistent with the directive's interpolated value.
+    [ -z "$branch_name" ] && create_branch=""
 
     local project_dir
     context_project_dir project_dir
@@ -711,7 +676,10 @@ cmd_action_uchange() {
     [[ -z "$opt_no_impl" ]] && impl_maybe="1"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
+        [change_folder]="$change_folder_rel"
         [change_file]="$change_file"
+        [branch_name]="$branch_name"
+        [create_branch]="$create_branch"
         [specs_folder]="$specs_folder_rel"
         [no_impl]="$opt_no_impl"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
@@ -721,6 +689,9 @@ cmd_action_uchange() {
         [constr_maybe]="$impl_maybe"
         [change_file_rel_path]="$change_file"
     )
+
+    emit_artifact "change_frontmatter" "$frontmatter" \
+        "Frontmatter for change.md (copy verbatim)"
 
     prompt_start_instructions "action"
     emit_prompt "$prompts_dir" "instr_uchange" context_vars
