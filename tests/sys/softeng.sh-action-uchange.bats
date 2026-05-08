@@ -73,6 +73,21 @@ _assert_frontmatter_contains() {
     [[ "$output" != *"git checkout -b"* ]]
 }
 
+@test "uchange: scn: No options: detached HEAD" {
+    # Given Engineer is on a detached HEAD (common in CI or when checked out
+    # at a specific commit) the action must not abort under set -Eeuo pipefail
+    # and must skip the branch-creation directive (treated as not-on-default).
+    cd "$PROJECT_ROOT"
+    git checkout -q --detach HEAD
+
+    uspecs action uchange --kebab-name my-change
+
+    _assert_uchange_base_output
+
+    # No branch directive
+    [[ "$output" != *"git checkout -b"* ]]
+}
+
 # --- Option forwarding ---
 
 @test "uchange: scn: Issue reference provided" {

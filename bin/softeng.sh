@@ -629,8 +629,10 @@ cmd_action_uchange() {
         local _is_git
         context_is_git_repo _is_git
         if [[ "$_is_git" == "1" ]]; then
-            local current_branch_name
-            current_branch_name=$(git symbolic-ref --short HEAD)
+            local current_branch_name=""
+            if git symbolic-ref -q HEAD >/dev/null; then
+                current_branch_name=$(git symbolic-ref --short HEAD)
+            fi
             local def_branch
             def_branch=$(git_default_branch_name || echo "")
             if [ "$current_branch_name" != "$def_branch" ]; then
