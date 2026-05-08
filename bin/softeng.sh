@@ -1,26 +1,28 @@
 #!/usr/bin/env bash
 
 # Re-exec under a modern Bash if the current interpreter is too old.
-# This script uses Bash 4.2+ features (declare -g, -gA). macOS still ships
-# /bin/bash 3.2, so an explicit `/bin/bash bin/softeng.sh` would otherwise fail.
-# The check below uses only Bash 3.2-safe syntax.
+# This script uses Bash 4.3+ features (declare -g/-gA, local -n namerefs).
+# macOS still ships /bin/bash 3.2, so an explicit `/bin/bash bin/softeng.sh`
+# would otherwise fail. The check below uses only Bash 3.2-safe syntax.
+SOFTENG_MIN_BASH_MAJOR=4
+SOFTENG_MIN_BASH_MINOR=3
 if [ -z "${SOFTENG_BASH_REEXEC:-}" ] && \
-   { [ -z "${BASH_VERSINFO+x}" ] || [ "${BASH_VERSINFO[0]}" -lt 4 ] || \
-     { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 2 ]; }; }; then
+   { [ -z "${BASH_VERSINFO+x}" ] || [ "${BASH_VERSINFO[0]}" -lt "$SOFTENG_MIN_BASH_MAJOR" ] || \
+     { [ "${BASH_VERSINFO[0]}" -eq "$SOFTENG_MIN_BASH_MAJOR" ] && [ "${BASH_VERSINFO[1]}" -lt "$SOFTENG_MIN_BASH_MINOR" ]; }; }; then
     for _candidate in /opt/homebrew/bin/bash /usr/local/bin/bash /usr/bin/bash; do
         if [ -x "$_candidate" ]; then
             # shellcheck disable=SC2016
             _cand_major=$("$_candidate" -c 'echo ${BASH_VERSINFO[0]}')
             # shellcheck disable=SC2016
             _cand_minor=$("$_candidate" -c 'echo ${BASH_VERSINFO[1]}')
-            if [ "$_cand_major" -gt 4 ] || \
-               { [ "$_cand_major" -eq 4 ] && [ "$_cand_minor" -ge 2 ]; }; then
+            if [ "$_cand_major" -gt "$SOFTENG_MIN_BASH_MAJOR" ] || \
+               { [ "$_cand_major" -eq "$SOFTENG_MIN_BASH_MAJOR" ] && [ "$_cand_minor" -ge "$SOFTENG_MIN_BASH_MINOR" ]; }; then
                 export SOFTENG_BASH_REEXEC=1
                 exec "$_candidate" "$0" "$@"
             fi
         fi
     done
-    echo "Error: this script requires Bash 4.2+. Found Bash ${BASH_VERSION:-unknown}." >&2
+    echo "Error: this script requires Bash ${SOFTENG_MIN_BASH_MAJOR}.${SOFTENG_MIN_BASH_MINOR}+. Found Bash ${BASH_VERSION:-unknown}." >&2
     echo "Install a modern Bash (e.g. 'brew install bash') and retry." >&2
     exit 1
 fi
