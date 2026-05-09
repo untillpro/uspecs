@@ -10,6 +10,18 @@ _assert_uchange_base_output() {
     [[ "$output" == *"</LOG>"* ]]
     [[ "$output" == *"<AGENT_INSTRUCTIONS>"* ]]
     [[ "$output" == *"</AGENT_INSTRUCTIONS>"* ]]
+    # Action is side-effect-free with respect to the timestamped Change Folder:
+    # bash never creates it.
+    [[ "$output" =~ uspecs/changes/[0-9]{10}- ]]
+}
+
+# Helper: assert that the AGENT_INSTRUCTIONS payload carries a populated
+# change_frontmatter artifact whose body contains the given substring.
+_assert_frontmatter_contains() {
+    local needle="$1"
+    [[ "$output" == *'<artifact id="change_frontmatter"'* ]]
+    [[ "$output" == *"</artifact>"* ]]
+    [[ "$output" == *"$needle"* ]]
 }
 
 # --- No options ---
@@ -18,32 +30,32 @@ _assert_uchange_base_output() {
     # Given Engineer is on <branch>
     # And Git branch <branch_outcome>
     # branch: the default branch
-    # branch_outcome: is created with name following branch naming rules
+    # branch_outcome: directive to create branch is emitted to the agent
     cd "$PROJECT_ROOT"
 
     uspecs action uchange --kebab-name my-change
 
     _assert_uchange_base_output
 
-    # Change folder and change.md created
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
-    [ -f "$change_folder/change.md" ]
+    # Bash did NOT create the timestamped Change Folder
+    [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
 
-    # Instructions reference the change file
-    [[ "$output" == *"change.md"* ]]
+    # Instructions reference the change file path that the agent will create
+    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/change.md ]]
 
-    # Instructions contain Why/What section content from artifacts.md
+    # Instructions contain Why/What section content from artdefs
     [[ "$output" == *"Why"* ]]
     [[ "$output" == *"What"* ]]
+
+    # Branch directive emitted (default branch + no opt)
+    [[ "$output" == *"git checkout -b my-change"* ]]
 }
 
 @test "uchange: scn: No options: non-default branch" {
     # Given Engineer is on <branch>
     # And Git branch <branch_outcome>
     # branch: a non-default branch
-    # branch_outcome: is not created
+    # branch_outcome: directive to create branch is NOT emitted
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
 
@@ -51,14 +63,29 @@ _assert_uchange_base_output() {
 
     _assert_uchange_base_output
 
-    # Change folder created
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
-    [ -f "$change_folder/change.md" ]
+    # Bash did NOT create the timestamped Change Folder
+    [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
 
     [[ "$output" == *"Why"* ]]
     [[ "$output" == *"What"* ]]
+
+    # No branch directive
+    [[ "$output" != *"git checkout -b"* ]]
+}
+
+@test "uchange: scn: No options: detached HEAD" {
+    # Given Engineer is on a detached HEAD (common in CI or when checked out
+    # at a specific commit) the action must not abort under set -Eeuo pipefail
+    # and must skip the branch-creation directive (treated as not-on-default).
+    cd "$PROJECT_ROOT"
+    git checkout -q --detach HEAD
+
+    uspecs action uchange --kebab-name my-change
+
+    _assert_uchange_base_output
+
+    # No branch directive
+    [[ "$output" != *"git checkout -b"* ]]
 }
 
 # --- Option forwarding ---
@@ -70,11 +97,8 @@ _assert_uchange_base_output() {
 
     _assert_uchange_base_output
 
-    # change.md frontmatter contains issue_url
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
-    grep -q "issue_url:" "$change_folder/change.md"
+    # change_frontmatter artifact carries the issue_url
+    _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 }
 
 @test "uchange: scn: --no-branch option" {
@@ -84,10 +108,10 @@ _assert_uchange_base_output() {
 
     _assert_uchange_base_output
 
-    # Change folder created, no new branch
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
+    # No branch directive emitted
+    [[ "$output" != *"git checkout -b"* ]]
+
+    # Bash leaves the working branch untouched
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
     [ "$current_branch" = "main" ]
@@ -101,10 +125,13 @@ _assert_uchange_base_output() {
 
     _assert_uchange_base_output
 
-    # --branch forces branch creation even on non-default branch
+    # --branch forces the branch directive even from a non-default branch
+    [[ "$output" == *"git checkout -b my-change"* ]]
+
+    # Bash does not actually run the checkout
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
-    [ "$current_branch" = "my-change" ]
+    [ "$current_branch" = "feature-branch" ]
 }
 
 @test "uchange: scn: --no-impl option" {
@@ -147,7 +174,7 @@ _assert_uchange_base_output() {
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
 }
 
-# --- cmd_change_new internals exercised via action uchange ---
+# --- bash-side responsibilities exercised via action uchange ---
 
 @test "uchange: changes folder auto-creation" {
     cd "$PROJECT_ROOT"
@@ -156,67 +183,57 @@ _assert_uchange_base_output() {
     uspecs action uchange --kebab-name my-change --no-branch
 
     _assert_uchange_base_output
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
-    [ -f "$change_folder/change.md" ]
+    # Bash creates the parent uspecs/changes/ directory but NOT the timestamped
+    # Change Folder; that is the agent's responsibility.
+    [ -d "$PROJECT_ROOT/uspecs/changes" ]
+    [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
 }
 
-@test "uchange: frontmatter contains change_id" {
+@test "uchange: frontmatter artifact contains change_id" {
     cd "$PROJECT_ROOT"
 
     uspecs action uchange --kebab-name my-change --no-branch
 
     _assert_uchange_base_output
-    local change_folder
-    change_folder=$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' | head -1)
-    [ -n "$change_folder" ]
-    grep -q "change_id:.*my-change" "$change_folder/change.md"
+    _assert_frontmatter_contains "change_id: "
+    [[ "$output" =~ change_id:[[:space:]][0-9]{10}-my-change ]]
+    _assert_frontmatter_contains "registered_at: "
+    _assert_frontmatter_contains "baseline: "
 }
 
 @test "uchange: scn: Issue reference: branch naming" {
-    # Then Git branch is created with name <branch_name>
+    # Then a `git checkout -b <branch_name>` directive is emitted to the agent
     cd "$PROJECT_ROOT"
 
     # GitHub URL
     uspecs action uchange --kebab-name my-feature --issue-url "https://github.com/owner/repo/issues/42"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/42-my-feature
-
-    git checkout -q main
+    [[ "$output" == *"git checkout -b 42-my-feature"* ]]
 
     # GitLab URL
     uspecs action uchange --kebab-name add-validation --issue-url "https://gitlab.com/group/project/-/issues/7"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/7-add-validation
-
-    git checkout -q main
+    [[ "$output" == *"git checkout -b 7-add-validation"* ]]
 
     # Jira URL
     uspecs action uchange --kebab-name fix-bug --issue-url "https://jira.example.com/browse/PROJ-123"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/PROJ-123-fix-bug
-
-    git checkout -q main
+    [[ "$output" == *"git checkout -b PROJ-123-fix-bug"* ]]
 
     # Hash-fragment URL
     uspecs action uchange --kebab-name fix-crash --issue-url "https://example.com/projects/#!766766"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/766766-fix-crash
-
-    git checkout -q main
+    [[ "$output" == *"git checkout -b 766766-fix-crash"* ]]
 
     # Comment anchor ignored
     uspecs action uchange --kebab-name fix-typo --issue-url "https://github.com/owner/repo/issues/42#issuecomment-123456"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/42-fix-typo
-
-    git checkout -q main
+    [[ "$output" == *"git checkout -b 42-fix-typo"* ]]
 
     # No valid issue ID falls back to change name
     uspecs action uchange --kebab-name my-fallback --issue-url "https://example.com/###"
     [ "$status" -eq 0 ]
-    git -C "$PROJECT_ROOT" show-ref --verify --quiet refs/heads/my-fallback
+    [[ "$output" == *"git checkout -b my-fallback"* ]]
 }
 
 # --- Edge cases ---
