@@ -41,6 +41,8 @@ When the condition does not hold (no `change.md` in scope, or the target is unre
 Per-decision format (second-level header per entry):
 
 ```text
+# Decisions: {Change-request-title-from-change.md}
+
 ## Uncertainty: <short statement of the uncertainty>
 
 Decision: <chosen solution name>
