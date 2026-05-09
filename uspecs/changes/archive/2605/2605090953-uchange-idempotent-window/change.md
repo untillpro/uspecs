@@ -2,6 +2,7 @@
 registered_at: 2026-05-08T14:00:47Z
 change_id: 2605081400-uchange-idempotent-window
 baseline: 03446b3e0fecfd203d1b72d76575ac1be61ee31e
+archived_at: 2026-05-09T09:53:41Z
 ---
 
 # Change request: Move uchange filesystem side effects to the agent
@@ -33,13 +34,13 @@ Introductory items:
 
 References:
 
-- [bin/softeng.sh](../../../bin/softeng.sh)
-- [bin/prompts/instr_uchange.md](../../../bin/prompts/instr_uchange.md)
-- [tests/sys/softeng.sh-action-uchange.bats](../../../tests/sys/softeng.sh-action-uchange.bats)
+- [bin/softeng.sh](../../../../../bin/softeng.sh)
+- [bin/prompts/instr_uchange.md](../../../../../bin/prompts/instr_uchange.md)
+- [tests/sys/softeng.sh-action-uchange.bats](../../../../../tests/sys/softeng.sh-action-uchange.bats)
 
 ## Construction
 
-- [x] update: [tests/sys/softeng.sh-action-uchange.bats](../../../tests/sys/softeng.sh-action-uchange.bats)
+- [x] update: [tests/sys/softeng.sh-action-uchange.bats](../../../../../tests/sys/softeng.sh-action-uchange.bats)
   - update: existing scenarios to assert on `AGENT_INSTRUCTIONS` content instead of post-action filesystem state (no `[ -f .../change.md ]`, no `[ -d .../<timestamp>-<name> ]`, no branch existence checks)
   - add: assertion that `<artifact id="change_frontmatter" ...>` appears in output and contains `change_id:`, `registered_at:`, `baseline:`, and (when `--issue-url` provided) `issue_url:`
   - add: assertion that the instruction body references the timestamped Change Folder path matching `uspecs/changes/<10-digit-ts>-<kebab-name>/`
@@ -47,14 +48,14 @@ References:
   - keep: the "changes folder auto-creation" case asserting that `uspecs/changes/` is created by bash; remove the `change.md` existence check
   - keep: error-path cases (`--kebab-name is required`, mutually exclusive flags, invalid kebab format, unknown flag) unchanged
 
-- [x] update: [bin/softeng.sh](../../../bin/softeng.sh)
+- [x] update: [bin/softeng.sh](../../../../../bin/softeng.sh)
   - update: `cmd_change_new` -> remove `mkdir -p "$change_folder"`, remove the `printf '%s\n' "$frontmatter" > "$change_folder/change.md"` write, remove the `git checkout -b` block; keep kebab validation, `uspecs/changes/` `mkdir -p`, timestamp + folder name computation, frontmatter assembly
   - update: `cmd_change_new` return contract -> output both `change_folder_rel` and the assembled frontmatter to its caller (e.g. via two named-ref out-params, or fold the remaining logic directly into `cmd_action_uchange`)
   - update: `cmd_action_uchange` -> after obtaining the frontmatter, call `emit_artifact "change_frontmatter" "$frontmatter" "Frontmatter for change.md (copy verbatim)"` before `emit_prompt`
   - add: `change_folder` and (when applicable) `branch_name` / `create_branch` entries in the `context_vars` map passed to `emit_prompt`
   - keep: `--branch` / `--no-branch` precedence rules and `extract_issue_id` use; the resolved `branch_name` and `create_branch` flag are now passed to the agent rather than acted on directly
 
-- [x] update: [bin/prompts/instr_uchange.md](../../../bin/prompts/instr_uchange.md)
+- [x] update: [bin/prompts/instr_uchange.md](../../../../../bin/prompts/instr_uchange.md)
   - update: instruction body so the agent first creates folder `${change_folder}`, then creates `${change_file}` containing the verbatim contents of `@artifact_change_frontmatter`, then appends the Why/What (and How if `!no_impl`) sections
   - add: conditional line `Run \`git checkout -b ${branch_name}\` (?create_branch)` so branch creation appears only when bash signals it
   - keep: the existing `@artdef_change_why_what`, `@artdef_change_how`, and `@include_impl_sections` references and ordering
