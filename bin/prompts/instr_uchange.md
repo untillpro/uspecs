@@ -14,5 +14,4 @@ Run `git checkout -b ${branch_name}` (?create_branch)
 
 Rules:
 
-- Do not read `${change_file}`, if it exists overwrite it with the supplied frontmatter content
 - Do not start implementation, only add sections as described above
