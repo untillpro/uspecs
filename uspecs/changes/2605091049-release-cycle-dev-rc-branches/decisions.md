@@ -1,11 +1,11 @@
-# Decisions: Three-branch release cycle (dev, rc, release)
+# Decisions: Four-branch release cycle (dev, rc, rc-maint, release)
 
 ## Uncertainty: Branch topology and protection
 
-Decision: Three long-lived rolling branches (`main`, `rc`, `release`); `rc` and `release` are force-pushed when promoted; tags `vX.Y.Z` preserve history across recreations; branch protection rules are out of scope of this change.
+Decision: Four long-lived rolling branches (`main`, `rc`, `rc-maint`, `release`); `rc`, `rc-maint`, and `release` are force-pushed when promoted; tags `vX.Y.Z` preserve history across recreations; branch protection rules are out of scope of this change. `rc-maint` is an rc-style maintenance line for the currently-released minor (captured from `rc` at the moment `rc` moves to the next minor; serves as the patch source while `rc` tracks the next-minor stabilization).
 
-- Pros: simplest model that fits a single product (no per-minor proliferation); one branch to track per stream; force-push is the natural primitive for "(re)create from upstream"
-- Cons: non-linear history on `rc`/`release` across cycles; deferring branch protection means workflow identity must be trusted to force-push
+- Pros: simplest model that fits a single product (no per-minor proliferation); one branch to track per stream; force-push is the natural primitive for "(re)create from upstream"; `rc-maint` keeps an rc-style preview line for the released minor so patches always branch from an `-rc` source and follow the same back-port discipline
+- Cons: non-linear history on `rc`/`rc-maint`/`release` across cycles; deferring branch protection means workflow identity must be trusted to force-push; one extra long-lived branch to track
 - Confidence: user-provided
 
 Alternatives:
@@ -18,6 +18,52 @@ Alternatives:
    - Pros: protects against accidental developer force-push while preserving rolling model
    - Cons: extra GitHub config; out of scope for this change
    - Confidence: medium
+
+## Uncertainty: Maintenance line for the currently-released minor
+
+Decision: Introduce `rc-maint`, a single rolling rc-style branch that holds the maintenance line for the currently-released minor. `rc-maint` is force-pushed from the current `rc` HEAD by the "Create a new rc" workflow at the moment `rc` is about to advance to the next minor (gated on `rc.major.minor == release.major.minor` and `rc-maint` HEAD diverged from `rc` HEAD; the snapshot step is idempotent and is a no-op once `rc` has moved on). `rc-maint` carries an anticipatory `-rc` next-patch tracker the same way `rc` does today. Patches for the released minor branch from `rc-maint` once `rc` has moved to a newer minor; while `rc.major.minor == release.major.minor`, `rc` itself remains the patch source and `rc-maint` is unused.
+
+- Pros: every patch branches from an `-rc` preview line, eliminating the previous "Initiate patch from release" special case; back-port discipline is uniform (cherry-pick fix to the active `-rc` line, then initiate patch); `release` HEAD is never used as a branch base, only as a merge target; the anticipatory next-patch tracker continues to work for the maintenance line; one extra long-lived branch only (no per-minor proliferation)
+- Cons: one extra rolling branch with force-push semantics; the snapshot step adds a state-changing step to "Create a new rc"; CD configuration must explicitly decide whether `rc-maint` pushes deliver
+- Confidence: user-provided
+
+Alternatives:
+
+1. Keep "Initiate patch from release" -- branch `patch-X.Y.Z` from `release` HEAD whenever `rc.major.minor != release.major.minor`
+   - Pros: no extra branch; minimal model
+   - Cons: branches a `-rc`-free target as a patch base, breaking the back-port discipline uniformity; no anticipatory next-patch tracker for the released minor; developers must cherry-pick fixes directly onto the patch branch instead of staging through an `-rc` preview
+   - Confidence: medium
+2. Per-minor sticky `rc-X.Y` branches replacing the rolling `rc` entirely (flavor A)
+   - Pros: each minor has its own independent stabilization line; supports concurrent minor stabilization
+   - Cons: branch proliferation; CD trigger becomes a glob; rewrites the "Create a new rc" model (no force-push of a rolling rc); larger spec rewrite
+   - Confidence: medium
+3. Per-minor sticky `rc-X.Y` branches in addition to the rolling `rc` (flavor B)
+   - Pros: rolling `rc` keeps its semantics; each maintained minor has its own rc snapshot
+   - Cons: number of branches scales with maintained minors; CD must decide per-sticky-rc; more state to track than a single `rc-maint`
+   - Confidence: medium
+4. Tag-based maintenance source: branch `patch-X.Y.Z` from tag `vX.Y.(Z-1)` instead of any branch
+   - Pros: no extra branch; tags are immutable
+   - Cons: tags cannot carry an anticipatory `-rc` next-patch tracker or accept back-ported preview cherry-picks; back-port discipline collapses to "cherry-pick directly to the patch branch"
+   - Confidence: low
+
+## Uncertainty: CD behavior for `rc-maint`
+
+Decision: `rc-maint` pushes do not trigger CD. The CD trigger set remains `main`, `rc`, `release` (3 streams x 3 agents = 9 destinations).
+
+- Pros: keeps the CD topology unchanged; matches the existing "patch branches do not trigger CD" pattern (both are short-cycle staging surfaces for patches that publish through `release`); avoids two coexisting `-rc` streams in the rc destination (`rc` for next-minor previews, `rc-maint` for current-minor previews) and the consumer-side confusion that would create; rc-maint anticipatory bumps would otherwise need the same skip rule as rc anticipatory bumps
+- Cons: developers who want to preview a back-ported fix on the maintenance line must do so off the `rc-maint` branch directly (or via the patch PR's CI), without an `rc-maint` plugin repository to install from
+- Confidence: default (operator can flip to "rc-maint delivers via rc destination" or "rc-maint gets its own destination" if previewing maintenance commits becomes important)
+
+Alternatives:
+
+1. `rc-maint` shares the existing `rc` destination (`uspecs-rc-plugins-{agent}`); the same anticipatory-bump skip rule applies to `rc-maint` pushes
+   - Pros: maintenance previews are installable; no new destination repos; SemVer ordering keeps `rc` and `rc-maint` versions sorted naturally in the same repo
+   - Cons: two `-rc` lines coexist in one repo; consumers see versions from both the next minor and the maintenance minor; subtle confusion for users who track "the rc stream"
+   - Confidence: medium
+2. `rc-maint` gets its own 3 destinations (`uspecs-rc-maint-plugins-{agent}`); CD matrix grows to 4 streams x 3 agents = 12 destinations
+   - Pros: clean separation; each consumer chooses which lines to follow
+   - Cons: 3 more repos to provision and grant tokens for; another stream in `gen-uspecs-market.py`; for a feature that is consumer-irrelevant most of the time
+   - Confidence: low
 
 ## Uncertainty: Version transition mechanics for "Create a new rc" -- where the minor bump falls and what version ends up on each branch
 
@@ -97,23 +143,23 @@ Alternatives:
 
 ## Uncertainty: Patch branch base, version mechanics, and concurrency
 
-Decision: `patch-X.Y.Z` is created from `rc` HEAD when `rc.major.minor == release.major.minor`, otherwise from `release` HEAD; a single workflow-authored commit "version X.Y.Z" sets `version.txt` to the patch number (strips `-rc` from `rc/version.txt` in the same-line case); only one patch in flight (workflow aborts if `patch-X.Y.Z` already exists, or if `release` does not exist); patch number is `release/version.txt` patch component + 1 (equal to stripping `-rc` from `rc/version.txt` when on the same release line, by the rc anticipatory-bump invariant)
+Decision: `patch-X.Y.Z` is created from `rc` HEAD when `rc.major.minor == release.major.minor`, otherwise from `rc-maint` HEAD; a single workflow-authored commit "version X.Y.Z" sets `version.txt` to the patch number (strips `-rc` from the source's `version.txt`); the source branch is also bumped anticipatorily to `X.Y.Z+1-rc` (on `rc` in the same-line case, on `rc-maint` in the cross-line case); only one patch in flight (workflow aborts if `patch-X.Y.Z` already exists with different content, or if `release` does not exist); patch number is `release/version.txt` patch component + 1 (equal to stripping `-rc` from the source's `version.txt`, by the rc anticipatory-bump invariant)
 
-- Pros: when rc and release share a major.minor, the fix already cherry-picked onto rc carries through to the patch branch with its original commit hash (no second cherry-pick); when rc has moved to a new minor, branching from release keeps unrelated rc work out of the patch; single-patch-in-flight matches the linear feel of the rest of the flow; patch number rule is uniform across both paths
-- Cons: `patch.sh` has two code paths and must compare rc and release versions to choose the source; in the same-line case, rc-only commits accumulated since promotion land on the patch branch (mitigated by squash-merge to release); blocks unrelated parallel patches
+- Pros: every patch branches from an `-rc` line, so the back-port discipline (fix on `main` -> cherry-pick to `rc` or `rc-maint` -> initiate patch) is uniform across both paths; the fix already cherry-picked onto the source carries through to the patch branch with its original commit hash (no second cherry-pick); anticipatory bumps on the source preserve the "the next thing that will ship" invariant for both `rc` and `rc-maint`; single-patch-in-flight matches the linear feel of the rest of the flow; patch number rule is uniform
+- Cons: `patch.sh` has two code paths and must compare rc and release versions to choose the source; source-only commits since promotion land on the patch branch (mitigated by squash-merge to release); blocks unrelated parallel patches
 - Confidence: user-provided
 
 Alternatives:
 
-1. Always branch from `release` HEAD; developer cherry-picks the fix from `rc` onto the patch branch
-   - Pros: single rule; predictable merge base equal to release HEAD; no rc-only history bleeding into the patch
-   - Cons: requires a manual cherry-pick even when rc already has exactly the desired fix; loses the original commit hash for the fix
+1. Always branch from `release` HEAD; developer cherry-picks the fix onto the patch branch
+   - Pros: single rule; predictable merge base equal to release HEAD; no source-line history bleeding into the patch
+   - Cons: requires a manual cherry-pick even when the source already has exactly the desired fix; loses the original commit hash for the fix; no anticipatory next-patch tracker for the released minor
    - Confidence: medium
 2. Always branch from `rc` HEAD (no fallback)
    - Pros: simplest when the same-line case is dominant; no cherry-pick step
    - Cons: breaks once rc advances to a new minor while an old release still needs a patch
    - Confidence: low
-3. Workflow input chooses the base (`--from rc|release`)
+3. Workflow input chooses the base (`--from rc|rc-maint`)
    - Pros: explicit; no implicit rule to remember
    - Cons: extra knob to misuse; non-deterministic outcome from the same trigger
    - Confidence: low
@@ -214,12 +260,15 @@ Alternatives:
    - Cons: most moving parts; alias maintenance is an extra step
    - Confidence: medium
 
-## Uncertainty: Back-porting fixes across `main`, `rc`, and patch branches
+## Uncertainty: Back-porting fixes across `main`, `rc`, `rc-maint`, and patch branches
 
-Decision: Developer-driven; no workflow automation. Recommended order: fix on `main` -> cherry-pick to `rc` -> initiate patch and cherry-pick from `rc` to the patch branch (skip steps that do not apply)
+Decision: Developer-driven; no workflow automation. Recommended order depends on the alignment of `rc` and `release`:
 
-- Pros: zero new automation; flexible (skip when not applicable); puts the fix on the longest-lived line first so cherry-picks flow downstream
-- Cons: relies on human discipline; easy to miss; no enforcement
+- When `rc.major.minor == release.major.minor`: fix on `main` -> cherry-pick to `rc` -> initiate patch and cherry-pick from `rc` to the patch branch (skip steps that do not apply)
+- When `rc.major.minor != release.major.minor`: fix on `main` -> cherry-pick to `rc-maint` -> initiate patch and cherry-pick from `rc-maint` to the patch branch; cherry-pick to `rc` as well if the fix also applies to the next minor
+
+- Pros: zero new automation; flexible (skip when not applicable); puts the fix on the longest-lived line first so cherry-picks flow downstream; every patch is sourced from an `-rc` preview line
+- Cons: relies on human discipline; easy to miss; no enforcement; developer must determine which maintenance line applies
 - Confidence: user-provided
 
 Alternatives:

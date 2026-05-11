@@ -4,7 +4,7 @@ change_id: 2605091049-release-cycle-dev-rc-branches
 baseline: 00cd47a0951be732691d6b8dea7fef4f7860035c
 ---
 
-# Change request: Three-branch release cycle (dev, rc, release)
+# Change request: Four-branch release cycle (dev, rc, rc-maint, release)
 
 ## Why
 
@@ -14,7 +14,7 @@ The current single-track release flow tags directly off `main` and immediately b
 
 ### Release feature
 
-Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate stream), `release` (release stream). `rc` and `release` are force-pushed when promoted; tags `vX.Y.Z` preserve historical points across recreations. Branch protection is out of scope of this change.
+Four long-lived rolling branches: `main` (dev stream), `rc` (release candidate stream for the next minor), `rc-maint` (rc-style maintenance stream for the currently-released minor; patch source when `rc` has already moved to a newer minor), `release` (release stream). `rc`, `rc-maint`, and `release` are force-pushed when promoted; tags `vX.Y.Z` preserve historical points across recreations. Branch protection is out of scope of this change.
 
 - Create a new rc
   - Background
@@ -22,6 +22,7 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
     - `rc` does not exist OR has no commits that are not also on `release` (no unpromoted commits)
   - Developer runs `rc` github workflow (optional `force` input, default false)
   - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the Background preconditions):
+    - if `rc` exists and `rc.major.minor` == `release.major.minor` and `rc-maint` HEAD != `rc` HEAD: force-push `rc-maint` from `rc` HEAD (archive the about-to-be-replaced rc state so it can serve as the patch source for the released minor after `rc` moves to the next minor)
     - if `rc` does not exist or `rc` HEAD is not aligned with the `main` HEAD seen by this run: force-push `rc` from `main` HEAD
     - if `rc/version.txt` != `2.3.0-rc`: commit "version 2.3.0-rc" on `rc` (`version.txt` updated to `2.3.0-rc`)
     - if `main/version.txt` == `2.3.0-dev`: bump to `2.4.0-dev` with commit "version 2.4.0-dev"
@@ -29,7 +30,7 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
 - Create an initial release
   - Background
     - version.txt in the `rc` branch contains `2.3.0-rc` (zero patch)
-    - No `patch-X.Y.*` branches exists
+    - No `patch-X.Y.*` branches exist
   - Developer runs `release` github workflow (optional `force` input, default false)
   - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the abort guards):
     - if `release` does not exist or `release` HEAD is not aligned with the `rc` HEAD seen by this run: force-push `release` from `rc` HEAD
@@ -40,6 +41,7 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
 
 - Initiate patch from rc
   - Background
+    - `rc.major.minor` == `release.major.minor` (otherwise use "Initiate patch from rc-maint")
     - `rc` version.txt contains `2.3.1-rc`; the fix already exists on `rc` (back-ported per the back-port discipline below)
     - `release` version.txt contains `2.3.0` (same major/minor, patch is one behind)
     - if `patch-2.3.1` already exists, its `version.txt` is `2.3.1` (otherwise the workflow aborts: collision with different content)
@@ -49,18 +51,21 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
     - if `patch-2.3.1/version.txt` != `2.3.1`: commit "version 2.3.1" on `patch-2.3.1` (`version.txt` updated to `2.3.1`)
     - if `rc/version.txt` == `2.3.1-rc`: bump to `2.3.2-rc` with commit "version 2.3.2-rc"
 
-- Initiate patch from release
+- Initiate patch from rc-maint
   - Background
-    - `rc` version.txt contains `2.4.2-rc`
-    - `release` version.txt contains `2.3.0` (not same major/minor)
+    - `rc.major.minor` != `release.major.minor` (otherwise use "Initiate patch from rc")
+    - `rc` version.txt contains `2.4.0-rc` (rc has already moved to a newer minor)
+    - `rc-maint` version.txt contains `2.3.1-rc`; `rc-maint.major.minor` == `release.major.minor`; the fix already exists on `rc-maint` (back-ported per the back-port discipline below)
+    - `release` version.txt contains `2.3.0` (same major/minor as `rc-maint`, patch is one behind)
     - if `patch-2.3.1` already exists, its `version.txt` is `2.3.1` (otherwise the workflow aborts: collision with different content)
   - Developer runs `patch` github workflow (optional `force` input, default false)
   - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the Background preconditions):
-    - if `patch-2.3.1` does not exist: create it from `release` HEAD
+    - if `patch-2.3.1` does not exist: create it from `rc-maint` HEAD
     - if `patch-2.3.1/version.txt` != `2.3.1`: commit "version 2.3.1" on `patch-2.3.1` (`version.txt` updated to `2.3.1`)
-  - Note: developers should prefer backporting from `rc` if the fix is already there to preserve the fix commit's history. Backporting from `release` is a fallback when the fix was not backported to `rc` before the release was cut
+    - if `rc-maint/version.txt` == `2.3.1-rc`: bump to `2.3.2-rc` with commit "version 2.3.2-rc"
+  - Note: `rc-maint` is the archived rc state for the currently-released minor; it was captured by the most recent "Create a new rc" run when `rc` moved to the next minor
 
-- Create patch from `patch-2.3.1`
+- Create patch from branch
   - Background
     - `patch-2.3.1` exists and version.txt contains `2.3.1`
     - `release` version.txt contains `2.3.0` (same major/minor, patch is one behind)
@@ -78,7 +83,8 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
 
 - Backport a fix
   - Developer's responsibility; no workflow automation
-  - Recommended order: fix on `main` -> cherry-pick to `rc` -> initiate patch and cherry-pick from `rc` to the patch branch (skip steps that do not apply)
+  - Recommended order when `rc.major.minor` == `release.major.minor`: fix on `main` -> cherry-pick to `rc` -> initiate patch and cherry-pick from `rc` to the patch branch (skip steps that do not apply)
+  - Recommended order when `rc.major.minor` != `release.major.minor`: fix on `main` -> cherry-pick to `rc-maint` -> initiate patch and cherry-pick from `rc-maint` to the patch branch (cherry-pick to `rc` as well if the fix also applies to the next minor)
 
 ### Continuous Delivery feature
 
@@ -121,7 +127,7 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
   - add: scenario "Create initial release aborts" - aborts when any `patch-X.Y.*` exists, when `rc/version.txt` has non-zero patch, or when tag `vX.Y.0` exists on a commit other than the prospective `release` HEAD
   - add: scenario "Create initial release is idempotent on retry" - rerun after partial failure converges to the target state without re-force-pushing or recreating the tag
   - add: scenario "Initiate patch from rc (same major.minor)" - `patch-X.Y.Z` branched from `rc`; `patch/version.txt` set to `X.Y.Z`; `rc` bumped to `X.Y.Z+1-rc`
-  - add: scenario "Initiate patch from release (different major.minor)" - `patch-X.Y.Z` branched from `release` HEAD; `patch/version.txt` set to `X.Y.Z`; `rc` unchanged
+  - add: scenario "Initiate patch from rc-maint (different major.minor)" - `patch-X.Y.Z` branched from `rc-maint` HEAD; `patch/version.txt` set to `X.Y.Z`; `rc-maint` bumped to `X.Y.Z+1-rc`; `rc` unchanged
   - add: scenario "Create patch" - PR from `patch-X.Y.Z` to `release` merged; tag `vX.Y.Z` (re)created on the new `release` HEAD; `patch-X.Y.Z` branch deleted
   - add: scenario "Validate patch" - `validate_patch` runs on PR creation and fails unless `patch.major == release.major`, `patch.minor == release.minor`, and `patch.patch == release.patch + 1`
 
@@ -155,10 +161,10 @@ Three long-lived rolling branches: `main` (dev stream), `rc` (release candidate 
 
 - [x] update: [devops/dev/release--td.md](../../specs/devops/dev/release--td.md)
   - update: "Key components" - replace single `release.yml`/`release.sh` entry with four manual workflows (`rc.yml`, `release.yml`, `patch.yml`, `validate_patch.yml`) plus one auto-triggered workflow that finalizes patch on merge to `release`; each backed by a script under `scripts/` (`rc.sh`, `release.sh`, `patch.sh`)
-  - update: "Key flows" - replace the single diagram with separate flows for "Create rc", "Create initial release", "Initiate patch from rc", "Initiate patch from release", "Create patch (PR merge + auto-finalize)"
+  - update: "Key flows" - replace the single diagram with separate flows for "Create rc" (including the `rc -> rc-maint` snapshot step), "Create initial release", "Initiate patch from rc", "Initiate patch from rc-maint", "Create patch (PR merge + auto-finalize)"
   - update: "Key data models / Version transformation" - cover all transitions: `X.Y.Z-dev` (main) -> `X.Y.0-rc` (rc) and `X.Y+1.0-dev` (main bump); `X.Y.0-rc` (rc) -> `X.Y.0` (release) + tag `vX.Y.0` + `X.Y.1-rc` (rc anticipatory); `X.Y.Z-rc` (rc) -> `X.Y.Z` (patch) + `X.Y.Z+1-rc` (rc anticipatory, same-line case only)
-  - add: section "Branch model" - long-lived rolling `main`/`rc`/`release`; ephemeral `patch-X.Y.Z`; force-push semantics on `rc` and `release`; lightweight tags `vX.Y.Z` preserve historical points across recreations
-  - add: section "Workflow guards" - rc workflow aborts when `rc` has unpromoted commits not on `release` (with bootstrap exception when `rc` does not exist); release workflow aborts on in-flight `patch-*` or non-zero rc patch; patch workflow aborts when `patch-X.Y.Z` exists or `release` does not exist; `validate_patch` fails unless `patch.major == release.major`, `patch.minor == release.minor`, `patch.patch == release.patch + 1`
+  - add: section "Branch model" - long-lived rolling `main`/`rc`/`rc-maint`/`release`; ephemeral `patch-X.Y.Z`; force-push semantics on `rc`, `rc-maint`, and `release`; tags `vX.Y.0` are annotated and immutable; patch tags `vX.Y.Z` (Z>=1) preserve historical points across recreations
+  - add: section "Workflow guards" - rc workflow snapshots `rc -> rc-maint` when `rc.major.minor` == `release.major.minor` and `rc-maint` HEAD differs (preserves the about-to-be-replaced rc state), then aborts when `rc` has unpromoted commits not on `release` (with bootstrap exception when `rc` does not exist); release workflow aborts on in-flight `patch-*`, non-zero rc patch, or `vX.Y.0` tag collision on a different commit; patch workflow source is `rc` if `rc.major.minor` == `release.major.minor` else `rc-maint`, and aborts when `patch-X.Y.Z` exists with different content or `release` does not exist; `validate_patch` fails unless `patch.major == release.major`, `patch.minor == release.minor`, `patch.patch == release.patch + 1`
   - add: section "Migration" - lazy bootstrap; `rc` and `release` materialize on first run of `rc.yml`/`release.yml`; pre-cutover tags remain reachable
 
 - [x] update: [devops/dev/cd--td.md](../../specs/devops/dev/cd--td.md)

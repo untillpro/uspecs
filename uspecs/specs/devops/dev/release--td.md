@@ -12,7 +12,7 @@
   - Executes `release.sh`
 
 - [patch.yml: GitHub Action](../../../../.github/workflows/patch.yml)
-  - Manual trigger (workflow_dispatch); branches `patch-X.Y.Z` from either `rc` or `release` based on minor alignment
+  - Manual trigger (workflow_dispatch); branches `patch-X.Y.Z` from either `rc` or `rc-maint` based on minor alignment
   - Executes `patch.sh`
 
 - [validate_patch.yml: GitHub Action](../../../../.github/workflows/validate_patch.yml)
@@ -24,7 +24,11 @@
   - Inline finalization, no script
 
 - [rc.sh: bash script](../../../../scripts/rc.sh)
-  - Force-pushes `rc` from `main` HEAD; sets `rc/version.txt` to `X.Y.0-rc`; bumps `main/version.txt` to `X.Y+1.0-dev`
+  - Idempotent steps, each gated by a state check:
+    - if `rc` exists and `rc.major.minor == release.major.minor` and `rc-maint` HEAD != `rc` HEAD: force-push `rc-maint` from `rc` HEAD (snapshot the about-to-be-replaced rc state)
+    - if `rc` does not exist or `rc` HEAD is not aligned with `main` HEAD: force-push `rc` from `main` HEAD
+    - if `rc/version.txt` != `X.Y.0-rc`: commit "version X.Y.0-rc" on `rc`
+    - if `main/version.txt` == `X.Y.0-dev`: bump to `X.Y+1.0-dev`
 
 - [release.sh: bash script](../../../../scripts/release.sh)
   - Idempotent steps, each gated by a state check:
@@ -34,7 +38,7 @@
   - Aborts before any mutation when tag `vX.Y.0` exists on a commit other than the prospective `release` HEAD; `force=true` bypasses the per-step skip checks but not the abort guards
 
 - [patch.sh: bash script](../../../../scripts/patch.sh)
-  - Branches `patch-X.Y.Z` from the appropriate base (`rc` if same major.minor, else `release`); sets `patch/version.txt` to `X.Y.Z`; if same-line, bumps `rc/version.txt` to `X.Y.Z+1-rc`
+  - Branches `patch-X.Y.Z` from the appropriate base (`rc` if `rc.major.minor == release.major.minor`, else `rc-maint`); sets `patch/version.txt` to `X.Y.Z`; bumps the source branch's `version.txt` to `X.Y.Z+1-rc`
 
 - [version.txt: text file](../../../../version.txt)
   - Stores current version number per branch
@@ -52,6 +56,8 @@ Maintainer -> rc.yml (workflow_dispatch from main)
                 |
                 +-- reads main/version.txt (X.Y.Z-dev)
                 +-- aborts if rc has unpromoted commits not on release (unless rc is missing)
+                +-- if rc exists AND rc.major.minor == release.major.minor AND rc-maint HEAD != rc HEAD:
+                |     force-pushes rc-maint from rc HEAD (snapshot the about-to-be-replaced rc state)
                 +-- force-pushes rc from main HEAD
                 +-- sets rc/version.txt to X.Y.0-rc
                 +-- bumps main/version.txt to X.Y+1.0-dev
@@ -94,20 +100,21 @@ Maintainer -> patch.yml (workflow_dispatch, base=rc)
                 +-- bumps rc/version.txt to X.Y.(Z+1)-rc
 ```
 
-### Initiate patch from release (older line)
+### Initiate patch from rc-maint (older line)
 
 ```text
-Maintainer -> patch.yml (workflow_dispatch, base=release)
+Maintainer -> patch.yml (workflow_dispatch, base=rc-maint)
                 |
                 v
             patch.sh
                 |
-                +-- reads release/version.txt (X.Y.W) and rc/version.txt (different minor)
-                +-- target patch = release.patch + 1 (== W+1)
-                +-- aborts if patch-X.Y.(W+1) exists or release missing
-                +-- branches patch-X.Y.(W+1) from release HEAD
-                +-- sets patch/version.txt to X.Y.(W+1)
-                +-- rc unchanged (different line)
+                +-- reads rc-maint/version.txt (X.Y.W-rc), release/version.txt (X.Y.(W-1)), and rc/version.txt (different minor)
+                +-- target patch = release.patch + 1 (== W)
+                +-- aborts if patch-X.Y.W exists with different content or release missing
+                +-- branches patch-X.Y.W from rc-maint HEAD
+                +-- sets patch/version.txt to X.Y.W
+                +-- bumps rc-maint/version.txt to X.Y.(W+1)-rc
+                +-- rc unchanged (different minor)
 ```
 
 ### Create patch (PR merge + auto-finalize)
@@ -133,43 +140,47 @@ Developer -> opens PR patch-X.Y.Z -> release
 
 ### Version transformation
 
-| Source                       | Action         | Source change           | Sibling change           | Tag      |
-|------------------------------|----------------|-------------------------|--------------------------|----------|
-| `main`: `X.Y.Z-dev`          | Create rc      | `main` -> `X.Y+1.0-dev` | `rc` -> `X.Y.0-rc`       | -        |
-| `rc`: `X.Y.0-rc`             | Create release | `rc` -> `X.Y.1-rc`      | `release` -> `X.Y.0`     | `vX.Y.0` |
-| `rc`: `X.Y.Z-rc` (same line) | Initiate patch | `rc` -> `X.Y.Z+1-rc`    | `patch-X.Y.Z` -> `X.Y.Z` | -        |
-| `release`: `X.Y.Z-1` (older) | Initiate patch | -                       | `patch-X.Y.Z` -> `X.Y.Z` | -        |
-| `patch-X.Y.Z` -> `release`   | Merge patch PR | -                       | `release` -> `X.Y.Z`     | `vX.Y.Z` |
+| Source                         | Action         | Source change              | Sibling change                                                                 | Tag      |
+|--------------------------------|----------------|----------------------------|--------------------------------------------------------------------------------|----------|
+| `main`: `X.Y.Z-dev`            | Create rc      | `main` -> `X.Y+1.0-dev`    | `rc` -> `X.Y.0-rc` (with prior `rc` snapshotted to `rc-maint` when applicable) | -        |
+| `rc`: `X.Y.0-rc`               | Create release | `rc` -> `X.Y.1-rc`         | `release` -> `X.Y.0`                                                           | `vX.Y.0` |
+| `rc`: `X.Y.Z-rc` (same line)   | Initiate patch | `rc` -> `X.Y.Z+1-rc`       | `patch-X.Y.Z` -> `X.Y.Z`                                                       | -        |
+| `rc-maint`: `X.Y.Z-rc` (older) | Initiate patch | `rc-maint` -> `X.Y.Z+1-rc` | `patch-X.Y.Z` -> `X.Y.Z`                                                       | -        |
+| `patch-X.Y.Z` -> `release`     | Merge patch PR | -                          | `release` -> `X.Y.Z`                                                           | `vX.Y.Z` |
 
 ## Branch model
 
 - Long-lived rolling branches:
   - `main`: continuous development; `version.txt` is `X.Y.Z-dev`
-  - `rc`: release-candidate stabilization; `version.txt` is `X.Y.Z-rc`; force-pushed on each "Create rc"
+  - `rc`: release-candidate stabilization for the next minor; `version.txt` is `X.Y.Z-rc`; force-pushed on each "Create rc"
+  - `rc-maint`: rc-style maintenance line for the currently-released minor; `version.txt` is `X.Y.Z-rc`; force-pushed by the `rc -> rc-maint` snapshot step in "Create a new rc"; serves as the patch source when `rc.major.minor != release.major.minor`
   - `release`: stable production; `version.txt` is `X.Y.Z`; force-pushed on each "Create release"; advanced by ordinary merge on each accepted patch PR
 - Ephemeral branches:
   - `patch-X.Y.Z`: short-lived hotfix branch; deleted on merge by `patch-finalize.yml`
 - Tags:
   - Annotated `vX.Y.0` created (immutable) on `release` HEAD by `release.yml`; create-if-not-exists semantics -- once created, the tag is not moved or recreated
-  - Lightweight `vX.Y.Z` (re)created on `release` HEAD by `patch-finalize.yml` for patches
+  - Lightweight `vX.Y.Z` (re)created on `release` HEAD by `patch-finalize.yml` for patches (Z >= 1)
   - Each `vX.Y.Z` tag pins the commit that was promoted to `release` for that version; older tags remain at their original commits even after `release` is force-pushed forward, so historical release points stay reachable
 
 ## Workflow guards
 
-- `rc.yml`: aborts when `rc` has commits not present on `release` (unpromoted RC) -- bootstrap exception applies when `rc` does not yet exist
+- `rc.yml`:
+  - Snapshots `rc -> rc-maint` when `rc` exists, `rc.major.minor == release.major.minor`, and `rc-maint` HEAD differs from `rc` HEAD (preserves the about-to-be-replaced rc state); idempotent (no-op once `rc` has moved on)
+  - Aborts when `rc` has commits not present on `release` (unpromoted RC) -- bootstrap exception applies when `rc` does not yet exist
 - `release.yml`: aborts when any `patch-X.Y.*` branch exists, when `rc/version.txt` patch component is non-zero (rc must be freshly cut from `main` for the next minor before promotion), or when tag `vX.Y.0` exists on a commit other than the prospective `release` HEAD
-- `patch.yml`: aborts when `patch-X.Y.Z` already exists or when `release` does not exist
+- `patch.yml`: source branch is `rc` if `rc.major.minor == release.major.minor`, otherwise `rc-maint`; aborts when `release` does not exist, when the chosen source does not exist, or when `patch-X.Y.Z` already exists with different content
 - `validate_patch.yml`: fails unless `patch.major == release.major`, `patch.minor == release.minor`, and `patch.patch == release.patch + 1`
 
 ## Workflow execution model
 
-- `release.yml` runs idempotent steps: each state-changing step is gated by a check on the post-condition and is a no-op when the post-condition already holds (release already at `X.Y.0`; tag `vX.Y.0` already exists; rc already at `X.Y.1-rc`)
+- `rc.yml` and `release.yml` run idempotent steps: each state-changing step is gated by a check on the post-condition and is a no-op when the post-condition already holds (e.g., `rc-maint` already at the prior `rc` HEAD; release already at `X.Y.0`; tag `vX.Y.0` already exists; rc already at `X.Y.1-rc`)
 - The abort guards above run before any mutation and apply on every invocation regardless of idempotent skips
 - An optional `force` workflow input (default false) bypasses the per-step skip checks for the operator who needs to redo a partially-applied state; it does not bypass the abort guards or the tag immutability rule (a colliding tag must be deleted manually before `force=true` will tag elsewhere)
 
 ## Migration
 
-- Lazy bootstrap: neither `rc` nor `release` is pre-provisioned
-- `rc` materializes on the first `rc.yml` run (force-push from `main`)
+- Lazy bootstrap: none of `rc`, `rc-maint`, or `release` is pre-provisioned
+- `rc` materializes on the first `rc.yml` run (force-push from `main`); the `rc -> rc-maint` snapshot step is a no-op on this first run because `rc` does not yet exist
 - `release` materializes on the first `release.yml` run (force-push from `rc`)
+- `rc-maint` materializes on the second `rc.yml` run that occurs after an initial release exists (when `rc.major.minor == release.major.minor` and `rc` is about to advance to the next minor)
 - Pre-cutover tags remain reachable; the new `vX.Y.Z` discipline takes over from the next minor

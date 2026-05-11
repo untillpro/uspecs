@@ -1,13 +1,26 @@
 Feature: Release management
-  Three-branch release cycle with `main` (dev), `rc` (release candidate), and `release` (stable);
+  Four-branch release cycle with `main` (dev), `rc` (release candidate for the next minor),
+  `rc-maint` (rc-style maintenance line for the currently-released minor), and `release` (stable);
   tags `vX.Y.Z` preserve historical release points across branch recreations.
 
   Rule: Create a new rc
 
-    Scenario: Developer triggers rc from main
+    Scenario: Developer triggers rc from main when rc tracks the currently-released minor
       Given version.txt on `main` is "2.3.0-dev"
+      And version.txt on `rc` is "2.2.3-rc"
+      And version.txt on `release` is "2.2.2"
       When Developer triggers `rc` workflow manually
-      Then `rc` is force-pushed from `main` HEAD with version.txt set to "2.3.0-rc"
+      Then `rc-maint` is force-pushed from the prior `rc` HEAD (snapshot of "2.2.3-rc")
+      And `rc` is force-pushed from `main` HEAD with version.txt set to "2.3.0-rc"
+      And version.txt on `main` is bumped to "2.4.0-dev"
+
+    Scenario: Developer triggers the first rc (bootstrap)
+      Given version.txt on `main` is "2.3.0-dev"
+      And `rc` does not exist
+      And `release` does not exist
+      When Developer triggers `rc` workflow manually
+      Then the `rc-maint` snapshot step is a no-op (no prior `rc` to capture)
+      And `rc` is force-pushed from `main` HEAD with version.txt set to "2.3.0-rc"
       And version.txt on `main` is bumped to "2.4.0-dev"
 
   Rule: Create an initial release
@@ -48,7 +61,7 @@ Feature: Release management
 
   Rule: Patch flow
 
-    Scenario: Initiate patch when rc and release share major.minor
+    Scenario: Initiate patch from rc when rc and release share major.minor
       Given version.txt on `rc` is "2.3.1-rc"
       And version.txt on `release` is "2.3.0"
       And no `patch-2.3.1` branch exists
@@ -56,12 +69,14 @@ Feature: Release management
       Then branch `patch-2.3.1` is created from `rc` with version.txt set to "2.3.1"
       And version.txt on `rc` is bumped to "2.3.2-rc"
 
-    Scenario: Initiate patch when rc has moved to a different minor
-      Given version.txt on `rc` is "2.4.2-rc"
+    Scenario: Initiate patch from rc-maint when rc has moved to a different minor
+      Given version.txt on `rc` is "2.4.0-rc"
+      And version.txt on `rc-maint` is "2.3.1-rc"
       And version.txt on `release` is "2.3.0"
       And no `patch-2.3.1` branch exists
       When Developer triggers `patch` workflow manually
-      Then branch `patch-2.3.1` is created from `release` HEAD with version.txt set to "2.3.1"
+      Then branch `patch-2.3.1` is created from `rc-maint` with version.txt set to "2.3.1"
+      And version.txt on `rc-maint` is bumped to "2.3.2-rc"
       And version.txt on `rc` is unchanged
 
     Scenario: Create patch by merging PR to release

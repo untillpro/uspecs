@@ -4,7 +4,7 @@
 
 - [.github/workflows/cd.yml](../../../../.github/workflows/cd.yml)
   - GitHub Actions workflow orchestrator
-  - Triggered on push to `main`, `rc`, or `release`
+  - Triggered on push to `main`, `rc`, or `release` only; pushes to `rc-maint` and `patch-X.Y.Z` do not trigger CD (maintenance previews and in-flight patches publish to the `release` stream through the patch PR merge)
   - Per push event, the source branch determines the active `stream` (`main` -> `dev`, `rc` -> `rc`, `release` -> `release`); only that stream's row is materialized, fanning out across the `agent` matrix dimension (`claude | augment | codex`) into 3 jobs
   - The conceptual delivery surface is 9 (agent x stream) destinations; any single push event activates 3 of them
   - Uses `USPECS_DELIVERY_TOKEN` for repository access
