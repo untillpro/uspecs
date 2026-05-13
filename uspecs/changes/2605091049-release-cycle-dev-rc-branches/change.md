@@ -16,70 +16,54 @@ The current single-track release flow tags directly off `main` and immediately b
 
 Four long-lived rolling branches: `main` (dev stream), `rc` (release candidate stream for the next minor), `rc-maint` (rc-style maintenance stream for the currently-released minor; patch source when `rc` has already moved to a newer minor), `release` (release stream). `rc`, `rc-maint`, and `release` are force-pushed when promoted; tags `vX.Y.Z` preserve historical points across recreations. Branch protection is out of scope of this change.
 
-- Create a new rc
-  - Background
-    - version.txt in the `main` branch contains `2.3.0-dev`
-    - `rc` does not exist OR has no commits that are not also on `release` (no unpromoted commits)
-  - Developer runs `rc` github workflow (optional `force` input, default false)
-  - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the Background preconditions):
-    - if `rc` exists and `rc.major.minor` == `release.major.minor` and `rc-maint` HEAD != `rc` HEAD: force-push `rc-maint` from `rc` HEAD (archive the about-to-be-replaced rc state so it can serve as the patch source for the released minor after `rc` moves to the next minor)
-    - if `rc` does not exist or `rc` HEAD is not aligned with the `main` HEAD seen by this run: force-push `rc` from `main` HEAD
-    - if `rc/version.txt` != `2.3.0-rc`: commit "version 2.3.0-rc" on `rc` (`version.txt` updated to `2.3.0-rc`)
-    - if `main/version.txt` == `2.3.0-dev`: bump to `2.4.0-dev` with commit "version 2.4.0-dev"
+- Create rc
+  - Basic flow
+    - Background
+      - version.txt in the `main` branch contains `2.3.0-dev`
+      - last commit in `main` is not a version bump
+      - CHANGELOG.md is prepared and contains
+    - Developer runs `rc` github workflow
+    - If `rc` branch does not exist it is created from `main`
+    - Current `rc` HEAD is printed as a message "Current rc HEAD is {hash} ({message})"
+    - Current `rc/version.txt` is printed as a message "Current rc version is {version}"
+    - rc is force-pushed from `main` HEAD
+    - if `rc/version.txt` != `2.3.0-rc`:
+      - `version.txt` updated to `2.3.0-rc`
+      - commit "chore: version 2.3.0-rc" on `rc`
+    - if `main/version.txt` == `2.3.0-dev`
+      - `version.txt` updated to `2.3.1-dev`
+      - commit "chore: version 2.4.0-dev"
+  - Exceptional flow
+    - If last commit in the main is `chore: version*` workflow aborts with message "Last commit is a version bump; please add commits on top of the version bump to trigger the rc workflow"
 
-- Create an initial release
+- Create release
   - Background
     - version.txt in the `rc` branch contains `2.3.0-rc` (zero patch)
     - No `patch-X.Y.*` branches exist
-  - Developer runs `release` github workflow (optional `force` input, default false)
-  - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the abort guards):
-    - if `release` does not exist or `release` HEAD is not aligned with the `rc` HEAD seen by this run: force-push `release` from `rc` HEAD
+  - Developer runs `release` github workflow
+  - Basic flow
+    - if `release` does not exist it is created from `rc`
     - if `release/version.txt` != `2.3.0`: commit "version 2.3.0" on `release` (`version.txt` updated to `2.3.0`)
     - if tag `v2.3.0` does not exist: create annotated tag `v2.3.0` on `release` HEAD with message "release 2.3.0"
-    - if `rc/version.txt` == `2.3.0-rc`: bump to `2.3.1-rc` with commit "version 2.3.1-rc"
   - Note: tag `v2.3.0` is immutable once created; on subsequent minors the existing release branch is force-pushed forward and a new immutable `vX.Y.0` tag is created, while older `vX.Y.Z` tags remain pinned to their original commits
 
-- Initiate patch from rc
+- Initiate patch for rc/release
   - Background
-    - `rc.major.minor` == `release.major.minor` (otherwise use "Initiate patch from rc-maint")
-    - `rc` version.txt contains `2.3.1-rc`; the fix already exists on `rc` (back-ported per the back-port discipline below)
-    - `release` version.txt contains `2.3.0` (same major/minor, patch is one behind)
-    - if `patch-2.3.1` already exists, its `version.txt` is `2.3.1` (otherwise the workflow aborts: collision with different content)
-  - Developer runs `patch` github workflow (optional `force` input, default false)
-  - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the Background preconditions):
-    - if `patch-2.3.1` does not exist: create it from `rc` HEAD
-    - if `patch-2.3.1/version.txt` != `2.3.1`: commit "version 2.3.1" on `patch-2.3.1` (`version.txt` updated to `2.3.1`)
-    - if `rc/version.txt` == `2.3.1-rc`: bump to `2.3.2-rc` with commit "version 2.3.2-rc"
-
-- Initiate patch from rc-maint
-  - Background
-    - `rc.major.minor` != `release.major.minor` (otherwise use "Initiate patch from rc")
-    - `rc` version.txt contains `2.4.0-rc` (rc has already moved to a newer minor)
-    - `rc-maint` version.txt contains `2.3.1-rc`; `rc-maint.major.minor` == `release.major.minor`; the fix already exists on `rc-maint` (back-ported per the back-port discipline below)
-    - `release` version.txt contains `2.3.0` (same major/minor as `rc-maint`, patch is one behind)
-    - if `patch-2.3.1` already exists, its `version.txt` is `2.3.1` (otherwise the workflow aborts: collision with different content)
-  - Developer runs `patch` github workflow (optional `force` input, default false)
-  - Idempotent steps (each step is a no-op when its post-condition already holds; `force=true` bypasses the skip checks but not the Background preconditions):
-    - if `patch-2.3.1` does not exist: create it from `rc-maint` HEAD
-    - if `patch-2.3.1/version.txt` != `2.3.1`: commit "version 2.3.1" on `patch-2.3.1` (`version.txt` updated to `2.3.1`)
-    - if `rc-maint/version.txt` == `2.3.1-rc`: bump to `2.3.2-rc` with commit "version 2.3.2-rc"
-  - Note: `rc-maint` is the archived rc state for the currently-released minor; it was captured by the most recent "Create a new rc" run when `rc` moved to the next minor
-
-- Create patch from branch
-  - Background
-    - `patch-2.3.1` exists and version.txt contains `2.3.1`
-    - `release` version.txt contains `2.3.0` (same major/minor, patch is one behind)
-  - Developer creates and accepts the PR from `patch` to `release`
-    - `validate_patch` workflow is triggered
-  - Merge triggers a workflow that:
-    - (re)create lightweight tag `v2.3.1` on that commit (the new `release` HEAD)
-    - deletes `patch-2.3.1` branch
-
-- Validate patch
-  - Background
-    - Developer created a PR from `patch-2.3.1` to `release`
-  - Workflow `validate_patch` is triggered on PR creation and runs CI
-  - Workflow fails if `patch-2.3.1` version.txt is not exactly `release` version.txt with patch component incremented by 1 (i.e., same major and minor, `patch.patch == release.patch + 1`)
+    - `target` version.txt contains version core `2.3.2`
+  - Developer runs `patch` github workflow
+    - `target`: `rc` or `release`
+    - `hashes`: optional, comma-separated list of specific commits to cherry-pick to the patch branch (if empty, no cherry-picks are attempted and the patch branch is created directly from the target)
+  - Basic flow
+    - if `patch-2.3.3-{target}` does not exist: create it from `target` HEAD
+    - if `patch-2.3.3-{target}/version.txt` version core == `2.3.2`: bump it to `2.3.3`, commit "version 2.3.3-{target}"
+    - if hashes is specified and not cherry-picked to `patch-2.3.3-{target}`: 
+      - Attempt to cherry-pick the specified commits is made
+      - Error is not critical and logged
+      - Using `git cherry`
+    - if `{target}/version.txt` version core == `2.3.2`: bump to `2.3.3` with commit "version 2.3.3-{target}"
+    - If pull request
+  - Exeptional flow
+    - If patch is greater than zero and previous patch branch exists (`patch-2.3.1-{target}`) then workflow aborts with error "Previous patch branch patch-2.3.1-{target} exists; please resolve the patch before initiating a new one"
 
 - Backport a fix
   - Developer's responsibility; no workflow automation

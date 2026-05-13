@@ -1,4 +1,4 @@
-# Domain technology: prod
+# Technology: prod
 
 ## Tech stack
 
