@@ -8,9 +8,9 @@ user-invocable: false
 
 Section contains to-do items for modifying technical specification files under `uspecs/specs/`:
 
-- Domain Technology: `uspecs/specs/{domain}/tech.md`
-- Domain Architecture: `uspecs/specs/{domain}/arch.md`
-- Domain Subsystem Architecture: `uspecs/specs/{domain}/arch-{subsystem}.md`
+- (Domain) Technology: `uspecs/specs/{domain}/tech.md`
+- (Domain) Architecture: `uspecs/specs/{domain}/arch.md`
+- (Domain) Subsystem Architecture: `uspecs/specs/{domain}/arch-{subsystem}.md`
 - Context Technology: `uspecs/specs/{domain}/{context}/tech.md`
 - Context Architecture: `uspecs/specs/{domain}/{context}/arch.md`
 - Context Subsystem Architecture: `uspecs/specs/{domain}/{context}/arch-{subsystem}.md`

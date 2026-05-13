@@ -1,6 +1,6 @@
 ---
 name: uspecs-td
-description: Use this skill when authoring or reviewing a Technical Design Specification - any `tech.md`, `arch.md`, `arch-{subsystem}.md`, or `*--td.md` file under `uspecs/specs/`. Covers Domain Technology, Domain Architecture, Domain Subsystem Architecture, Context Architecture, Context Subsystem Architecture, and Feature Technical Design.
+description: Use this skill when authoring, explaning or reviewing a Technical Design Specification - any `tech.md`, `arch.md`, `arch-{subsystem}.md`, or `*--td.md` file under `uspecs/specs/`. Covers Domain Technology, Domain Architecture, Domain Subsystem Architecture, Context Architecture, Context Subsystem Architecture, and Feature Technical Design.
 user-invocable: false
 ---
 
@@ -10,9 +10,9 @@ Technical Design Specifications describe how functionality is to be implemented.
 
 Artifact types:
 
-- Domain Technology (`uspecs/specs/{domain}/tech.md`) - tech stack, architecture patterns, UI/UX guidelines
-- Domain Architecture (`uspecs/specs/{domain}/arch.md`)
-- Domain Subsystem Architecture (`uspecs/specs/{domain}/arch-{subsystem}.md`)
+- (Domain) Technology (`uspecs/specs/{domain}/tech.md`) - tech stack, architecture patterns, UI/UX guidelines
+- (Domain) Architecture (`uspecs/specs/{domain}/arch.md`)
+- (Domain) Subsystem Architecture (`uspecs/specs/{domain}/arch-{subsystem}.md`)
 - Context Technology (`uspecs/specs/{domain}/{context}/tech.md`)
 - Context Architecture (`uspecs/specs/{domain}/{context}/arch.md`)
 - Context Subsystem Architecture (`uspecs/specs/{domain}/{context}/arch-{subsystem}.md`)
