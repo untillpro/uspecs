@@ -19,6 +19,9 @@ Do not use when: the change only involves specifications or provisioning/configu
   - Key functions, classes, or components to include
   - Test cases or scenarios to cover
 - For `update` action use subitems describing each change
+- Link label: keep the displayed text of a Markdown link to at most the last three path segments. The URL must still be the full relative path.
+  - Bad:  `[src/services/api/v2/handlers/users/profile.ts](../../../../src/services/api/v2/handlers/users/profile.ts)`
+  - Good: `[handlers/users/profile.ts](../../../../src/services/api/v2/handlers/users/profile.ts)`
 - Optional grouping: when items span 3+ distinct dependency categories, group under `###` headers ordered by dependency (foundational first, dependent after)
 - Tests
   - If not specified otherwise (prompt, skills, etc.), include test file items when explicitly requested or implied by the codebase's established patterns
