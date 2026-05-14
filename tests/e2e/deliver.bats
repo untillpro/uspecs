@@ -25,7 +25,7 @@ load 'helpers'
     [ "$(_softeng_version uspecs-dev)" = "$ver" ]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
-    _assert_dev_install_block "claude" "claude"
+    _assert_dev_install_block "claude"
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
@@ -52,7 +52,7 @@ load 'helpers'
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
-    _assert_dev_install_block "augment" "augment"
+    _assert_dev_install_block "augment"
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]
@@ -82,7 +82,7 @@ load 'helpers'
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
-    _assert_dev_install_block "codex" "codex"
+    _assert_dev_install_block "codex"
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
     [[ "$(_marketplace_field "['metadata']['description']")" == *"development build"* ]]
     [ "$(_marketplace_field "['metadata']['version']")" = "$ver" ]

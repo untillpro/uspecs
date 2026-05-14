@@ -86,7 +86,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         output_kind="skills",
         dispatch=_DISPATCH_PLUGIN_ROOT,
         host="Augment Code",
-        cli="augment",
+        cli="auggie",
     ),
     "codex": AgentConfig(
         market_name="uspecs-plugins-codex",
