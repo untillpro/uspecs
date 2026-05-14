@@ -21,23 +21,29 @@ Key features:
 
 Roles:
 
-- Engineer
+- 👤Engineer
   - Software engineer interacting with the system
 
 Systems:
 
-- AI Agent
+- ⚙️AI Agent
   - System that can follow text based instructions to complete multi-step tasks
 
 ## Concepts
 
-- Change Request: a formal proposal to modify System
-- Active Change Request: a Change Request that is being actively worked on
-- Functional Design
+- `Change Request`
+  - A formal proposal to modify System
+
+- `Active Change Request`
+  - A Change Request that is being actively worked on
+
+- `Functional Design`
   - A functional specification focuses on what various outside agents (people using the program, computer peripherals, or other computers, for example) might "observe" when interacting with the system
-- Technical Design
+
+- `Technical Design`
   - The functional design specifies how a program will behave to outside agents and the technical design describes how that functionality is to be implemented
-- Construction
+
+- `Construction`
   - Software construction refers to the detailed creation and maintenance of software through coding, verification, unit testing, integration testing and debugging
 
 ---
