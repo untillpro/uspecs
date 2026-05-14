@@ -4,7 +4,7 @@
 
 PR has been created: ${pr_url}
 
-To restore branch to its pre-squash state, if needed:
+The branch was squashed and force-pushed. Show the user this exact command they can run to restore the pre-squash state if needed:
 
 ```text
 # Run from the PR branch with a clean working tree:
