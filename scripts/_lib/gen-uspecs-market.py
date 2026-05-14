@@ -277,7 +277,13 @@ def render_action_file(
     raw_text: str = action.raw_text.rstrip("\n")
     raw_text_with_dispatch: str = raw_text.replace("{{dispatch}}", dispatch_line)
 
-    options_line: str = f"Options: {action.options}" if action.options else ""
+    options_line: str = (
+        f"Options: {action.options}\n\n"
+        "Do not pass options that are not implied by the instructions above "
+        "or explicitly requested by the user."
+        if action.options
+        else ""
+    )
 
     result: str = template_text
     result = result.replace("{{action}}", action.action)
