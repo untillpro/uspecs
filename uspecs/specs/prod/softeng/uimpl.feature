@@ -45,13 +45,13 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       And AI Agent executes only one (the first available) <action> depending on <condition>
       Examples:
-        | condition                                                                  | action                                                                                        |
-        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files        |
-        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files  |
-        | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps         |
-        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files |
-        | `Construction` section does not exist and it is needed                     | Create `Construction` section and optionally `Quick start` section                            |
-        | Nothing of the above                                                       | Display message "No action needed"                                                            |
+        | condition                                                                  | action                                                                                                                                                                                          |
+        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files                                                                                                          |
+        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files                                                                                                    |
+        | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                           |
+        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                   |
+        | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, and set `scope:` (when at least one scope applies) and `breaking: true` (when the change is breaking) in change.md frontmatter |
+        | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                              |
       And AI Agent stops execution after performing the action
 
     Scenario: Some unchecked to-do items

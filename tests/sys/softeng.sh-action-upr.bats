@@ -4,11 +4,15 @@ set -Eeuo pipefail
 load 'helpers'
 
 # Helper: create a change folder with a proper heading for md_read_title.
-# Usage: _make_upr_change <folder_name> <title> [issue_url]
+# Usage: _make_upr_change <folder_name> <title> [issue_url] [type] [scope] [breaking]
+# type defaults to "feat"; scope and breaking are omitted when empty.
 _make_upr_change() {
     local folder_name="$1"
     local title="${2:-Test change title}"
     local issue_url="${3:-}"
+    local type="${4:-feat}"
+    local scope="${5:-}"
+    local breaking="${6:-}"
 
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
@@ -17,6 +21,13 @@ _make_upr_change() {
         echo "change_id: $folder_name"
         if [[ -n "$issue_url" ]]; then
             echo "issue_url: $issue_url"
+        fi
+        echo "type: $type"
+        if [[ -n "$scope" ]]; then
+            echo "scope: $scope"
+        fi
+        if [[ -n "$breaking" ]]; then
+            echo "breaking: $breaking"
         fi
         echo '---'
         echo ''
@@ -49,10 +60,13 @@ _setup_upr_branch() {
     local folder_name="${1:-2601010000-test-change}"
     local title="${2:-Test change title}"
     local issue_url="${3:-}"
+    local type="${4:-feat}"
+    local scope="${5:-}"
+    local breaking="${6:-}"
 
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
-    _make_upr_change "$folder_name" "$title" "$issue_url"
+    _make_upr_change "$folder_name" "$title" "$issue_url" "$type" "$scope" "$breaking"
 }
 
 # Helper: assert outcome from the "No PR for current branch" scenario.
@@ -78,6 +92,38 @@ _assert_no_pr_base_outcome() {
     local count
     count=$(git -C "$PROJECT_ROOT" rev-list --count origin/main..HEAD)
     [ "$count" -eq 1 ]
+}
+
+# Helper: assert gh pr create --title argument and the squashed HEAD commit
+# subject match <expected_subject>; assert the squash commit body carries
+# the "See change.md for details" trailer; if <issue_id> is given assert
+# a "Closes #<issue_id>" trailer also appears and follows the see-details
+# trailer.
+# Usage: _assert_subject_and_trailers <expected_subject> [<issue_id>]
+_assert_subject_and_trailers() {
+    local expected_subject="$1"
+    local issue_id="${2:-}"
+
+    local gh_calls
+    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
+    [[ "$gh_calls" == *"--title $expected_subject"* ]]
+
+    local subject body
+    subject=$(git -C "$PROJECT_ROOT" log -1 --format=%s HEAD)
+    [ "$subject" = "$expected_subject" ]
+
+    body=$(git -C "$PROJECT_ROOT" log -1 --format=%B HEAD)
+    [[ "$body" == *"See change.md for details"* ]]
+    if [[ -n "$issue_id" ]]; then
+        [[ "$body" == *"Closes #$issue_id"* ]]
+        # see-details trailer appears before Closes trailer
+        local before_see before_closes
+        before_see="${body%%See change.md for details*}"
+        before_closes="${body%%Closes #*}"
+        [ "${#before_see}" -lt "${#before_closes}" ]
+    else
+        [[ "$body" != *"Closes #"* ]]
+    fi
 }
 
 # Helper: assert PR body format invariants (frontmatter wrapped in YAML code fence,
@@ -229,6 +275,7 @@ _assert_pr_body_format() {
         echo '---'
         echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: 2601010000-archived-change"
+        echo "type: feat"
         echo "archived_at: 2026-01-01T01:00:00Z"
         echo '---'
         echo ''
@@ -242,19 +289,22 @@ _assert_pr_body_format() {
 }
 
 # --- PR title and commit message ---
+#
+# Subject template per Conventional Commits v1.0.0:
+#   <type>[(<scope>)][!]: <change_title>[ [<issue_id>]]
+# Commit body trailer order: "See change.md for details" THEN "Closes #<id>".
+# PR title equals the post-squash commit subject.
 
-@test "action upr: No PR for current branch: PR title and commit message, change has issue_url" {
-    _setup_upr_branch "2601010000-issue-change" "Fix the bug" "https://github.com/org/repo/issues/42"
+# type only, no scope, no breaking, no issue
+@test "action upr: subject: type only" {
+    _setup_upr_branch "2601010000-feat-only" "Add feature" "" "feat" "" ""
 
     uspecs action upr
     _assert_no_pr_base_outcome
 
-    # gh pr create was called with title containing issue id
-    local gh_calls
-    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
-    [[ "$gh_calls" == *"[42] Fix the bug"* ]]
+    _assert_subject_and_trailers "feat: Add feature"
 
-    # gh pr create body contains the Why, What and How sections from change.md
+    # PR body still carries the Why/What/How sections from change.md
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
@@ -263,24 +313,47 @@ _assert_pr_body_format() {
     _assert_pr_body_format
 }
 
-@test "action upr: No PR for current branch: PR title and commit message, change does not have issue_url" {
-    _setup_upr_branch "2601010000-no-issue" "Add feature"
+# type + scope, no breaking, no issue
+@test "action upr: subject: type + scope" {
+    _setup_upr_branch "2601010000-fix-api" "Fix the bug" "" "fix" "api" ""
 
     uspecs action upr
     _assert_no_pr_base_outcome
 
-    # gh pr create was called with title = change_title only
-    local gh_calls
-    gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
-    [[ "$gh_calls" == *"--title Add feature"* ]]
+    _assert_subject_and_trailers "fix(api): Fix the bug"
+}
 
-    # gh pr create body contains the Why, What and How sections from change.md
-    local gh_body
-    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
-    [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" == *"## How"*"How narrative."* ]]
-    _assert_pr_body_format
+# type + multi-scope + issue, no breaking
+@test "action upr: subject: type + multi-scope + issue" {
+    _setup_upr_branch "2601010000-multi-scope" "Add new flag" \
+        "https://github.com/org/repo/issues/42" "feat" "api,cli" ""
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    _assert_subject_and_trailers "feat(api,cli): Add new flag [42]" "42"
+}
+
+# type + scope + breaking + issue
+@test "action upr: subject: type + scope + breaking + issue" {
+    _setup_upr_branch "2601010000-breaking-scope" "Rewrite endpoint" \
+        "https://github.com/org/repo/issues/42" "feat" "api" "true"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    _assert_subject_and_trailers "feat(api)!: Rewrite endpoint [42]" "42"
+}
+
+# type + breaking only, no scope, no issue
+@test "action upr: subject: type + breaking only" {
+    _setup_upr_branch "2601010000-breaking-only" "Drop legacy API" \
+        "" "refactor" "" "true"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    _assert_subject_and_trailers "refactor!: Drop legacy API"
 }
 
 # 60 short lines inside Why section -> line limit (40) truncates
@@ -293,6 +366,7 @@ _assert_pr_body_format() {
         echo '---'
         echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
+        echo 'type: feat'
         echo '---'
         echo ''
         echo '# Change request: Large change'
@@ -329,6 +403,7 @@ _assert_pr_body_format() {
         echo '---'
         echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
+        echo 'type: feat'
         echo '---'
         echo ''
         echo '# Change request: Large chars change'
@@ -355,49 +430,6 @@ _assert_pr_body_format() {
     local body_size
     body_size=${#gh_body}
     (( body_size < 4200 ))
-}
-
-# change.md without YAML frontmatter -> PR body has no code fence and only emits Why/What/How
-@test "action upr: No PR for current branch: change.md without frontmatter" {
-    cd "$PROJECT_ROOT"
-    git checkout -q -b no-frontmatter-branch
-    local folder_name="2601010000-no-frontmatter"
-    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
-    {
-        echo '# Change request: No frontmatter change'
-        echo ''
-        echo '## Why'
-        echo ''
-        echo 'Why narrative.'
-        echo ''
-        echo '## What'
-        echo ''
-        echo 'What narrative.'
-        echo ''
-        echo '## How'
-        echo ''
-        echo 'How narrative.'
-        echo ''
-        echo '## Functional design'
-        echo ''
-        echo 'SENTINEL_FILTERED_OUT'
-    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
-    git add .
-    git commit -q -m "add no-frontmatter change"
-
-    uspecs action upr
-    _assert_no_pr_base_outcome
-
-    local gh_body
-    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
-    [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" == *"## How"*"How narrative."* ]]
-    [[ "$gh_body" != *'```yaml'* ]]
-    [[ "$gh_body" != *'```'* ]]
-    [[ "$gh_body" != *"---"* ]]
-    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
-    [[ "$gh_body" != *"## Functional design"* ]]
 }
 
 # --- Edge cases ---
@@ -509,4 +541,67 @@ _assert_pr_body_format() {
     [[ "${stderr:-}" == *"change.md"* ]]
     [[ "${stderr:-}" == *"impl.md"* ]]
     [[ "${stderr:-}" == *"Complete"* ]]
+}
+
+# Change Folder validations#change.md frontmatter has 'type:'
+@test "action upr: Validation rejects, change.md frontmatter is missing 'type:' field" {
+    # softeng.sh hard-fails when change.md frontmatter does not declare a
+    # 'type:' field, and does NOT enumerate the allowed Conventional Commits
+    # types inline. The agent is expected to read the list from the uchange
+    # dispatch instructions and surface it to the user.
+    cd "$PROJECT_ROOT"
+    git checkout -q -b missing-type-branch
+    local folder_name="2601010000-missing-type"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '---'
+        echo "registered_at: 2026-01-01T00:00:00Z"
+        echo "change_id: $folder_name"
+        echo '---'
+        echo ''
+        echo '# Change request: Missing type'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add missing-type change"
+
+    uspecs action upr
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"type"* ]]
+    [[ "${stderr:-}" == *"frontmatter"* ]]
+    # The error must not enumerate allowed types inline; the canonical
+    # list lives in scripts/templates/actions/uchange.yaml only.
+    [[ "${stderr:-}" != *"feat"*"fix"* ]]
+
+    # No PR was created in this error case
+    if [ -f "$BATS_TEST_TMPDIR/gh.calls" ]; then
+        local gh_calls
+        gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
+        [[ "$gh_calls" != *"pr create"* ]]
+    fi
+}
+
+# change.md without frontmatter at all -> same hard-fail as missing-type field
+@test "action upr: Validation rejects, change.md has no YAML frontmatter" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b no-frontmatter-branch
+    local folder_name="2601010000-no-frontmatter"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '# Change request: No frontmatter change'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add no-frontmatter change"
+
+    uspecs action upr
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"type"* ]]
+    [[ "${stderr:-}" == *"frontmatter"* ]]
 }

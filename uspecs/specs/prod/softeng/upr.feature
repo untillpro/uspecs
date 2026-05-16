@@ -36,18 +36,23 @@ Feature: Create pull request from current branch
 
   Scenario Outline: No PR for current branch: PR title and commit message
     Given no PR is associated with the current branch
+    And change.md frontmatter has type <type>, scope <scope>, breaking <breaking>
     And <issue_condition>
     When Engineer invokes upr action
-    Then PR title is <title_format>
+    Then PR title is <subject>
     And pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block, followed by the Why, What and How sections
     And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
     And see_details_line is "See change.md for details"
-    And commit message is <message_format>
+    And commit subject equals <subject>
+    And commit body is <body>
     And change_title is text after ":" in the first `#` heading of change.md, trimmed
     Examples:
-      | issue_condition                | title_format                | message_format                                         |
-      | change has issue_url           | [{issue_id}] {change_title} | Closes #{issue_id}: {change_title}\n{see_details_line} |
-      | change does not have issue_url | {change_title}              | {change_title}\n{see_details_line}                     |
+      | type     | scope          | breaking | issue_condition                | subject                                           | body                                   |
+      | feat     | (absent)       | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
+      | fix      | softeng        | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
+      | feat     | softeng,devops | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
+      | refactor | softeng        | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
+      | chore    | (absent)       | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
 
   Rule: Edge cases
 
@@ -56,8 +61,10 @@ Feature: Create pull request from current branch
       When Engineer invokes upr action
       Then AI Agent displays error <message> and stops
       Examples:
-        | condition                                                                     | message           |
-        | no changes detected in the current branch since branching from default branch | same as condition |
+        | condition                                                                     | message                                                                                                                                                                                                              |
+        | no changes detected in the current branch since branching from default branch | same as condition                                                                                                                                                                                                    |
+        | change.md frontmatter does not contain a `type:` field                        | error directs AI Agent to read allowed Conventional Commits types from the uchange dispatch instructions and present them to the user with a prompt to add `type: <value>` (softeng.sh does not enumerate the types) |
       And Examples includes examples from the "Git validations#Git working tree is clean" scenario
       And Examples includes examples from the "Change Folder validations#All todo items are completed" scenario
       And Examples includes examples from the "Change Folder validations#Exactly one Working Change Folder" scenario
+      And PR is not created in any error case
