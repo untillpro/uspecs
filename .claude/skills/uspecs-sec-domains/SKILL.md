@@ -1,6 +1,6 @@
 ---
 name: uspecs-sec-domains
-description: Use this skill when authoring or reviewing the `## Domain specifications` section in `change.md` or `impl.md` under a Change Folder.
+description: Use this skill when authoring or reviewing the `## Domain specifications` section in `change.md` or `impl.md`  files.
 user-invocable: false
 ---
 
