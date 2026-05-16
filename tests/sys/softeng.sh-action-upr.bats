@@ -127,7 +127,7 @@ _assert_subject_and_trailers() {
 }
 
 # Helper: assert PR body format invariants (frontmatter wrapped in YAML code fence,
-# non-Why/What/How sections filtered out).
+# non-Why/What sections filtered out).
 _assert_pr_body_format() {
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
@@ -304,12 +304,12 @@ _assert_pr_body_format() {
 
     _assert_subject_and_trailers "feat: Add feature"
 
-    # PR body still carries the Why/What/How sections from change.md
+    # PR body still carries the Why/What sections from change.md (How is filtered out)
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
     [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" == *"## How"*"How narrative."* ]]
+    [[ "$gh_body" != *"## How"* ]] && [[ "$gh_body" != *"How narrative."* ]]
     _assert_pr_body_format
 }
 
