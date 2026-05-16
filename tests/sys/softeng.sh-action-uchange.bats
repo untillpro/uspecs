@@ -33,7 +33,7 @@ _assert_frontmatter_contains() {
     # branch_outcome: directive to create branch is emitted to the agent
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change
+    uspecs action uchange --kebab-name my-change --type feat
 
     _assert_uchange_base_output
 
@@ -49,6 +49,9 @@ _assert_frontmatter_contains() {
 
     # Branch directive emitted (default branch + no opt)
     [[ "$output" == *"git checkout -b my-change"* ]]
+
+    # change_frontmatter artifact carries the supplied --type value
+    _assert_frontmatter_contains "type: feat"
 }
 
 @test "uchange: scn: No options: non-default branch" {
@@ -59,7 +62,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
 
-    uspecs action uchange --kebab-name my-change
+    uspecs action uchange --kebab-name my-change --type fix
 
     _assert_uchange_base_output
 
@@ -80,7 +83,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     git checkout -q --detach HEAD
 
-    uspecs action uchange --kebab-name my-change
+    uspecs action uchange --kebab-name my-change --type chore
 
     _assert_uchange_base_output
 
@@ -93,7 +96,7 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: Issue reference provided" {
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --issue-url "https://github.com/owner/repo/issues/42"
+    uspecs action uchange --kebab-name my-change --type feat --issue-url "https://github.com/owner/repo/issues/42"
 
     _assert_uchange_base_output
 
@@ -104,7 +107,7 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: --no-branch option" {
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --no-branch
+    uspecs action uchange --kebab-name my-change --type feat --no-branch
 
     _assert_uchange_base_output
 
@@ -121,7 +124,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
 
-    uspecs action uchange --kebab-name my-change --branch
+    uspecs action uchange --kebab-name my-change --type feat --branch
 
     _assert_uchange_base_output
 
@@ -139,7 +142,7 @@ _assert_frontmatter_contains() {
     # But uimpl action is not invoked
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --no-impl
+    uspecs action uchange --kebab-name my-change --type feat --no-impl
 
     _assert_uchange_base_output
     [[ "$output" == *"Why"* ]]
@@ -153,7 +156,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
-    uspecs action uchange --kebab-name my-change --specs
+    uspecs action uchange --kebab-name my-change --type feat --specs
 
     _assert_uchange_base_output
     # Specs folder created
@@ -166,7 +169,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
-    uspecs action uchange --kebab-name my-change
+    uspecs action uchange --kebab-name my-change --type feat
 
     _assert_uchange_base_output
     # FD label and its Required skill pointer not emitted
@@ -180,7 +183,7 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
     rm -rf "$PROJECT_ROOT/uspecs/changes"
 
-    uspecs action uchange --kebab-name my-change --no-branch
+    uspecs action uchange --kebab-name my-change --type feat --no-branch
 
     _assert_uchange_base_output
     # Bash creates the parent uspecs/changes/ directory but NOT the timestamped
@@ -192,7 +195,7 @@ _assert_frontmatter_contains() {
 @test "uchange: frontmatter artifact contains change_id" {
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --no-branch
+    uspecs action uchange --kebab-name my-change --type feat --no-branch
 
     _assert_uchange_base_output
     _assert_frontmatter_contains "change_id: "
@@ -206,32 +209,32 @@ _assert_frontmatter_contains() {
     cd "$PROJECT_ROOT"
 
     # GitHub URL
-    uspecs action uchange --kebab-name my-feature --issue-url "https://github.com/owner/repo/issues/42"
+    uspecs action uchange --kebab-name my-feature --type feat --issue-url "https://github.com/owner/repo/issues/42"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b 42-my-feature"* ]]
 
     # GitLab URL
-    uspecs action uchange --kebab-name add-validation --issue-url "https://gitlab.com/group/project/-/issues/7"
+    uspecs action uchange --kebab-name add-validation --type feat --issue-url "https://gitlab.com/group/project/-/issues/7"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b 7-add-validation"* ]]
 
     # Jira URL
-    uspecs action uchange --kebab-name fix-bug --issue-url "https://jira.example.com/browse/PROJ-123"
+    uspecs action uchange --kebab-name fix-bug --type fix --issue-url "https://jira.example.com/browse/PROJ-123"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b PROJ-123-fix-bug"* ]]
 
     # Hash-fragment URL
-    uspecs action uchange --kebab-name fix-crash --issue-url "https://example.com/projects/#!766766"
+    uspecs action uchange --kebab-name fix-crash --type fix --issue-url "https://example.com/projects/#!766766"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b 766766-fix-crash"* ]]
 
     # Comment anchor ignored
-    uspecs action uchange --kebab-name fix-typo --issue-url "https://github.com/owner/repo/issues/42#issuecomment-123456"
+    uspecs action uchange --kebab-name fix-typo --type fix --issue-url "https://github.com/owner/repo/issues/42#issuecomment-123456"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b 42-fix-typo"* ]]
 
     # No valid issue ID falls back to change name
-    uspecs action uchange --kebab-name my-fallback --issue-url "https://example.com/###"
+    uspecs action uchange --kebab-name my-fallback --type feat --issue-url "https://example.com/###"
     [ "$status" -eq 0 ]
     [[ "$output" == *"git checkout -b my-fallback"* ]]
 }
@@ -247,10 +250,26 @@ _assert_frontmatter_contains() {
     [[ "${stderr:-}" == *"--kebab-name is required"* ]]
 }
 
+@test "uchange: --type is required" {
+    # softeng.sh hard-fails when --type is missing and does NOT enumerate
+    # the allowed Conventional Commits types inline. The agent is expected
+    # to read the list from the uchange dispatch instructions and surface
+    # it to the user.
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change
+
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"--type is required"* ]]
+    # The error must not enumerate allowed types inline; the canonical
+    # list lives in scripts/templates/actions/uchange.yaml only.
+    [[ "${stderr:-}" != *"feat"*"fix"* ]]
+}
+
 @test "uchange: scn: --branch and --no-branch are mutually exclusive" {
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --branch --no-branch
+    uspecs action uchange --kebab-name my-change --type feat --branch --no-branch
 
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"mutually exclusive"* ]]
@@ -268,7 +287,7 @@ _assert_frontmatter_contains() {
 @test "uchange: invalid --kebab-name format rejected" {
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name "Invalid_Name"
+    uspecs action uchange --kebab-name "Invalid_Name" --type feat
 
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"kebab-case"* ]]

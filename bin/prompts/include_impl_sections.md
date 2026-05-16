@@ -16,3 +16,6 @@ Sections:
 - Provisioning and configuration section. Required skill: uspecs-sec-prov (?prov_maybe)
 - Technical design section. Required skill: uspecs-sec-td (?td_maybe)
 - Construction and Quick start sections. Required skill: uspecs-sec-constr (?constr_maybe)
+  - Set `change.md` frontmatter `scope:` from the contexts listed under `## Contexts` in `uspecs/specs/{domain}/domain.md` that the items touch; comma-separated for multiple; omit when none applies (?constr_maybe)(?domains_defined)
+  - Set `change.md` frontmatter `scope:` as a short free-form name from the code area touched (e.g. `auth`, `tests`); comma-separated for multiple; omit when none applies (?constr_maybe)(?!domains_defined)
+  - Set `change.md` frontmatter `breaking: true` when an existing code API / CLI / UI contract is removed or incompatibly changed; omit otherwise (additive changes are never breaking) (?constr_maybe)

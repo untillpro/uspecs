@@ -305,6 +305,46 @@ _uimpl_with_sections() {
     [[ "$output" == *"completed"* ]]
 }
 
+@test "uimpl: scn: Construction frontmatter sub-bullets (scope/breaking) appear when constr_maybe is set, with scope branch driven by domains_defined" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    # Case 1: specs folder + at least one domain.md -> specs-derived scope branch
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod/softeng"
+    echo '# domain' > "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
+
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"frontmatter \`scope:\` from the contexts listed under \`## Contexts\` in \`uspecs/specs/{domain}/domain.md\`"* ]]
+    [[ "$output" != *"short free-form name from the code area"* ]]
+    [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
+
+    # Case 2: specs folder exists but no domain.md anywhere -> free-form scope branch
+    rm -f "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
+
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
+    [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
+    [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
+
+    # Case 3: no specs folder at all -> free-form scope branch
+    rm -rf "$PROJECT_ROOT/uspecs/specs"
+
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
+    [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
+    [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
+
+    # Case 4: Construction section already exists (constr_maybe="") -> sub-bullets absent
+    _uimpl_with_sections prov constr
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"frontmatter \`scope:\`"* ]]
+    [[ "$output" != *"frontmatter \`breaking: true\`"* ]]
+}
+
 
 # ---------------------------------------------------------------------------
 # scn: unchecked items are emitted into the instr_uimpl_todos prompt

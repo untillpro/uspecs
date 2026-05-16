@@ -171,7 +171,7 @@ extract_issue_id() {
     fi
 }
 
-# _uchange_compute <change_name> <issue_url> <create_branch_flag>
+# _uchange_compute <change_name> <type> <issue_url> <create_branch_flag>
 #     <out_change_folder_rel> <out_frontmatter> <out_branch_name>
 # Side-effect-free except for ensuring the parent uspecs/changes/ directory exists.
 # Computes the timestamped Change Folder path, the YAML frontmatter, and the
@@ -179,11 +179,12 @@ extract_issue_id() {
 # write change.md, does NOT run git checkout.
 _uchange_compute() {
     local change_name="$1"
-    local issue_url="$2"
-    local create_branch_flag="$3"
-    local -n _out_folder_rel="$4"
-    local -n _out_frontmatter="$5"
-    local -n _out_branch_name="$6"
+    local type="$2"
+    local issue_url="$3"
+    local create_branch_flag="$4"
+    local -n _out_folder_rel="$5"
+    local -n _out_frontmatter="$6"
+    local -n _out_branch_name="$7"
 
     if [[ ! "$change_name" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
         error "change-name must be kebab-case (lowercase letters, numbers, hyphens): $change_name"
@@ -213,6 +214,7 @@ _uchange_compute() {
     local _fm="---"$'\n'
     _fm+="registered_at: $registered_at"$'\n'
     _fm+="change_id: $folder_name"$'\n'
+    _fm+="type: $type"$'\n'
 
     if [ -n "$baseline" ]; then
         _fm+="baseline: $baseline"$'\n'
@@ -560,11 +562,17 @@ changes_validate_todos_completed() {
 }
 
 
-# cmd_action_uchange --kebab-name <name> [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
+# cmd_action_uchange --kebab-name <name> --type <type> [--no-impl] [--branch]
+#     [--no-branch] [--issue-url <url>] [--specs]
 # Side-effect-free with respect to the Change Folder: bash only ensures the
 # parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
 # the agent to create the Change Folder, write change.md from the supplied
 # frontmatter artifact, and (when applicable) create the git branch.
+#
+# <type> is the Conventional Commits v1.0.0 commit type the agent inferred
+# from the change description. The canonical list of allowed values lives in
+# scripts/templates/actions/uchange.yaml; softeng.sh does not validate the
+# value itself and does not enumerate the list in error messages.
 cmd_action_uchange() {
     local opt_no_impl=""
     local opt_specs=""
@@ -572,6 +580,7 @@ cmd_action_uchange() {
     local opt_no_branch=""
     local issue_url=""
     local change_name=""
+    local change_type=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -585,6 +594,13 @@ cmd_action_uchange() {
                     error "--kebab-name requires a name argument"
                 fi
                 change_name="$2"
+                shift 2
+                ;;
+            --type)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--type requires a type argument"
+                fi
+                change_type="$2"
                 shift 2
                 ;;
             --specs)
@@ -616,6 +632,10 @@ cmd_action_uchange() {
         error "--kebab-name is required"
     fi
 
+    if [[ -z "$change_type" ]]; then
+        error "--type is required (Conventional Commits type; see uchange dispatch instructions for allowed values)"
+    fi
+
     if [[ -n "$opt_branch" && -n "$opt_no_branch" ]]; then
         error "--branch and --no-branch are mutually exclusive"
     fi
@@ -642,7 +662,7 @@ cmd_action_uchange() {
     fi
 
     local change_folder_rel="" frontmatter="" branch_name=""
-    _uchange_compute "$change_name" "$issue_url" "$create_branch" \
+    _uchange_compute "$change_name" "$change_type" "$issue_url" "$create_branch" \
         change_folder_rel frontmatter branch_name
 
     # _uchange_compute clears branch_name when not in a git repo; mirror that
@@ -673,6 +693,21 @@ cmd_action_uchange() {
         specs_maybe="1"
     fi
 
+    # Detect domains_defined: at least one `uspecs/specs/{domain}/domain.md` exists.
+    # At uchange time `--specs` only creates the empty specs folder, so this is
+    # typically empty here; included so `@include_impl_sections` can resolve the
+    # `(?domains_defined)` conditional inside this context.
+    local domains_defined=""
+    if [[ -n "$specs_maybe" ]]; then
+        local _dd_path
+        for _dd_path in "$project_dir/$specs_folder_rel"/*/domain.md; do
+            if [[ -f "$_dd_path" ]]; then
+                domains_defined="1"
+                break
+            fi
+        done
+    fi
+
     # Cascade `_maybe` flags collapse here because `cmd_uchange` has no impl
     # file: spec-tier flags follow `specs_maybe`; prov/constr are always on.
     # `--no-impl` suppresses every section bullet at once.
@@ -687,6 +722,7 @@ cmd_action_uchange() {
         [specs_folder]="$specs_folder_rel"
         [no_impl]="$opt_no_impl"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
+        [domains_defined]="${impl_maybe:+$domains_defined}"
         [fd_maybe]="${impl_maybe:+$specs_maybe}"
         [prov_maybe]="$impl_maybe"
         [td_maybe]="${impl_maybe:+$specs_maybe}"
@@ -887,6 +923,20 @@ cmd_action_uimpl() {
         specs_maybe="1"
     fi
 
+    # Detect domains_defined: at least one `uspecs/specs/{domain}/domain.md` file exists.
+    # Used by include_impl_sections.md to split the scope-derivation rule between
+    # "lift from specs folder names" and "free-form from code area".
+    local domains_defined=""
+    if [[ -n "$specs_maybe" ]]; then
+        local _dd_path
+        for _dd_path in "$project_dir/$specs_folder_rel"/*/domain.md; do
+            if [[ -f "$_dd_path" ]]; then
+                domains_defined="1"
+                break
+            fi
+        done
+    fi
+
     # Cascade `_maybe` flags: each section is offered only when its own
     # heading is absent and no later-stage section exists. Spec-tier flags
     # additionally require `specs_maybe`. See uimpl.feature priority order.
@@ -932,6 +982,7 @@ cmd_action_uimpl() {
             [impl_file]="$impl_file"
             [specs_folder]="$specs_folder_rel"
             [domains_maybe]="$domains_maybe"
+            [domains_defined]="$domains_defined"
             [fd_maybe]="$fd_maybe"
             [prov_maybe]="$prov_maybe"
             [td_maybe]="$td_maybe"
@@ -1353,7 +1404,7 @@ cmd_action_upr() {
         # PR exists but is CLOSED -- proceed silently with new PR creation
     fi
 
-    # Read change.md: title and optional issue_url
+    # Read change.md: title, type (required), optional scope/breaking/issue_url
     local full_title
     full_title=$(md_read_title "$change_file")
     # change_title is text after ":" in the heading, trimmed
@@ -1365,19 +1416,50 @@ cmd_action_upr() {
         change_title="$full_title"
     fi
 
+    # type: is required by the Conventional Commits subject template.
+    # Hard-fail without enumerating allowed values; the canonical list lives
+    # in scripts/templates/actions/uchange.yaml and is surfaced to the user
+    # by the AI Agent via the uchange dispatch instructions.
+    local change_type change_scope change_breaking
+    change_type=$(md_read_frontmatter_field "$change_file" "type" 2>/dev/null) || true
+    if [[ -z "$change_type" ]]; then
+        error "change.md frontmatter is missing required 'type:' field. AI Agent: read the allowed Conventional Commits types from your 'uchange' dispatch instructions, present them to the user, then add 'type: <value>' to ${change_file} and re-run."
+    fi
+    change_scope=$(md_read_frontmatter_field "$change_file" "scope" 2>/dev/null) || true
+    change_breaking=$(md_read_frontmatter_field "$change_file" "breaking" 2>/dev/null) || true
+
     local issue_url pr_title commit_message see_details_line
     issue_url=$(md_read_frontmatter_field "$change_file" "issue_url" 2>/dev/null) || true
 
     see_details_line="See change.md for details"
 
+    # Compose subject per Conventional Commits v1.0.0:
+    #   <type>[(<scope>)][!]: <change_title>[ [<issue_id>]]
+    local subject="$change_type"
+    if [[ -n "$change_scope" ]]; then
+        subject+="(${change_scope})"
+    fi
+    if [[ "$change_breaking" == "true" ]]; then
+        subject+="!"
+    fi
+    subject+=": ${change_title}"
+
     if [[ -n "$issue_url" ]]; then
         local issue_id
         issue_id=$(extract_issue_id "$issue_url")
-        pr_title="[${issue_id}] ${change_title}"
-        commit_message="Closes #${issue_id}: ${change_title}"$'\n'"${see_details_line}"
+        if [[ -n "$issue_id" ]]; then
+            subject+=" [${issue_id}]"
+        fi
+        pr_title="$subject"
+        # Commit body: see-details trailer first, then Closes trailer
+        if [[ -n "$issue_id" ]]; then
+            commit_message="${subject}"$'\n\n'"${see_details_line}"$'\n\n'"Closes #${issue_id}"
+        else
+            commit_message="${subject}"$'\n\n'"${see_details_line}"
+        fi
     else
-        pr_title="${change_title}"
-        commit_message="${change_title}"$'\n'"${see_details_line}"
+        pr_title="$subject"
+        commit_message="${subject}"$'\n\n'"${see_details_line}"
     fi
 
     # Archive WCF if active and --no-archive not set
