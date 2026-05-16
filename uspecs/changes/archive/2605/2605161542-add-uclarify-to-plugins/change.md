@@ -62,7 +62,7 @@ References:
 - [x] update: [actions/uclarify.md](../../../../../scripts/templates/actions/uclarify.md)
   - move: `git mv .claude/skills/uclarify/SKILL.md scripts/templates/actions/uclarify.md` to preserve history
   - update: strip the skill YAML frontmatter (`name`, `description`, `disable-model-invocation`); the body becomes the action template consumed by `render_action_file` via the new `file:` field
-  - update: leading `# Clarifications` heading kept; subsequent section structure (`Modes`, `On invocation`, `Input`, `Decision recording`, `Interactive mode`, `Auto mode`) unchanged
+  - update: leading `# Clarifications` heading kept; subsequent section structure (`Modes`, `Start`, `Input`, `Decision recording`, `Interactive mode`, `Auto mode`) unchanged
 
 - [x] create: [actions/uclarify.yaml](../../../../../scripts/templates/actions/uclarify.yaml)
   - Action manifest for the marketplace generator
