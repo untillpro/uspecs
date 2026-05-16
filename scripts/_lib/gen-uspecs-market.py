@@ -52,6 +52,7 @@ class AgentConfig:
     dispatch: str
     host: str
     cli: str
+    install_verb: str
 
 
 @dataclass
@@ -78,6 +79,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch="run `softeng.sh action {{action}} [options]`",
         host="Claude Code",
         cli="claude",
+        install_verb="install",
     ),
     "augment": AgentConfig(
         market_name="uspecs-plugins-augment",
@@ -87,6 +89,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch=_DISPATCH_PLUGIN_ROOT,
         host="Augment Code",
         cli="auggie",
+        install_verb="install",
     ),
     "codex": AgentConfig(
         market_name="uspecs-plugins-codex",
@@ -96,6 +99,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         dispatch=_DISPATCH_REL_BIN,
         host="Codex",
         cli="codex",
+        install_verb="add",
     ),
 }
 
@@ -430,7 +434,7 @@ def render_install_block(
     return (
         "```sh\n"
         f"{config.cli} plugin marketplace add {repo_path}\n"
-        f"{config.cli} plugin install {plugin_name}@{market_name}\n"
+        f"{config.cli} plugin {config.install_verb} {plugin_name}@{market_name}\n"
         "```"
     )
 

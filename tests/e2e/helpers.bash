@@ -101,19 +101,20 @@ _softeng_version() {
 
 # _assert_dev_install_block <agent>: asserts README.md install block
 # references the dev marketplace consistently for the given agent. The
-# expected CLI binary per agent is pinned here so the assertion acts as a
-# real oracle independent of the generator's AGENT_CONFIGS.
+# expected CLI binary and install subcommand per agent are pinned here so
+# the assertion acts as a real oracle independent of the generator's
+# AGENT_CONFIGS.
 _assert_dev_install_block() {
     local agent="$1"
-    local cli
+    local cli install_verb
     case "$agent" in
-        claude)  cli="claude" ;;
-        augment) cli="auggie" ;;
-        codex)   cli="codex" ;;
+        claude)  cli="claude"; install_verb="install" ;;
+        augment) cli="auggie"; install_verb="install" ;;
+        codex)   cli="codex";  install_verb="add" ;;
         *) echo "unknown agent: $agent" >&2; return 1 ;;
     esac
     local market_name="uspecs-dev-plugins-$agent"
     local readme="$MKT_REPO/README.md"
     [[ "$(cat "$readme")" == *"$cli plugin marketplace add uspecs/$market_name"* ]]
-    [[ "$(cat "$readme")" == *"$cli plugin install uspecs-dev@$market_name"* ]]
+    [[ "$(cat "$readme")" == *"$cli plugin $install_verb uspecs-dev@$market_name"* ]]
 }
