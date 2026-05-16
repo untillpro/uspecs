@@ -249,17 +249,42 @@ def read_feature_description(source: Path, action: str) -> str:
 
 
 def load_actions(source: Path) -> list[ActionData]:
-    """Load action YAML files; read descriptions from feature files in source repo."""
+    """Load action YAML files; read descriptions from feature files in source repo.
+
+    Each action YAML must specify exactly one of `raw_text` or `file`. When
+    `file` is set, the body is read from `ACTIONS_DIR / data["file"]`.
+    """
     actions: list[ActionData] = []
     for path in sorted(ACTIONS_DIR.glob("*.yaml")):
         with open(path, encoding="utf-8") as f:
             data: dict[str, str] = yaml.safe_load(f)
         action_name: str = data["action"]
+        has_raw: bool = "raw_text" in data
+        has_file: bool = "file" in data
+        if has_raw == has_file:
+            print(
+                f"error: {path}: action YAML must specify exactly one of "
+                f"`raw_text` or `file`",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if has_file:
+            body_path: Path = ACTIONS_DIR / data["file"]
+            if not body_path.is_file():
+                print(
+                    f"error: {path}: `file` references missing body file: "
+                    f"{body_path}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            raw_text: str = body_path.read_text(encoding="utf-8")
+        else:
+            raw_text = data["raw_text"]
         actions.append(
             ActionData(
                 action=action_name,
                 description=read_feature_description(source, action_name),
-                raw_text=data["raw_text"],
+                raw_text=raw_text,
                 options=data.get("options", ""),
             )
         )
@@ -273,7 +298,12 @@ def render_dispatch(dispatch_template: str, action_name: str) -> str:
 def render_action_file(
     template_text: str, action: ActionData, dispatch_line: str
 ) -> str:
-    """Render a command .md or SKILL.md from template + action data."""
+    """Render a command .md or SKILL.md from template + action data.
+
+    Placeholder substitution is a no-op when the placeholder is absent from
+    the body, so bodies sourced via the action YAML `file:` field (which have
+    no `{{dispatch}}`) are embedded as-is.
+    """
     raw_text: str = action.raw_text.rstrip("\n")
     raw_text_with_dispatch: str = raw_text.replace("{{dispatch}}", dispatch_line)
 

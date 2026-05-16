@@ -2,7 +2,9 @@
 
 ## Overview
 
-All softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, the `AI Agent` runs `softeng.sh` to get workflow instructions, reads/creates/updates artifact files, and runs shell commands. The result is reported back to the Engineer.
+Most softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, the `AI Agent` runs `softeng.sh` to get workflow instructions, reads/creates/updates artifact files, and runs shell commands. The result is reported back to the Engineer.
+
+`uclarify` is the exception: it has no `softeng.sh` dispatch. The AI Agent reads the action body directly from `scripts/templates/actions/uclarify.md` (in installed plugins, the rendered command/skill) and executes its instructions.
 
 ## Key flows
 
@@ -39,4 +41,8 @@ Non-exhaustive list of actions and their artifacts:
   - dispatch: softeng.sh action uarchive
   - input: Active Change Folder or --all
   - output: Active Change Folder moved to changes/archive/
-  
+
+- uclarify
+  - dispatch: read `scripts/templates/actions/uclarify.md` and follow it (no `softeng.sh`)
+  - input: specification or artifact file (implicit from context)
+  - output: decision integrated into the file; entry appended to `decisions.md` when the target is in a Change Folder

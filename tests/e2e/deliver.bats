@@ -33,6 +33,9 @@ load 'helpers'
     [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
+    # uclarify is bundled as a command with body sourced from actions/uclarify.md (file: field)
+    [ -f "$MKT_REPO/uspecs-dev/commands/uclarify.md" ]
+    [[ "$(cat "$MKT_REPO/uspecs-dev/commands/uclarify.md")" == *"# Clarifications"* ]]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: augment" {
@@ -62,7 +65,13 @@ load 'helpers'
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
     # Action skill folder name and frontmatter name match the bare action
     [ -f "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md" ]
-    [[ "$(head -n 4 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
+    # All action skills opt out of autonomous model invocation
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"disable-model-invocation: true"* ]]
+    # uclarify is bundled as a skill with body sourced from actions/uclarify.md (file: field)
+    [ -f "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md" ]
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md")" == *"name: uclarify"* ]]
+    [[ "$(cat "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md")" == *"# Clarifications"* ]]
 }
 
 @test "cd: scn: Pre-release version routes to Dev Plugin Repositories: codex" {
@@ -92,7 +101,13 @@ load 'helpers'
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
     # Action skill folder name and frontmatter name match the bare action
     [ -f "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md" ]
-    [[ "$(head -n 4 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"name: uarchive"* ]]
+    # All action skills opt out of autonomous model invocation
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uarchive/SKILL.md")" == *"disable-model-invocation: true"* ]]
+    # uclarify is bundled as a skill with body sourced from actions/uclarify.md (file: field)
+    [ -f "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md" ]
+    [[ "$(head -n 5 "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md")" == *"name: uclarify"* ]]
+    [[ "$(cat "$MKT_REPO/uspecs-dev/skills/uclarify/SKILL.md")" == *"# Clarifications"* ]]
 }
 
 # ---------------------------------------------------------------------------

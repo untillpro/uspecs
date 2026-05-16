@@ -15,6 +15,9 @@
 
 ## Execution instructions
 
+- When user input starts with `uclarify [options] {other-input}` then
+  - read `scripts/templates/actions/uclarify.md` and follow its instructions, treating `{other-input}` as the clarification input
+  - Do not run `bin/softeng.sh` for this action
 - When user input starts with {action} [options] {other-input} like `uchange --no-impl here is some prompt` then
   - run `bash bin/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
     - Do not pass {other-input} verbatim to the command
