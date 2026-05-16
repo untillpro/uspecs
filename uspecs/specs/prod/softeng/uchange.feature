@@ -70,5 +70,5 @@ Feature: Create change request
 
     Scenario: --type option is missing
       When Engineer invokes uchange action without --type option
-      Then error is displayed indicating --type is required and listing the allowed Conventional Commits types
+      Then error is displayed indicating --type is required and AI Agent is instructed to read the allowed Conventional Commits types from the uchange dispatch instructions and present them to the Engineer
       And change request is not created
