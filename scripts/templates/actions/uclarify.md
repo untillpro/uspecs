@@ -1,9 +1,3 @@
----
-name: uclarify
-description: When invoked, identifies the most critical uncertainty in the provided input, presents ranked options with tradeoffs, and applies the user's choice to the relevant specification or artifact files.
-disable-model-invocation: true
----
-
 # Clarifications
 
 ## Modes
@@ -11,9 +5,7 @@ disable-model-invocation: true
 - Interactive (default): present one uncertainty at a time, wait for user input
 - Auto (`--auto`): find and resolve three most critical uncertainties without user input
 
-## On invocation
-
-When the skill is invoked:
+## Start
 
 - Determine the mode: Auto if the user's message contains `--auto`, otherwise Interactive
 - Determine the input (see Input)
@@ -83,7 +75,11 @@ Steps:
 - Use web search to find relevant information if needed or if the user includes `--web` in their message
   - For technology, architecture, library, or tool choices web search is a must
 - After the user picks a numbered option, provides a free-form answer, or chooses Skip/Cancel:
-  - If the choice is a numbered solution or a free-form answer, you MUST integrate the decision into the relevant specification or artifact files AND append an entry to `decisions.md` (see Decision recording) -- do not ask follow-up questions about the same uncertainty before integration
+  - If the choice is a numbered solution or a free-form answer, you MUST:
+    - Integrate the decision into the relevant specification or artifact files
+    - Fix ambiguities, contradictions, stale alternatives, and TBD markers caused or made resolvable by this decision, across the input file and any files it references (for `change.md`, this includes the specs it links to)
+    - Append an entry to `decisions.md` (see Decision recording)
+    - Do not ask follow-up questions about the same uncertainty before integration
   - If the choice is Skip, find the next most critical uncertainty and present options for it
   - If the choice is Cancel, stop -- do not make any changes
 - After integration (numbered solution or free-form answer only -- not after Skip or Cancel), present a review prompt with three control choices:
@@ -135,5 +131,6 @@ Activated when the user includes `--auto` in their message.
 - Identify the three most critical uncertainties in the provided input
 - For each uncertainty, pick the best solution based on available context and web search
 - Integrate all three decisions into the relevant specification or artifact files
+- Fix ambiguities, contradictions, stale alternatives, and TBD markers caused or made resolvable by each decision, across the input file and any files it references (for `change.md`, this includes the specs it links to)
 - Append all three entries to `decisions.md` (see Decision recording)
 - Report a brief summary to the user (one line per decision: uncertainty + chosen solution) and mention that full details are in `decisions.md`
