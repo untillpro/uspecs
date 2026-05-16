@@ -1508,7 +1508,7 @@ cmd_action_upr() {
     atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
-    # ```yaml code fence and emit only the Why, What and How sections from change.md.
+    # ```yaml code fence and emit only the Why and What sections from change.md.
     # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
     # are emitted, and an orphan opening fence is closed in END.
     local pr_body_file
@@ -1516,15 +1516,15 @@ cmd_action_upr() {
     local pr_body_max_lines=40
     local pr_body_max_chars=4000
     awk '
-        BEGIN { in_frontmatter=0; in_why_what_how=0 }
+        BEGIN { in_frontmatter=0; in_why_what=0 }
         NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
         in_frontmatter && /^---$/ { in_frontmatter=0; print "```"; next }
         in_frontmatter { print; next }
         {
             if (/^## /) {
-                in_why_what_how = ($0 ~ /^## (Why|What|How)[[:space:]]*$/) ? 1 : 0
+                in_why_what = ($0 ~ /^## (Why|What)[[:space:]]*$/) ? 1 : 0
             }
-            if (in_why_what_how) print
+            if (in_why_what) print
         }
         END { if (in_frontmatter) print "```" }
     ' "$change_file" > "$pr_body_file"
