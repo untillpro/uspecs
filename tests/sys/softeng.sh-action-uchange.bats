@@ -52,6 +52,10 @@ _assert_frontmatter_contains() {
 
     # change_frontmatter artifact carries the supplied --type value
     _assert_frontmatter_contains "type: feat"
+
+    # Defaults: neither How artdef nor impl-menu bullets emitted
+    [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
+    [[ "$output" != *"- Functional design section"* ]]
 }
 
 @test "uchange: scn: No options: non-default branch" {
@@ -74,6 +78,10 @@ _assert_frontmatter_contains() {
 
     # No branch directive
     [[ "$output" != *"git checkout -b"* ]]
+
+    # Defaults: neither How artdef nor impl-menu bullets emitted
+    [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
+    [[ "$output" != *"- Functional design section"* ]]
 }
 
 @test "uchange: scn: No options: detached HEAD" {
@@ -137,22 +145,71 @@ _assert_frontmatter_contains() {
     [ "$current_branch" = "feature-branch" ]
 }
 
-@test "uchange: scn: --no-impl option" {
-    # And ## How section is produced in Change File
-    # But uimpl action is not invoked
+@test "uchange: scn: --no-impl option is a backwards-compatible no-op" {
+    # And the outcome is identical to invocation without the flag
     cd "$PROJECT_ROOT"
 
-    uspecs action uchange --kebab-name my-change --type feat --no-impl
+    uspecs action uchange --kebab-name my-change --type feat
+    local out_no_flag="$output"
 
-    _assert_uchange_base_output
-    [[ "$output" == *"Why"* ]]
-    [[ "$output" == *"What"* ]]
-    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
-    [[ "$output" == *"## How"* ]]
-    [[ "$output" != *"- Functional design section"* ]]
+    uspecs action uchange --kebab-name my-change --type feat --no-impl
+    local out_no_impl="$output"
+
+    # Normalize the embedded timestamps so byte-equality holds across second
+    # boundaries: timestamped folder name (YYMMDDHHMM-) and the ISO
+    # registered_at frontmatter field.
+    local norm_no_flag norm_no_impl
+    norm_no_flag=$(printf '%s' "$out_no_flag" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g; s/registered_at: [^[:space:]]+/registered_at: TIMESTAMP/')
+    norm_no_impl=$(printf '%s' "$out_no_impl" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g; s/registered_at: [^[:space:]]+/registered_at: TIMESTAMP/')
+
+    [ "$norm_no_flag" = "$norm_no_impl" ]
 }
 
-@test "uchange: --specs creates specs folder and emits FD label" {
+@test "uchange: scn: --how option" {
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat --how
+
+    _assert_uchange_base_output
+    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
+    [[ "$output" == *"## How"* ]]
+    # impl-menu bullets are not emitted
+    [[ "$output" != *"- Functional design section"* ]]
+    [[ "$output" != *"- Construction and Quick start sections"* ]]
+}
+
+@test "uchange: scn: --plan option" {
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat --plan
+
+    _assert_uchange_base_output
+    # impl-menu bullets are emitted (Construction is always emitted when
+    # impl_maybe is set, since constr_maybe mirrors impl_maybe)
+    [[ "$output" == *"- Construction and Quick start sections"* ]]
+    # How artdef is not emitted
+    [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
+}
+
+@test "uchange: scn: --no-impl combined with --how" {
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat --no-impl --how
+
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"--no-impl cannot be combined with --how or --plan"* ]]
+}
+
+@test "uchange: scn: --no-impl combined with --plan" {
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat --no-impl --plan
+
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"--no-impl cannot be combined with --how or --plan"* ]]
+}
+
+@test "uchange: --specs creates specs folder" {
     cd "$PROJECT_ROOT"
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
@@ -161,20 +218,6 @@ _assert_frontmatter_contains() {
     _assert_uchange_base_output
     # Specs folder created
     [ -d "$PROJECT_ROOT/uspecs/specs" ]
-    # FD label and its Required skill pointer emitted in the artdef_impl_all_sections menu
-    [[ "$output" == *"- Functional design section"*"Required skill: uspecs-sec-fd"* ]]
-}
-
-@test "uchange: without --specs and no specs folder, FD label not emitted" {
-    cd "$PROJECT_ROOT"
-    rm -rf "$PROJECT_ROOT/uspecs/specs"
-
-    uspecs action uchange --kebab-name my-change --type feat
-
-    _assert_uchange_base_output
-    # FD label and its Required skill pointer not emitted
-    [[ "$output" != *"- Functional design section"* ]]
-    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
 }
 
 # --- bash-side responsibilities exercised via action uchange ---

@@ -20,4 +20,4 @@ raw_text: |
   - {{dispatch}} and follow the instructions in the output how to process {description}.
   - Do not pass {description} verbatim to the command
 options: "`--kebab-name <name>` (required), `--type <type>` (required),
-  `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--specs`"
+  `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--specs`"

@@ -34,7 +34,7 @@ USPECS_VERSION="0.0.0-source"
 # softeng automation
 #
 # Usage:
-#   softeng action uchange --kebab-name <name> [--no-impl] [--branch] [--no-branch] [--issue-url <url>]
+#   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
 #   softeng action uimpl [--change-folder <path>]
 #   softeng action uarchive [--change-folder <path>] [--all]
 #   softeng action upr [--no-archive]
@@ -562,8 +562,8 @@ changes_validate_todos_completed() {
 }
 
 
-# cmd_action_uchange --kebab-name <name> --type <type> [--no-impl] [--branch]
-#     [--no-branch] [--issue-url <url>] [--specs]
+# cmd_action_uchange --kebab-name <name> --type <type> [--how] [--plan]
+#     [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
 # Side-effect-free with respect to the Change Folder: bash only ensures the
 # parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
 # the agent to create the Change Folder, write change.md from the supplied
@@ -575,6 +575,8 @@ changes_validate_todos_completed() {
 # value itself and does not enumerate the list in error messages.
 cmd_action_uchange() {
     local opt_no_impl=""
+    local opt_how=""
+    local opt_plan=""
     local opt_specs=""
     local opt_branch=""
     local opt_no_branch=""
@@ -585,8 +587,15 @@ cmd_action_uchange() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --no-impl)
-                # shellcheck disable=SC2034
                 opt_no_impl="1"
+                shift
+                ;;
+            --how)
+                opt_how="1"
+                shift
+                ;;
+            --plan)
+                opt_plan="1"
                 shift
                 ;;
             --kebab-name)
@@ -638,6 +647,10 @@ cmd_action_uchange() {
 
     if [[ -n "$opt_branch" && -n "$opt_no_branch" ]]; then
         error "--branch and --no-branch are mutually exclusive"
+    fi
+
+    if [[ -n "$opt_no_impl" && ( -n "$opt_how" || -n "$opt_plan" ) ]]; then
+        error "--no-impl cannot be combined with --how or --plan"
     fi
 
     # Resolve the create-branch decision (default: true; --no-branch clears it;
@@ -709,10 +722,13 @@ cmd_action_uchange() {
     fi
 
     # Cascade `_maybe` flags collapse here because `cmd_uchange` has no impl
-    # file: spec-tier flags follow `specs_maybe`; prov/constr are always on.
-    # `--no-impl` suppresses every section bullet at once.
+    # file: spec-tier flags follow `specs_maybe`; prov/constr follow impl_maybe.
+    # `--plan` opts into the impl sections menu; `--how` opts into the `## How`
+    # bullet. `--no-impl` is a parsed no-op retained for backwards compatibility.
     local impl_maybe=""
-    [[ -z "$opt_no_impl" ]] && impl_maybe="1"
+    [[ -n "$opt_plan" ]] && impl_maybe="1"
+    local how_maybe=""
+    [[ -n "$opt_how" ]] && how_maybe="1"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_folder]="$change_folder_rel"
@@ -720,7 +736,7 @@ cmd_action_uchange() {
         [branch_name]="$branch_name"
         [create_branch]="$create_branch"
         [specs_folder]="$specs_folder_rel"
-        [no_impl]="$opt_no_impl"
+        [how_maybe]="$how_maybe"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
         [domains_defined]="${impl_maybe:+$domains_defined}"
         [fd_maybe]="${impl_maybe:+$specs_maybe}"
