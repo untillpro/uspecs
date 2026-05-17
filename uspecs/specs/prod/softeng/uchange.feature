@@ -9,7 +9,7 @@ Feature: Create change request
       Then base change request is created with Why and What sections
       And Frontmatter has type field set to <type>
       And Git branch <branch_outcome>
-      And uimpl action is invoked automatically
+      And uimpl action is not invoked automatically
       Examples:
         | branch               | type | branch_outcome                                     |
         | the default branch   | feat | is created with name following branch naming rules |
@@ -49,17 +49,25 @@ Feature: Create change request
       Then base change request is created
       And Git branch is created with name following branch naming rules
 
-    Scenario: --no-impl option
+    Scenario: --no-impl option is a backwards-compatible no-op
       When Engineer invokes uchange action with --no-impl option
+      Then the outcome is identical to invocation without the flag
+
+    Scenario: --how option
+      When Engineer invokes uchange action with --how option
       Then base change request is created
       And ## How section is produced in Change File
-      But uimpl action is not invoked
+      And uimpl action is not invoked automatically
+
+    Scenario: --plan option
+      When Engineer invokes uchange action with --plan option
+      Then base change request is created
+      And uimpl action is invoked automatically
 
     Scenario: --specs option
       When Engineer invokes uchange action with --specs option
       Then base change request is created
       And specs folder is created if it does not exist
-      And AI Agent receives Domain specifications, Functional design specifications, and Technical design specifications artdefs
 
   Rule: Edge cases
 
@@ -72,3 +80,12 @@ Feature: Create change request
       When Engineer invokes uchange action without --type option
       Then error is displayed indicating --type is required and AI Agent is instructed to read the allowed Conventional Commits types from the uchange dispatch instructions and present them to the Engineer
       And change request is not created
+
+    Scenario Outline: --no-impl combined with --how or --plan
+      When Engineer invokes uchange action with --no-impl and <other> options
+      Then error is displayed: "--no-impl cannot be combined with --how or --plan"
+      And change request is not created
+      Examples:
+        | other  |
+        | --how  |
+        | --plan |
