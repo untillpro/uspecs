@@ -36,3 +36,4 @@ Rules:
 - References: curated links supporting the change - source files referenced in Decisions, other key files related to the change (e.g., affected modules, related tests, neighboring code), and relevant external docs, RFCs, or specs; not a full inventory of files the implementation will touch
 - Use purpose-based link text in References, not file names
 - By default, use a single `References:` list with internal items first, then external. Split into `References (internal):` and `References (external):` only when both groups have 2 or more items
+- Verify each internal relative link resolves to an existing file before writing. The change file is at `uspecs/changes/{change-folder}/change.md`, so links to repo-root files start with `../../../`
