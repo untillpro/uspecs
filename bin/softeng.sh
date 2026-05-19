@@ -34,7 +34,7 @@ USPECS_VERSION="0.0.0-source"
 # softeng automation
 #
 # Usage:
-#   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
+#   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
 #   softeng action uimpl [--change-folder <path>]
 #   softeng action uarchive [--change-folder <path>] [--all]
 #   softeng action upr [--no-archive]
@@ -563,7 +563,7 @@ changes_validate_todos_completed() {
 
 
 # cmd_action_uchange --kebab-name <name> --type <type> [--how] [--plan]
-#     [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--specs]
+#     [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
 # Side-effect-free with respect to the Change Folder: bash only ensures the
 # parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
 # the agent to create the Change Folder, write change.md from the supplied
