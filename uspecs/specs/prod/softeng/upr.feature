@@ -28,31 +28,43 @@ Feature: Create pull request from current branch
     Then Working Change Folder remains active (not archived)
     And outcome from the "No PR for current branch" scenario is followed
 
+  ## // TODO: Rename to track origin/current_branch if not tracked yet
   Scenario: No PR for current branch: branch has no upstream
     Given local branch does not track origin/current_branch
     When Engineer invokes upr action
     Then local branch is set to track origin/current_branch
     And outcome from the "No PR for current branch" scenario is followed
 
-  Scenario Outline: No PR for current branch: PR title and commit message
-    Given no PR is associated with the current branch
-    And change.md frontmatter has type <type>, scope <scope>, breaking <breaking>
-    And <issue_condition>
-    When Engineer invokes upr action
-    Then PR title is <subject>
-    And pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block, followed by the Why and What sections
-    And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
-    And see_details_line is "See change.md for details"
-    And commit subject equals <subject>
-    And commit body is <body>
-    And change_title is text after ":" in the first `#` heading of change.md, trimmed
-    Examples:
-      | type     | scope          | breaking | issue_condition                | subject                                           | body                                   |
-      | feat     | (absent)       | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
-      | fix      | softeng        | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
-      | feat     | softeng,devops | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
-      | refactor | softeng        | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
-      | chore    | (absent)       | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
+  Rule: PR artifacts
+
+    Background:
+      Given a PR is being created
+
+    Scenario Outline: Construct PR title and commit message
+      Given change.md frontmatter has type <type>, scope <scope>, breaking <breaking>
+      And <issue_condition>
+      Then PR title is <subject>
+      And see_details_line is "See change.md for details"
+      And commit subject equals <subject>
+      And commit body is <body>
+      And change_title is text after ":" in the first `#` heading of change.md, trimmed
+      Examples:
+        | type     | scope          | breaking | issue_condition                | subject                                           | body                                   |
+        | feat     | (absent)       | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
+        | fix      | softeng        | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
+        | feat     | softeng,devops | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
+        | refactor | softeng        | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
+        | chore    | (absent)       | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
+
+    Scenario Outline: Construct PR body
+      Given change.md has <change_md_shape>
+      Then pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block, <body_content>
+      And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
+      Examples:
+        | change_md_shape                                | body_content                                |
+        | a ## Context section                           | followed by the ## Context section          |
+        | ## Why and ## What sections (or archived file) | followed by the ## Why and ## What sections |
+        | neither ## Context nor ## Why/## What sections | with no body sections appended              |
 
   Rule: Edge cases
 

@@ -102,6 +102,8 @@ _assert_frontmatter_contains() {
 # --- Option forwarding ---
 
 @test "uchange: scn: Issue reference provided" {
+    # Without --fetchable: issue_url is recorded in frontmatter but no fetch
+    # directive is emitted and change.md uses the legacy ## Why + ## What shape.
     cd "$PROJECT_ROOT"
 
     uspecs action uchange --kebab-name my-change --type feat --issue-url "https://github.com/owner/repo/issues/42"
@@ -110,6 +112,52 @@ _assert_frontmatter_contains() {
 
     # change_frontmatter artifact carries the issue_url
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
+
+    # No fetch directive (the AI Agent was not asked to fetch issue.md)
+    [[ "$output" != *"Fetch the issue at"* ]]
+
+    # Body shape: legacy Why + What artdef rendered, Context artdef absent
+    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
+
+    # Issue file artdef is gated on --fetchable, so it must not appear here
+    [[ "$output" != *'<artdef id="artdef_issue_file"'* ]]
+}
+
+@test "uchange: scn: --fetchable with issue reference" {
+    # With --fetchable: issue_url is recorded, fetch directive is emitted, and
+    # change.md uses the ## Context shape.
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat \
+        --issue-url "https://github.com/owner/repo/issues/42" --fetchable
+
+    _assert_uchange_base_output
+
+    _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
+
+    # Fetch directive references the issue URL and the change folder's issue.md
+    [[ "$output" == *"Fetch the issue at https://github.com/owner/repo/issues/42"* ]]
+    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue\.md ]]
+
+    # Fetch directive references the issue-file artdef
+    [[ "$output" == *"@artdef_issue_file"* ]]
+
+    # Body shape: Context artdef rendered, legacy Why/What artdef absent
+    [[ "$output" == *'<artdef id="artdef_change_context"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_why_what"'* ]]
+
+    # Issue file artdef is rendered alongside the fetch directive
+    [[ "$output" == *'<artdef id="artdef_issue_file"'* ]]
+}
+
+@test "uchange: scn: --fetchable without issue reference errors out" {
+    cd "$PROJECT_ROOT"
+
+    uspecs action uchange --kebab-name my-change --type feat --fetchable
+
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"--fetchable requires an issue reference"* ]]
 }
 
 @test "uchange: scn: --no-branch option" {

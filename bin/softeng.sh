@@ -580,6 +580,7 @@ cmd_action_uchange() {
     local opt_specs=""
     local opt_branch=""
     local opt_no_branch=""
+    local opt_fetchable=""
     local issue_url=""
     local change_name=""
     local change_type=""
@@ -631,6 +632,10 @@ cmd_action_uchange() {
                 issue_url="$2"
                 shift 2
                 ;;
+            --fetchable)
+                opt_fetchable="1"
+                shift
+                ;;
             *)
                 error "Unknown argument: $1"
                 ;;
@@ -647,6 +652,10 @@ cmd_action_uchange() {
 
     if [[ -n "$opt_branch" && -n "$opt_no_branch" ]]; then
         error "--branch and --no-branch are mutually exclusive"
+    fi
+
+    if [[ -n "$opt_fetchable" && -z "$issue_url" ]]; then
+        error "--fetchable requires an issue reference (pass --issue-url <url>)"
     fi
 
     if [[ -n "$opt_no_impl" && ( -n "$opt_how" || -n "$opt_plan" ) ]]; then
@@ -729,6 +738,8 @@ cmd_action_uchange() {
     [[ -n "$opt_plan" ]] && impl_maybe="1"
     local how_maybe=""
     [[ -n "$opt_how" ]] && how_maybe="1"
+    local fetchable_maybe=""
+    [[ -n "$opt_fetchable" ]] && fetchable_maybe="1"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_folder]="$change_folder_rel"
@@ -737,6 +748,8 @@ cmd_action_uchange() {
         [create_branch]="$create_branch"
         [specs_folder]="$specs_folder_rel"
         [how_maybe]="$how_maybe"
+        [fetchable_maybe]="$fetchable_maybe"
+        [issue_url]="$issue_url"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
         [domains_defined]="${impl_maybe:+$domains_defined}"
         [fd_maybe]="${impl_maybe:+$specs_maybe}"
@@ -1524,7 +1537,10 @@ cmd_action_upr() {
     atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
-    # ```yaml code fence and emit only the Why and What sections from change.md.
+    # ```yaml code fence and emit only the body sections from change.md that
+    # describe the change itself -- `## Context` (issue-case shape, --fetchable)
+    # or `## Why` / `## What` (non-issue case and archived files). When change.md
+    # has neither, only the frontmatter fence is emitted.
     # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
     # are emitted, and an orphan opening fence is closed in END.
     local pr_body_file
@@ -1532,15 +1548,15 @@ cmd_action_upr() {
     local pr_body_max_lines=40
     local pr_body_max_chars=4000
     awk '
-        BEGIN { in_frontmatter=0; in_why_what=0 }
+        BEGIN { in_frontmatter=0; in_body=0 }
         NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
         in_frontmatter && /^---$/ { in_frontmatter=0; print "```"; next }
         in_frontmatter { print; next }
         {
             if (/^## /) {
-                in_why_what = ($0 ~ /^## (Why|What)[[:space:]]*$/) ? 1 : 0
+                in_body = ($0 ~ /^## (Context|Why|What)[[:space:]]*$/) ? 1 : 0
             }
-            if (in_why_what) print
+            if (in_body) print
         }
         END { if (in_frontmatter) print "```" }
     ' "$change_file" > "$pr_body_file"
