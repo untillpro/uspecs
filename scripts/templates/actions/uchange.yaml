@@ -3,7 +3,7 @@ raw_text: |
   Parse user input as `[options] {description}`:
 
   - Determine `kebab-name` from {description}: kebab-case, max 40 chars (ideal 15-30), descriptive, safe to use as a git branch name
-  - Determine `--type <type>` from {description}: pick the Conventional Commits v1.0.0 type that best fits the change. Allowed values:
+  - Determine change request `--type <type>` from {description}: pick the Conventional Commits v1.0.0 type that best fits the change. Allowed values:
     - `feat` -- new user-visible capability
     - `fix` -- bug fix in existing behaviour
     - `build` -- build system, packaging, or external dependency changes
