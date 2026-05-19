@@ -18,16 +18,15 @@ Feature: Create change request
   Rule: Options
 
     Scenario Outline: Issue reference provided
-      Given AI Agent <configured> to fetch issue content from the referenced issue URL
-      When Engineer invokes uchange action with issue reference
+      When Engineer invokes uchange action with issue reference and <fetchable_flag>
       Then base change request is created
       And Frontmatter has issue_url value set to the referenced issue URL
-      And Issue File <issue-file-created-and-contains> the fetched issue contents in markdown format
-      And Change File <references> Issue File in the Why section
+      And Change File body shape is <body_shape>
+      And AI Agent <fetch_instruction>
       Examples:
-        | configured                         | references                    | issue-file-created-and-contains |
-        | configured to fetch content        | references Issue File         | contains fetched issue content  |
-        | configured not to fetch configured | does not reference Issue File | is not created                  |
+        | fetchable_flag | body_shape                  | fetch_instruction                                                            |
+        | --fetchable    | ## Context section          | is instructed to fetch the issue and save its body to Issue File as markdown |
+        | (omitted)      | ## Why and ## What sections | is not instructed to fetch the issue and Issue File is not created           |
 
     Scenario Outline: Issue reference: branch naming
       When Engineer invokes uchange action with issue reference <issue_url> and change name <change_name>
@@ -89,3 +88,8 @@ Feature: Create change request
         | other  |
         | --how  |
         | --plan |
+
+    Scenario: --fetchable without an issue reference
+      When Engineer invokes uchange action with --fetchable but no issue reference
+      Then error is displayed: "--fetchable requires an issue reference"
+      And change request is not created

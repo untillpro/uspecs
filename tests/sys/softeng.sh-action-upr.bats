@@ -4,8 +4,13 @@ set -Eeuo pipefail
 load 'helpers'
 
 # Helper: create a change folder with a proper heading for md_read_title.
-# Usage: _make_upr_change <folder_name> <title> [issue_url] [type] [scope] [breaking]
+# Usage: _make_upr_change <folder_name> <title> [issue_url] [type] [scope] [breaking] [body_shape]
 # type defaults to "feat"; scope and breaking are omitted when empty.
+# body_shape controls which body section(s) are written:
+#   "why_what" (default) -- ## Why + ## What sections (legacy / non-issue shape)
+#   "context"            -- ## Context section (issue-case shape, --fetchable)
+#   "none"               -- no body sections (frontmatter-only body)
+# ## How and ## Functional design are always appended (filtered out by upr).
 _make_upr_change() {
     local folder_name="$1"
     local title="${2:-Test change title}"
@@ -13,6 +18,7 @@ _make_upr_change() {
     local type="${4:-feat}"
     local scope="${5:-}"
     local breaking="${6:-}"
+    local body_shape="${7:-why_what}"
 
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
@@ -33,14 +39,32 @@ _make_upr_change() {
         echo ''
         echo "# Change request: $title"
         echo ''
-        echo '## Why'
-        echo ''
-        echo 'Why narrative.'
-        echo ''
-        echo '## What'
-        echo ''
-        echo 'What narrative.'
-        echo ''
+        case "$body_shape" in
+            why_what)
+                echo '## Why'
+                echo ''
+                echo 'Why narrative.'
+                echo ''
+                echo '## What'
+                echo ''
+                echo 'What narrative.'
+                echo ''
+                ;;
+            context)
+                echo '## Context'
+                echo ''
+                echo 'Context narrative.'
+                echo ''
+                echo 'See [issue.md](issue.md) for the originating ticket.'
+                echo ''
+                ;;
+            none)
+                ;;
+            *)
+                echo "_make_upr_change: unknown body_shape: $body_shape" >&2
+                return 1
+                ;;
+        esac
         echo '## How'
         echo ''
         echo 'How narrative.'
@@ -63,10 +87,11 @@ _setup_upr_branch() {
     local type="${4:-feat}"
     local scope="${5:-}"
     local breaking="${6:-}"
+    local body_shape="${7:-why_what}"
 
     cd "$PROJECT_ROOT"
     git checkout -q -b my-feature
-    _make_upr_change "$folder_name" "$title" "$issue_url" "$type" "$scope" "$breaking"
+    _make_upr_change "$folder_name" "$title" "$issue_url" "$type" "$scope" "$breaking" "$body_shape"
 }
 
 # Helper: assert outcome from the "No PR for current branch" scenario.
@@ -126,15 +151,46 @@ _assert_subject_and_trailers() {
     fi
 }
 
-# Helper: assert PR body format invariants (frontmatter wrapped in YAML code fence,
-# non-Why/What sections filtered out).
+# Helper: assert PR body format invariants.
+# Usage: _assert_pr_body_format [body_shape]
+# Invariants always asserted:
+#   - frontmatter wrapped in a ```yaml fenced code block
+#   - no bare "---" delimiters outside the fence
+#   - non-Why/What/Context sections filtered out (SENTINEL, ## Functional design)
+# body_shape selects which body sections must be present:
+#   "why_what" (default) -- ## Why and ## What present, ## Context absent
+#   "context"            -- ## Context present, ## Why and ## What absent
+#   "none"               -- no body sections (frontmatter-only body)
 _assert_pr_body_format() {
+    local body_shape="${1:-why_what}"
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
     [[ "$gh_body" != *"---"* ]]
     [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
     [[ "$gh_body" != *"## Functional design"* ]]
+
+    case "$body_shape" in
+        why_what)
+            [[ "$gh_body" == *"## Why"* ]]
+            [[ "$gh_body" == *"## What"* ]]
+            [[ "$gh_body" != *"## Context"* ]]
+            ;;
+        context)
+            [[ "$gh_body" == *"## Context"* ]]
+            [[ "$gh_body" != *"## Why"* ]]
+            [[ "$gh_body" != *"## What"* ]]
+            ;;
+        none)
+            [[ "$gh_body" != *"## Why"* ]]
+            [[ "$gh_body" != *"## What"* ]]
+            [[ "$gh_body" != *"## Context"* ]]
+            ;;
+        *)
+            echo "_assert_pr_body_format: unknown body_shape: $body_shape" >&2
+            return 1
+            ;;
+    esac
 }
 
 # --- PR already exists ---
@@ -288,7 +344,7 @@ _assert_pr_body_format() {
     _assert_no_pr_base_outcome
 }
 
-# --- PR title and commit message ---
+# --- Construct PR title and commit message ---
 #
 # Subject template per Conventional Commits v1.0.0:
 #   <type>[(<scope>)][!]: <change_title>[ [<issue_id>]]
@@ -355,6 +411,13 @@ _assert_pr_body_format() {
 
     _assert_subject_and_trailers "refactor!: Drop legacy API"
 }
+
+# --- Construct PR body ---
+#
+# pr_body composition depends on change.md shape: ## Context section,
+# ## Why and ## What sections (including archived files), or neither
+# (frontmatter-only body). Truncated to 40 lines or 4000 characters
+# (whichever hits first) with a "(truncated ...)" notice appended.
 
 # 60 short lines inside Why section -> line limit (40) truncates
 @test "action upr: No PR for current branch: PR body truncated by line limit" {
@@ -430,6 +493,47 @@ _assert_pr_body_format() {
     local body_size
     body_size=${#gh_body}
     (( body_size < 4200 ))
+}
+
+# change.md has ## Context (issue-case shape) instead of ## Why + ## What
+@test "action upr: Construct PR body: ## Context section" {
+    _setup_upr_branch "2601010000-context-shape" "Context shape change" \
+        "https://github.com/org/repo/issues/42" "feat" "" "" "context"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    # ## Context section is rendered in the PR body
+    [[ "$gh_body" == *"## Context"*"Context narrative."* ]]
+    [[ "$gh_body" == *"See [issue.md](issue.md)"* ]]
+    # Sentinel from ## Functional design is filtered out
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+
+    _assert_pr_body_format "context"
+}
+
+# change.md has neither ## Context nor ## Why/## What (frontmatter-only body)
+@test "action upr: Construct PR body: no body sections (frontmatter-only)" {
+    _setup_upr_branch "2601010000-no-body" "No body sections" \
+        "" "feat" "" "" "none"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    # Frontmatter is present, wrapped in a yaml code fence
+    [[ "$gh_body" == *'```yaml'*"change_id: 2601010000-no-body"*'```'* ]]
+    # No body sections appended (Why/What/Context/How/Functional design)
+    [[ "$gh_body" != *"## Why"* ]]
+    [[ "$gh_body" != *"## What"* ]]
+    [[ "$gh_body" != *"## Context"* ]]
+    [[ "$gh_body" != *"## How"* ]]
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+
+    _assert_pr_body_format "none"
 }
 
 # --- Edge cases ---
