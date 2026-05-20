@@ -2,6 +2,8 @@
 
 ## data
 
+Basic example:
+
 ```markdown
 # Change request: {title-derived-from-change-description}
 
@@ -16,6 +18,7 @@
 Introductory sentence:
 
 - Item 1
+
 - Item 2
 
 ...
@@ -23,6 +26,7 @@ Introductory sentence:
 
 Rules:
 
+- Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why` (?fetchable_maybe)
 - Tailor the `## What` items to the `type:` frontmatter value:
   - `feat`: behavior claims only; no file paths, no symbol names; name the affected domain/context in prose so reviewers can judge blast radius
   - `fix`:
@@ -36,4 +40,3 @@ Rules:
   - `build`, `ci`, `chore`: what capability or guarantee changes for contributors, not which files
   - `test`: which behavior gains coverage and at which level
   - `revert`: the commit being reverted and which behavior returns
-- When `breaking: true` in frontmatter (any type), include an explicit bullet describing what previously worked stops working or changes shape

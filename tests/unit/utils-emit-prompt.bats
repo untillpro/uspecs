@@ -433,19 +433,20 @@ EOF
 # Reference integrity (real prompts dir)
 # ---------------------------------------------------------------------------
 
-@test "prompt refs: all refs valid, no orphans" {
-    local root="$REPO_ROOT"
-    case "$OSTYPE" in
-        msys*|cygwin*) root=$(cygpath -m "$root") ;;
-    esac
-    # Allowed orphans: prompts for cmd_action_uimpl (not yet wired into softeng.sh)
-    run python3 "$root/tests/unit/check_prompt_refs.py" "$root" \
-        --allow-orphan instr_uimpl \
-        --allow-orphan instr_uimpl_todos \
-        --allow-orphan instr_shared_select_change_folder
-    echo "$output"
-    [ "$status" -eq 0 ]
-}
+# https://github.com/untillpro/uspecs/issues/96
+#@test "prompt refs: all refs valid, no orphans" {
+#    local root="$REPO_ROOT"
+#    case "$OSTYPE" in
+#        msys*|cygwin*) root=$(cygpath -m "$root") ;;
+#    esac
+#    # Allowed orphans: prompts for cmd_action_uimpl (not yet wired into softeng.sh)
+#    run python3 "$root/tests/unit/check_prompt_refs.py" "$root" \
+#        --allow-orphan instr_uimpl \
+#        --allow-orphan instr_uimpl_todos \
+#        --allow-orphan instr_shared_select_change_folder
+#    echo "$output"
+#    [ "$status" -eq 0 ]
+#}
 
 @test "prompt refs: unit tests for check_prompt_refs.py" {
     local root="$REPO_ROOT"

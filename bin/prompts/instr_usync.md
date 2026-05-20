@@ -11,7 +11,7 @@ Implementation plan should mention all changed files except files inside `${chan
 
 If the implementation plan references specifications (located in `${specs_folder}`), align those specifications with the source changes made outside `${specs_folder}`.
 
-Report contradictions between `${change_folder}/issue.md` and implementation in the output (do not modify `issue.md`). (?issue_exists)
+Report contradictions between `${change_folder}/${issue_file}` and implementation in the output (do not modify `${issue_file}`). (?issue_exists)
 
 Rules:
 

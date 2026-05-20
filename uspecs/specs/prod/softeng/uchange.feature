@@ -24,9 +24,30 @@ Feature: Create change request
       And Change File body shape is <body_shape>
       And AI Agent <fetch_instruction>
       Examples:
-        | fetchable_flag | body_shape                  | fetch_instruction                                                            |
-        | --fetchable    | ## Context section          | is instructed to fetch the issue and save its body to Issue File as markdown |
-        | (omitted)      | ## Why and ## What sections | is not instructed to fetch the issue and Issue File is not created           |
+        | fetchable_flag | body_shape                                         | fetch_instruction                                                                                          |
+        | --fetchable    | Refs block followed by ## Why and ## What sections | is instructed to fetch the issue and save its body to Issue File named issue-{issue-number}.md as markdown |
+        | (omitted)      | ## Why and ## What sections                        | is not instructed to fetch the issue and Issue File is not created                                         |
+
+    Scenario: Refs block under --fetchable
+      When Engineer invokes uchange action with --fetchable and an issue reference
+      Then Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
+      And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
+      And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
+
+    Scenario: Why and What sourced from issue under --fetchable
+      When Engineer invokes uchange action with --fetchable and an issue reference
+      Then ## Why and ## What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
+      And the semantics and per-type guidance for ## Why and ## What sections are preserved from the non-fetchable shape
+
+    Scenario Outline: ## How section under --fetchable
+      When Engineer invokes uchange action with --fetchable, an issue reference, <how_flag>, and the issue <approach_in_issue>
+      Then ## How section <how_outcome> in Change File
+      Examples:
+        | how_flag  | approach_in_issue             | how_outcome     |
+        | (omitted) | describes an approach         | is produced     |
+        | (omitted) | does not describe an approach | is not produced |
+        | --how     | describes an approach         | is produced     |
+        | --how     | does not describe an approach | is produced     |
 
     Scenario Outline: Issue reference: branch naming
       When Engineer invokes uchange action with issue reference <issue_url> and change name <change_name>

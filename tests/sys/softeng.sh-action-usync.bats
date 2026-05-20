@@ -71,12 +71,28 @@ EOF
     [[ "$output" == *"impl.md"* ]]
 }
 
-@test "usync: scn: Core output: issue.md triggers discrepancy reporting" {
-    # And If issue.md exists, Engineer is informed of any discrepancies between issue.md and actual sources
+@test "usync: scn: Core output: issue-{issue-number}.md triggers discrepancy reporting" {
+    # And If an issue-{issue-number}.md file exists in the Change Folder,
+    # Engineer is informed of any discrepancies between it and actual sources
+    _setup_usync_branch
+    echo "# Issue" > "$PROJECT_ROOT/uspecs/changes/2601010000-test-change/issue-42.md"
+    git add .
+    git commit -q -m "add issue-42.md"
+
+    uspecs action usync
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"issue-42.md"* ]]
+    [[ "$output" == *"contradict"* ]]
+}
+
+@test "usync: scn: Core output: legacy issue.md still triggers discrepancy reporting" {
+    # Backwards-compat fallback: WCFs created before the issue-{issue-number}.md
+    # naming convention may still contain a literal issue.md. usync must keep
+    # reporting discrepancies for them until they are archived.
     _setup_usync_branch
     echo "# Issue" > "$PROJECT_ROOT/uspecs/changes/2601010000-test-change/issue.md"
     git add .
-    git commit -q -m "add issue.md"
+    git commit -q -m "add legacy issue.md"
 
     uspecs action usync
     [ "$status" -eq 0 ]
