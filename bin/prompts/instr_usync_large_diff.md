@@ -7,6 +7,6 @@ Inform the user that there are a lot of changes since the baseline (${size} byte
 1. Yes
 2. Cancel
 
-On "Yes", rerun: `bash ${softeng_sh} action usync -y`
+On "Yes", rerun: `bash "${softeng_sh}" action usync -y`
 
 Format size in human-readable form for better user experience.

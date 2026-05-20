@@ -11,5 +11,5 @@ Rules:
 
 After fixing all issues, invoke the next stage:
 
-- Run `bash bin/softeng.sh self-review --type construction --stage B` (?!concurrency)
-- Run `bash bin/softeng.sh self-review --type construction --stage B --concurrency` (?concurrency)
+- Run `bash "${softeng_sh}" self-review --type construction --stage B` (?!concurrency)
+- Run `bash "${softeng_sh}" self-review --type construction --stage B --concurrency` (?concurrency)

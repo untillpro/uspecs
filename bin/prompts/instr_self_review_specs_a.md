@@ -2,7 +2,7 @@
 
 ## data
 
-Review the specs that were just changed (or added) by `uimpl` for:
+Review the specs and/or to-do items that were just changed (or added) by `uimpl` or `uchange` for:
 
 - Consistency with the change request
 - DRY across specs - no duplicated requirements, scenarios etc. Replace with references whenever possible.
@@ -10,5 +10,5 @@ Review the specs that were just changed (or added) by `uimpl` for:
 Rules:
 
 - For each issue found, fix it inline; do not stop to ask the user
-- Do not re-run this stage
+- If new issues were detected during this review, re-invoke this stage: `bash "${softeng_sh}" self-review --type specs --stage A -b ${next_budget}` (?budget)
 - After fixing all issues, report results to the user: files reviewed, issues found, fixes applied, and any outstanding issues

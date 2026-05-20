@@ -10,7 +10,16 @@ load 'helpers'
 # can point PROJECT_ROOT at the real repo instead. Override setup() to do
 # only that.
 setup() {
-    export PROJECT_ROOT="$REPO_ROOT"
+    # Mirror helpers.bash _setup_project_root path normalization: on
+    # MSYS/Cygwin convert to mixed (C:/...) format so PROJECT_ROOT matches
+    # the form softeng.sh's _CTX_SCRIPT_DIR emits via `cygpath -m`. Without
+    # this the rendered absolute softeng_sh path (mixed) would not match
+    # $PROJECT_ROOT (POSIX /c/...).
+    local _root="$REPO_ROOT"
+    case "$OSTYPE" in
+        msys*|cygwin*) _root=$(cygpath -m "$_root") ;;
+    esac
+    export PROJECT_ROOT="$_root"
 }
 
 # ---------------------------------------------------------------------------
@@ -134,4 +143,91 @@ setup() {
     uspecs self-review --type specs --stage A --bogus
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Unknown"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# scn: Specs retry budget (-b N)
+# `self-review --type specs --stage A -b N` controls a retry loop: when N>0 the
+# prompt renders a retry instruction with `-b (N-1)`; when N==0 or -b is
+# absent, no retry block is emitted. -b is rejected for --type construction
+# and for negative values.
+# ---------------------------------------------------------------------------
+
+@test "self-review: -b 4 renders budget=4 and next_budget=3" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage A -b 4
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_self_review_specs_a"'* ]]
+    # Retry block must reference the decremented budget
+    [[ "$output" == *"self-review --type specs --stage A -b 3"* ]]
+}
+
+@test "self-review: -b 1 renders budget=1 and next_budget=0" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage A -b 1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"self-review --type specs --stage A -b 0"* ]]
+}
+
+@test "self-review: -b 0 accepts but emits no retry block" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage A -b 0
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_self_review_specs_a"'* ]]
+    # Terminal "report results" remains
+    [[ "$output" == *[Rr]eport* ]]
+    # No retry re-invocation rendered
+    [[ "$output" != *"self-review --type specs --stage A -b"* ]]
+}
+
+@test "self-review: no -b emits no retry block" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *[Rr]eport* ]]
+    [[ "$output" != *"self-review --type specs --stage A -b"* ]]
+}
+
+@test "self-review: -b rejected with --type construction" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type construction --stage A -b 1
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"-b requires --type specs"* ]]
+}
+
+@test "self-review: -b rejects negative values" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage A -b -1
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"non-negative"* ]]
+}
+
+@test "self-review: rendered review-template invocations use absolute softeng_sh path" {
+    cd "$PROJECT_ROOT"
+
+    # Specs Stage A with budget: retry line must use the absolute path, not
+    # a hardcoded "bin/softeng.sh" relative reference. The path is double-quoted
+    # in the rendered command so spaces in install paths (e.g. C:\Program Files)
+    # do not split the bash invocation.
+    uspecs self-review --type specs --stage A -b 2
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type specs --stage A -b 1"* ]]
+    [[ "$output" != *"bash bin/softeng.sh self-review --type specs"* ]]
+
+    # Construction Stage A: advance to Stage B must use the absolute path
+    uspecs self-review --type construction --stage A
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage B"* ]]
+    [[ "$output" != *"bash bin/softeng.sh self-review --type construction --stage B"* ]]
+
+    # Construction Stage B with --concurrency: advance to Stage C must use abs path
+    uspecs self-review --type construction --stage B --concurrency
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage C"* ]]
 }
