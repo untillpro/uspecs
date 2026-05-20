@@ -768,7 +768,7 @@ cmd_action_uchange() {
 }
 
 
-# cmd_action_uimpl [--change-folder <path>]
+# cmd_action_uimpl [--change-folder <path>] [--no-self-review]
 # Determines the Implementation Folder and emits AGENT_INSTRUCTIONS
 # for the next implementation step.
 cmd_action_uimpl() {
