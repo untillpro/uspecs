@@ -85,6 +85,21 @@ EOF
     [[ "$output" == *"contradict"* ]]
 }
 
+@test "usync: scn: Core output: legacy issue.md still triggers discrepancy reporting" {
+    # Backwards-compat fallback: WCFs created before the issue-{issue-number}.md
+    # naming convention may still contain a literal issue.md. usync must keep
+    # reporting discrepancies for them until they are archived.
+    _setup_usync_branch
+    echo "# Issue" > "$PROJECT_ROOT/uspecs/changes/2601010000-test-change/issue.md"
+    git add .
+    git commit -q -m "add legacy issue.md"
+
+    uspecs action usync
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"issue.md"* ]]
+    [[ "$output" == *"contradict"* ]]
+}
+
 @test "usync: scn: Core output: empty diff" {
     # Then WCF Implementation Plan is updated (agent-side no-op for empty diff)
     _setup_git_origin

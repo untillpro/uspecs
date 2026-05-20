@@ -433,6 +433,7 @@ EOF
 # Reference integrity (real prompts dir)
 # ---------------------------------------------------------------------------
 
+# https://github.com/untillpro/uspecs/issues/96
 #@test "prompt refs: all refs valid, no orphans" {
 #    local root="$REPO_ROOT"
 #    case "$OSTYPE" in

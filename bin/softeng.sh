@@ -1298,7 +1298,9 @@ cmd_action_usync() {
     local prompts_dir
     context_prompts_dir prompts_dir
 
-    # Check impl.md and issue-*.md existence
+    # Check impl.md and issue file existence (issue-*.md preferred,
+    # legacy issue.md accepted as fallback for WCFs created before the
+    # issue-{issue-number}.md naming convention)
     local impl_exists=""
     if [[ -f "$project_dir/$change_folder_rel/impl.md" ]]; then
         impl_exists="1"
@@ -1314,6 +1316,10 @@ cmd_action_usync() {
             break
         fi
     done
+    if [[ -z "$issue_exists" && -f "$project_dir/$change_folder_rel/issue.md" ]]; then
+        issue_exists="1"
+        issue_file="issue.md"
+    fi
 
     # Compute merge-base and diff
     local merge_base
