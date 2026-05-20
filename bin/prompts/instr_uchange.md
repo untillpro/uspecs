@@ -18,3 +18,5 @@ Run `git checkout -b ${branch_name}` (?create_branch)
 Rules:
 
 - Do not start implementation, only add sections as described above
+
+`@include_chain_self_review`

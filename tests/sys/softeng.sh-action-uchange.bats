@@ -290,6 +290,61 @@ _assert_frontmatter_contains() {
     [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
 }
 
+# ---------------------------------------------------------------------------
+# scn: Auto-invoke self-review after uchange --plan
+# `uchange --plan` chains a specs self-review (Stage A) with the default
+# retry budget of 4. `--no-self-review` suppresses the chain. Variants that
+# do not author plan bullets (default, --how, --fetchable) do not chain.
+# ---------------------------------------------------------------------------
+
+@test "uchange: --plan chains self-review --type specs --stage A -b 4" {
+    _setup_git_repo
+
+    uspecs action uchange --kebab-name my-change --type feat --plan
+    _assert_uchange_base_output
+    # The chained self-review invocation must use the absolute softeng_sh
+    # path (rendered from $_CTX_SCRIPT_DIR) and include the default budget.
+    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type specs --stage A -b 4"* ]]
+}
+
+@test "uchange: --plan --no-self-review suppresses the chain" {
+    _setup_git_repo
+
+    uspecs action uchange --kebab-name my-change --type feat --plan --no-self-review
+    _assert_uchange_base_output
+    # No chained self-review invocation rendered
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+}
+
+@test "uchange: without --plan does not chain self-review" {
+    _setup_git_repo
+
+    # Default invocation: no plan bullets, no chain
+    uspecs action uchange --kebab-name my-change --type feat
+    _assert_uchange_base_output
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+
+    # --how alone: no chain
+    uspecs action uchange --kebab-name my-change --type feat --how
+    _assert_uchange_base_output
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+
+    # --fetchable alone (no --plan): no chain
+    uspecs action uchange --kebab-name my-change --type feat \
+        --issue-url "https://github.com/owner/repo/issues/42" --fetchable
+    _assert_uchange_base_output
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+}
+
+@test "uchange: --no-self-review without --plan is accepted as a no-op" {
+    _setup_git_repo
+
+    uspecs action uchange --kebab-name my-change --type feat --no-self-review
+    _assert_uchange_base_output
+    # Flag parses, no error, nothing to suppress
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+}
+
 @test "uchange: scn: --no-impl combined with --how" {
     cd "$PROJECT_ROOT"
 

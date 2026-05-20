@@ -84,6 +84,23 @@ Feature: Create change request
       Then base change request is created
       And uimpl action is invoked automatically
 
+    Scenario: uchange --plan chains specs self-review
+      When Engineer invokes uchange action with --plan option
+      Then AI Agent invokes `softeng self-review --type specs --stage A -b 4` after authoring the plan section
+
+    Scenario: uchange --plan --no-self-review suppresses the chain
+      When Engineer invokes uchange action with --plan and --no-self-review options
+      Then AI Agent does not invoke self-review
+
+    Scenario Outline: uchange without --plan does not chain self-review
+      When Engineer invokes uchange action <invocation>
+      Then AI Agent does not invoke self-review
+      Examples:
+        | invocation                              |
+        | with default options                    |
+        | with --how option                       |
+        | with --fetchable and an issue reference |
+
     Scenario: --specs option
       When Engineer invokes uchange action with --specs option
       Then base change request is created

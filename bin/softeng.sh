@@ -102,9 +102,13 @@ move_folder() {
 }
 
 # Cache script dir at source time (one subshell, reused everywhere).
+# On MSYS/Cygwin use cygpath -m (mixed: drive letter + forward slashes) rather
+# than -w (backslashes): the rendered `softeng_sh` path is concatenated with
+# `/softeng.sh` and emitted into prompts; mixed format yields a single, bash-
+# friendly path and matches how tests normalize Windows paths (helpers.bash).
 _CTX_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 case "$OSTYPE" in
-    msys*|cygwin*) _CTX_SCRIPT_DIR=$(cygpath -w "$_CTX_SCRIPT_DIR") ;;
+    msys*|cygwin*) _CTX_SCRIPT_DIR=$(cygpath -m "$_CTX_SCRIPT_DIR") ;;
 esac
 
 # shellcheck source=_lib/utils.sh
@@ -565,6 +569,7 @@ changes_validate_todos_completed() {
 
 # cmd_action_uchange --kebab-name <name> --type <type> [--how] [--plan]
 #     [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
+#     [--no-self-review]
 # Side-effect-free with respect to the Change Folder: bash only ensures the
 # parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
 # the agent to create the Change Folder, write change.md from the supplied
@@ -582,6 +587,7 @@ cmd_action_uchange() {
     local opt_branch=""
     local opt_no_branch=""
     local opt_fetchable=""
+    local opt_no_self_review=""
     local issue_url=""
     local change_name=""
     local change_type=""
@@ -635,6 +641,10 @@ cmd_action_uchange() {
                 ;;
             --fetchable)
                 opt_fetchable="1"
+                shift
+                ;;
+            --no-self-review)
+                opt_no_self_review="1"
                 shift
                 ;;
             *)
@@ -743,6 +753,18 @@ cmd_action_uchange() {
     [[ -n "$opt_fetchable" ]] && fetchable_maybe="1"
     local fetchable_no_how_maybe=""
     [[ -n "$opt_fetchable" && -z "$opt_how" ]] && fetchable_no_how_maybe="1"
+
+    # Chain self-review is triggered only when `--plan` authored an impl plan
+    # (i.e. `impl_maybe="1"`) and `--no-self-review` was not passed. On non-plan
+    # branches `--no-self-review` is a parsed no-op.
+    local chain_self_review="" chain_self_review_construction=""
+    local self_review_type="" self_review_budget=""
+    if [[ -n "$impl_maybe" && -z "$opt_no_self_review" ]]; then
+        chain_self_review="1"
+        self_review_type="specs"
+        self_review_budget="4"
+    fi
+    local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_folder]="$change_folder_rel"
@@ -761,6 +783,11 @@ cmd_action_uchange() {
         [td_maybe]="${impl_maybe:+$specs_maybe}"
         [constr_maybe]="$impl_maybe"
         [change_file_rel_path]="$change_file"
+        [chain_self_review]="$chain_self_review"
+        [chain_self_review_construction]="$chain_self_review_construction"
+        [self_review_type]="$self_review_type"
+        [self_review_budget]="$self_review_budget"
+        [softeng_sh]="$softeng_sh"
     )
 
     emit_artifact "change_frontmatter" "$frontmatter" \
@@ -1011,7 +1038,10 @@ cmd_action_uimpl() {
     elif [[ "$non_review_unchecked_count" -gt 0 ]]; then
         # Has unchecked to-do items (not just review). Compose chain-self-review
         # flags from the section of the first non-review item, unless suppressed.
-        local chain_self_review="" chain_self_review_construction="" self_review_type=""
+        # `self_review_budget` is set for specs chains only; the construction
+        # sub-branch leaves it empty so the include omits the `-b` segment.
+        local chain_self_review="" chain_self_review_construction=""
+        local self_review_type="" self_review_budget=""
         if [[ -z "$opt_no_self_review" ]]; then
             chain_self_review="1"
             if [[ "$_items_section" == "constr" ]]; then
@@ -1019,8 +1049,10 @@ cmd_action_uimpl() {
                 chain_self_review_construction="1"
             else
                 self_review_type="specs"
+                self_review_budget="4"
             fi
         fi
+        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
         # shellcheck disable=SC2034
         declare -A todos_vars=(
             [change_folder]="$change_folder_rel"
@@ -1031,11 +1063,25 @@ cmd_action_uimpl() {
             [chain_self_review]="$chain_self_review"
             [chain_self_review_construction]="$chain_self_review_construction"
             [self_review_type]="$self_review_type"
+            [self_review_budget]="$self_review_budget"
+            [softeng_sh]="$softeng_sh"
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl_todos" todos_vars
     else
-        # No unchecked todos -- add next section
+        # No unchecked todos -- add next section. Section creation chains a
+        # specs self-review (with budget) only when a section will actually
+        # be appended; when all sections already exist (`constr_maybe` empty),
+        # the prompt informs the user the plan is completed and no chain
+        # should occur.
+        local chain_self_review="" chain_self_review_construction=""
+        local self_review_type="" self_review_budget=""
+        if [[ -z "$opt_no_self_review" && -n "$constr_maybe" ]]; then
+            chain_self_review="1"
+            self_review_type="specs"
+            self_review_budget="4"
+        fi
+        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
         # shellcheck disable=SC2034
         declare -A impl_vars=(
             [change_folder]="$change_folder_rel"
@@ -1048,6 +1094,11 @@ cmd_action_uimpl() {
             [td_maybe]="$td_maybe"
             [constr_maybe]="$constr_maybe"
             [change_file_rel_path]="$change_folder_rel/$impl_file"
+            [chain_self_review]="$chain_self_review"
+            [chain_self_review_construction]="$chain_self_review_construction"
+            [self_review_type]="$self_review_type"
+            [self_review_budget]="$self_review_budget"
+            [softeng_sh]="$softeng_sh"
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl" impl_vars
@@ -1869,15 +1920,20 @@ cmd_action_uversion() {
     emit_prompt "$prompts_dir" "instr_uversion" version_vars
 }
 
-# cmd_self_review --type {specs|construction} --stage {A|B|C} [--concurrency]
+# cmd_self_review --type {specs|construction} --stage {A|B|C} [--concurrency] [-b N]
 # Top-level command (not under `action`). Auto-invoked by the AI Agent at the
 # end of a uimpl cycle; can also be called manually. Emits the stage prompt
 # matching (type, stage); --concurrency is an input flag that propagates
-# through the construction stage chain and gates Stage C.
+# through the construction stage chain and gates Stage C. `-b N` is a retry
+# budget applicable to `--type specs` only: when N>0 the prompt renders a
+# self-reinvocation with `-b $((N-1))`; when N==0 or omitted the retry block
+# is suppressed (terminal state).
 cmd_self_review() {
     local opt_type=""
     local opt_stage=""
     local opt_concurrency=""
+    local opt_budget=""
+    local opt_budget_set=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -1898,6 +1954,17 @@ cmd_self_review() {
             --concurrency)
                 opt_concurrency="1"
                 shift
+                ;;
+            -b)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "-b requires a non-negative integer argument"
+                fi
+                if [[ ! "$2" =~ ^[0-9]+$ ]]; then
+                    error "-b requires a non-negative integer argument (got '$2')"
+                fi
+                opt_budget="$2"
+                opt_budget_set="1"
+                shift 2
                 ;;
             *)
                 error "Unknown argument: $1"
@@ -1925,6 +1992,9 @@ cmd_self_review() {
     if [[ -n "$opt_concurrency" && "$opt_type" != "construction" ]]; then
         error "--concurrency requires --type construction"
     fi
+    if [[ -n "$opt_budget_set" && "$opt_type" != "specs" ]]; then
+        error "-b requires --type specs"
+    fi
 
     local prompts_dir
     context_prompts_dir prompts_dir
@@ -1938,9 +2008,23 @@ cmd_self_review() {
     local lc_stage="${opt_stage,,}"
     local prompt_id="instr_self_review_${opt_type}_${lc_stage}"
 
+    # Budget: when N>0, render a self-reinvocation with the decremented budget.
+    # When N==0 or `-b` omitted, leave `budget` empty so the (?budget) block is
+    # suppressed (terminal state).
+    local budget="" next_budget=""
+    if [[ -n "$opt_budget_set" && "$opt_budget" -gt 0 ]]; then
+        budget="$opt_budget"
+        next_budget="$((opt_budget - 1))"
+    fi
+
+    local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
+
     # shellcheck disable=SC2034  # vars used via nameref in emit_prompt
     declare -A review_vars=(
         [concurrency]="$opt_concurrency"
+        [budget]="$budget"
+        [next_budget]="$next_budget"
+        [softeng_sh]="$softeng_sh"
     )
     prompt_start_instructions "action"
     emit_prompt "$prompts_dir" "$prompt_id" review_vars

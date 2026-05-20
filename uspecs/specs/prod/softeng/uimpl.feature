@@ -67,12 +67,34 @@ Feature: Implementation plan management
       Then AI Agent <action>
       Examples:
         | section                          | flag             | action                                                      |
-        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A`        |
-        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A`        |
-        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A`        |
-        | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A`        |
+        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Construction                     |                  | invokes `softeng self-review --type construction --stage A` |
         | any                              | --no-self-review | does not invoke self-review                                 |
+
+    Scenario Outline: Auto-invoke self-review after section creation
+      Given Implementation Plan File has no unchecked to-do items
+      And the <section> section does not yet exist in Implementation Plan File
+      When Engineer invokes uimpl action <flag>
+      And AI Agent appends the <section> section
+      Then AI Agent <action>
+      Examples:
+        | section                          | flag             | action                                                    |
+        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Construction                     |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | any                              | --no-self-review | does not invoke self-review                               |
+
+    Scenario: No section appended and no todos: self-review is not chained
+      Given Implementation Plan File has no unchecked to-do items
+      And all implementation plan sections already exist in Implementation Plan File
+      When Engineer invokes uimpl action
+      Then AI Agent emits the "plan completed" notice
+      And AI Agent does not invoke self-review
 
     Scenario: Construction todos: AI Agent evaluates concurrency
       Given some to-do items in Construction are unchecked in Implementation Plan File

@@ -85,34 +85,27 @@ _uimpl_with_review_form() {
     _make_change_folder "2601010000-my-change"
 
     # scn: Some unchecked to-do items: with review item "- [ ] Review"
-    # But it stops on Review Item if it is unchecked
+    # Review item is excluded from the emitted unchecked items list.
     _uimpl_with_review_form '- [ ] Review'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Complete to-do items"* ]]
-    [[ "$output" == *"Stop on the"* ]]
-    [[ "$output" == *"review checkpoint"* ]]
 
     # scn: Some unchecked to-do items: with review item "- [ ] review" (lowercase)
     _uimpl_with_review_form '- [ ] review'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Stop on the"* ]]
 
     # scn: Some unchecked to-do items: with review item "- Review" (no checkbox)
     _uimpl_with_review_form '- Review'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Stop on the"* ]]
 
     # scn: Some unchecked to-do items: with review item "- review" (no checkbox, lowercase)
     _uimpl_with_review_form '- review'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Stop on the"* ]]
 
-    # scn: Some unchecked to-do items: checked review "- [x] Review" is NOT detected
+    # scn: Some unchecked to-do items: checked review "- [x] Review" is treated as a normal item
     _uimpl_with_review_form '- [x] Review'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Complete to-do items"* ]]
-    [[ "$output" != *"Stop on the"* ]]
-    [[ "$output" != *"review checkpoint"* ]]
 
     # scn: Some unchecked to-do items: without review item
     # Then AI Agent implements each unchecked To-Do Item
@@ -130,8 +123,6 @@ _uimpl_with_review_form() {
     uspecs action uimpl
     [ "$status" -eq 0 ]
     [[ "$output" == *"Complete to-do items"* ]]
-    [[ "$output" != *"Stop on the"* ]]
-    [[ "$output" != *"review checkpoint"* ]]
 
     # scn: Only Review Item unchecked: "- [ ] Review" -> review pending
     # Then AI Agent displays a message "Review item is pending"
@@ -425,8 +416,6 @@ _uimpl_with_sections() {
 
     uspecs action uimpl
     [ "$status" -eq 0 ]
-    # Review path still triggers
-    [[ "$output" == *"Stop on the"* ]]
     # Both non-review items are present in the output
     [[ "$output" == *'alpha.go'* ]]
     [[ "$output" == *'beta.go'* ]]
@@ -671,42 +660,42 @@ _uimpl_with_section_todo() {
     [[ "$todos_block" == *"self-review"* ]]
     [[ "$todos_block" == *"--type construction"* ]]
     [[ "$todos_block" == *"--stage A"* ]]
+    # -b is rejected for construction, so the chain must NOT carry it
+    [[ "$todos_block" != *"--type construction --stage A -b"* ]]
 }
 
-@test "uimpl: specs-side todos emit chained self-review --type specs --stage A" {
+@test "uimpl: specs-side todos emit chained self-review --type specs --stage A -b 4" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
 
-    # Functional design section -> specs review
+    # Functional design section -> specs review with default budget
     _uimpl_with_section_todo '## Functional design specifications'
     [ "$status" -eq 0 ]
     local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
-    [[ "$todos_block" == *"self-review"* ]]
-    [[ "$todos_block" == *"--type specs"* ]]
-    [[ "$todos_block" == *"--stage A"* ]]
+    [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 
-    # Technical design section -> specs review
+    # Technical design section -> specs review with default budget
     _uimpl_with_section_todo '## Technical design specifications'
     [ "$status" -eq 0 ]
     todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
-    [[ "$todos_block" == *"--type specs"* ]]
+    [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 
-    # Domain specifications section -> specs review
+    # Domain specifications section -> specs review with default budget
     _uimpl_with_section_todo '## Domain specifications'
     [ "$status" -eq 0 ]
     todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
-    [[ "$todos_block" == *"--type specs"* ]]
+    [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 
-    # Provisioning and configuration section -> specs review
+    # Provisioning and configuration section -> specs review with default budget
     _uimpl_with_section_todo '## Provisioning and configuration'
     [ "$status" -eq 0 ]
     todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
-    [[ "$todos_block" == *"--type specs"* ]]
+    [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 }
 
 @test "uimpl: --no-self-review suppresses the chained self-review instruction" {
@@ -747,4 +736,57 @@ _uimpl_with_section_todo() {
     todos_block="${todos_block%%</instruction>*}"
     # No concurrency wording when only specs-side todos were completed
     [[ "$todos_block" != *"--concurrency"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# scn: Auto-invoke self-review after a section-creation cycle
+# When uimpl appends a section (no unchecked to-dos but a section is missing),
+# the emitted instr_uimpl prompt chains a specs self-review with the default
+# retry budget of 4. `--no-self-review` suppresses the chain. The "plan
+# completed" cycle (all sections present, no to-dos) does not chain.
+# ---------------------------------------------------------------------------
+
+@test "uimpl: section-creation cycle chains self-review --type specs --stage A -b 4" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # No sections present -> the next section to author is Domain
+    # specifications; the rendered instr_uimpl prompt must include a chained
+    # self-review invocation with the default budget.
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type specs --stage A -b 4"* ]]
+}
+
+@test "uimpl: --no-self-review on a section-creation cycle suppresses the chain" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Re-implement _uimpl_with_sections inline to pass --no-self-review,
+    # since the helper does not forward extra flags.
+    local impl_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    printf '%s\n' '# Implementation plan: Test' '' > "$impl_path"
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change" --no-self-review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+}
+
+@test "uimpl: plan-completed cycle does NOT chain self-review" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # All sections present and all items checked -> "plan completed" branch;
+    # no section is appended, so no chain.
+    _uimpl_with_sections domains fd prov td constr
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"completed"* ]]
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
 }
