@@ -55,7 +55,7 @@ _make_upr_change() {
                 echo ''
                 echo 'Context narrative.'
                 echo ''
-                echo 'See [issue.md](issue.md) for the originating ticket.'
+                echo 'See [issue.md](issue.md) for the details.'
                 echo ''
                 ;;
             none)
