@@ -59,3 +59,24 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       Then AI Agent implements each unchecked To-Do Item and checks it immediately after implementation
       But it stops on Review Item if it is unchecked
+
+    Scenario Outline: Auto-invoke self-review after todos
+      Given some to-do items in <section> are unchecked in Implementation Plan File
+      When Engineer invokes uimpl action <flag>
+      And AI Agent completes the unchecked to-do items
+      Then AI Agent <action>
+      Examples:
+        | section                          | flag             | action                                                      |
+        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A`        |
+        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A`        |
+        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A`        |
+        | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A`        |
+        | Construction                     |                  | invokes `softeng self-review --type construction --stage A` |
+        | any                              | --no-self-review | does not invoke self-review                                 |
+
+    Scenario: Construction todos: AI Agent evaluates concurrency
+      Given some to-do items in Construction are unchecked in Implementation Plan File
+      When Engineer invokes uimpl action
+      And AI Agent completes the unchecked to-do items
+      Then AI Agent evaluates whether the completed changes touch concurrency-sensitive code paths
+      And AI Agent includes --concurrency on the self-review invocation when applicable

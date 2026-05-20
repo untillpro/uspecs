@@ -35,7 +35,7 @@ USPECS_VERSION="0.0.0-source"
 #
 # Usage:
 #   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
-#   softeng action uimpl [--change-folder <path>]
+#   softeng action uimpl [--change-folder <path>] [--no-self-review]
 #   softeng action uarchive [--change-folder <path>] [--all]
 #   softeng action upr [--no-archive]
 #   softeng action umergepr
@@ -44,6 +44,7 @@ USPECS_VERSION="0.0.0-source"
 #   softeng change list-wcf
 #   softeng diff specs
 #   softeng diff file <path>
+#   softeng self-review --type {specs|construction} --stage {A|B|C} [--concurrency]
 #
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
@@ -767,11 +768,12 @@ cmd_action_uchange() {
 }
 
 
-# cmd_action_uimpl [--change-folder <path>]
+# cmd_action_uimpl [--change-folder <path>] [--no-self-review]
 # Determines the Implementation Folder and emits AGENT_INSTRUCTIONS
 # for the next implementation step.
 cmd_action_uimpl() {
     local opt_change_folder=""
+    local opt_no_self_review=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -781,6 +783,10 @@ cmd_action_uimpl() {
                 fi
                 opt_change_folder="$2"
                 shift 2
+                ;;
+            --no-self-review)
+                opt_no_self_review="1"
+                shift
                 ;;
             *)
                 error "Unknown argument: $1"
@@ -859,6 +865,11 @@ cmd_action_uimpl() {
     local _current_is_review=0
     local _seen_item=0
     local _area_closed=0
+    # Section tracking for the first contiguous run of unchecked items. Drives
+    # the self-review chain --type: "construction" when items were in the
+    # Construction section, "specs" for any other section (or unsectioned).
+    local _active_section=""
+    local _items_section=""
 
     _uimpl_flush_item() {
         if (( ! _current_is_review )) && [[ -n "$_current_buf" ]]; then
@@ -883,11 +894,11 @@ cmd_action_uimpl() {
     while IFS= read -r _line; do
         ((_line_num++)) || true
         case "$_line" in
-            "##"*"Domain specifications"*) domains_exists="1"; _flush_and_close_area ;;
-            "##"*"Functional design"*)     fd_exists="1";      _flush_and_close_area ;;
-            "##"*"Provisioning"*)          prov_exists="1";    _flush_and_close_area ;;
-            "##"*"Technical design"*)      td_exists="1";      _flush_and_close_area ;;
-            "##"*"Construction"*)          constr_exists="1";  _flush_and_close_area ;;
+            "##"*"Domain specifications"*) domains_exists="1"; _active_section="domains"; _flush_and_close_area ;;
+            "##"*"Functional design"*)     fd_exists="1";      _active_section="fd";      _flush_and_close_area ;;
+            "##"*"Provisioning"*)          prov_exists="1";    _active_section="prov";    _flush_and_close_area ;;
+            "##"*"Technical design"*)      td_exists="1";      _active_section="td";      _flush_and_close_area ;;
+            "##"*"Construction"*)          constr_exists="1";  _active_section="constr";  _flush_and_close_area ;;
             "- [ ] "*)
                 if (( _area_closed )); then
                     :
@@ -901,6 +912,9 @@ cmd_action_uimpl() {
                     local _lower_item="${_line,,}"
                     if [[ "$_lower_item" =~ ^-[[:space:]]+\[[[:space:]]+\][[:space:]]+review($|[[:space:]]) ]]; then
                         _current_is_review=1
+                    elif [[ -z "$_items_section" ]]; then
+                        # Record section of the first non-review unchecked item.
+                        _items_section="$_active_section"
                     fi
                 fi
                 ;;
@@ -992,7 +1006,18 @@ cmd_action_uimpl() {
         prompt_start_instructions "results"
         emit_prompt "$prompts_dir" "instr_uimpl_review_pending"
     elif [[ "$non_review_unchecked_count" -gt 0 ]]; then
-        # Has unchecked to-do items (not just review)
+        # Has unchecked to-do items (not just review). Compose chain-self-review
+        # flags from the section of the first non-review item, unless suppressed.
+        local chain_self_review="" chain_self_review_construction="" self_review_type=""
+        if [[ -z "$opt_no_self_review" ]]; then
+            chain_self_review="1"
+            if [[ "$_items_section" == "constr" ]]; then
+                self_review_type="construction"
+                chain_self_review_construction="1"
+            else
+                self_review_type="specs"
+            fi
+        fi
         # shellcheck disable=SC2034
         declare -A todos_vars=(
             [change_folder]="$change_folder_rel"
@@ -1000,6 +1025,9 @@ cmd_action_uimpl() {
             [has_review]="$has_review_unchecked"
             [review_item]="${review_item:-}"
             [unchecked_items]="$unchecked_items"
+            [chain_self_review]="$chain_self_review"
+            [chain_self_review_construction]="$chain_self_review_construction"
+            [self_review_type]="$self_review_type"
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl_todos" todos_vars
@@ -1823,6 +1851,83 @@ cmd_action_uversion() {
     emit_prompt "$prompts_dir" "instr_uversion" version_vars
 }
 
+# cmd_self_review --type {specs|construction} --stage {A|B|C} [--concurrency]
+# Top-level command (not under `action`). Auto-invoked by the AI Agent at the
+# end of a uimpl cycle; can also be called manually. Emits the stage prompt
+# matching (type, stage); --concurrency is an input flag that propagates
+# through the construction stage chain and gates Stage C.
+cmd_self_review() {
+    local opt_type=""
+    local opt_stage=""
+    local opt_concurrency=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --type)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--type requires an argument (specs|construction)"
+                fi
+                opt_type="$2"
+                shift 2
+                ;;
+            --stage)
+                if [[ $# -lt 2 || -z "$2" ]]; then
+                    error "--stage requires an argument (A|B|C)"
+                fi
+                opt_stage="$2"
+                shift 2
+                ;;
+            --concurrency)
+                opt_concurrency="1"
+                shift
+                ;;
+            *)
+                error "Unknown argument: $1"
+                ;;
+        esac
+    done
+
+    if [[ -z "$opt_type" ]]; then
+        error "--type is required (specs|construction)"
+    fi
+    if [[ -z "$opt_stage" ]]; then
+        error "--stage is required (A|B|C)"
+    fi
+    case "$opt_type" in
+        specs|construction) ;;
+        *) error "--type must be one of: specs, construction (got '$opt_type')" ;;
+    esac
+    case "$opt_stage" in
+        A|B|C) ;;
+        *) error "--stage must be one of: A, B, C (got '$opt_stage')" ;;
+    esac
+    if [[ "$opt_type" == "specs" && "$opt_stage" != "A" ]]; then
+        error "--type specs only supports --stage A (got '$opt_stage')"
+    fi
+    if [[ -n "$opt_concurrency" && "$opt_type" != "construction" ]]; then
+        error "--concurrency requires --type construction"
+    fi
+
+    local prompts_dir
+    context_prompts_dir prompts_dir
+
+    prompt_start_log
+    echo "Command: self-review"
+    echo "Type: $opt_type"
+    echo "Stage: $opt_stage"
+
+    # Map (type, stage) to prompt id.
+    local lc_stage="${opt_stage,,}"
+    local prompt_id="instr_self_review_${opt_type}_${lc_stage}"
+
+    # shellcheck disable=SC2034  # vars used via nameref in emit_prompt
+    declare -A review_vars=(
+        [concurrency]="$opt_concurrency"
+    )
+    prompt_start_instructions "action"
+    emit_prompt "$prompts_dir" "$prompt_id" review_vars
+}
+
 main() {
     git_path
 
@@ -1913,6 +2018,9 @@ main() {
                     error "Unknown diff target: $target. Available: specs, file"
                     ;;
             esac
+            ;;
+        self-review)
+            cmd_self_review "$@"
             ;;
         *)
             error "Unknown command: $command"

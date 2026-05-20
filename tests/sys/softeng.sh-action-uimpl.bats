@@ -618,3 +618,123 @@ _uimpl_with_headings() {
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
 }
+
+
+# ---------------------------------------------------------------------------
+# scn: Auto-invoke self-review after todos
+# After the Agent completes unchecked todos, the uimpl emit must include a
+# chained instruction to invoke `softeng self-review`. The --type is selected
+# from the section the completed todos belong to:
+#   - Construction todos     -> --type construction
+#   - any specs-side todos   -> --type specs
+# --no-self-review on uimpl suppresses the chain.
+# Construction todos additionally include an instruction telling the Agent
+# to evaluate concurrency and pass --concurrency when applicable.
+# ---------------------------------------------------------------------------
+
+# Helper: write impl.md with a single unchecked item under the given heading
+# and run uimpl. Extracts the instr_uimpl_todos block into $todos_block.
+_uimpl_with_section_todo() {
+    local heading="$1"; shift
+    local impl_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    printf '%s\n' \
+        '# Implementation plan: Test' \
+        '' \
+        "$heading" \
+        '' \
+        '- [ ] update: [file.go](../../file.go)' \
+        '  - fix: something' \
+        > "$impl_path"
+    uspecs action uimpl "$@"
+}
+
+@test "uimpl: Construction todos emit chained self-review --type construction --stage A" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    _uimpl_with_section_todo '## Construction'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
+    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" == *"self-review"* ]]
+    [[ "$todos_block" == *"--type construction"* ]]
+    [[ "$todos_block" == *"--stage A"* ]]
+}
+
+@test "uimpl: specs-side todos emit chained self-review --type specs --stage A" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    # Functional design section -> specs review
+    _uimpl_with_section_todo '## Functional design specifications'
+    [ "$status" -eq 0 ]
+    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" == *"self-review"* ]]
+    [[ "$todos_block" == *"--type specs"* ]]
+    [[ "$todos_block" == *"--stage A"* ]]
+
+    # Technical design section -> specs review
+    _uimpl_with_section_todo '## Technical design specifications'
+    [ "$status" -eq 0 ]
+    todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" == *"--type specs"* ]]
+
+    # Domain specifications section -> specs review
+    _uimpl_with_section_todo '## Domain specifications'
+    [ "$status" -eq 0 ]
+    todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" == *"--type specs"* ]]
+
+    # Provisioning and configuration section -> specs review
+    _uimpl_with_section_todo '## Provisioning and configuration'
+    [ "$status" -eq 0 ]
+    todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" == *"--type specs"* ]]
+}
+
+@test "uimpl: --no-self-review suppresses the chained self-review instruction" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    _uimpl_with_section_todo '## Construction' --no-self-review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
+    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    [[ "$todos_block" != *"self-review"* ]]
+}
+
+@test "uimpl: Construction todos include concurrency-evaluation instruction" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    _uimpl_with_section_todo '## Construction'
+    [ "$status" -eq 0 ]
+    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    # Concurrency-evaluation instruction must appear for Construction todos
+    [[ "$todos_block" == *"concurrency"* ]]
+    [[ "$todos_block" == *"--concurrency"* ]]
+}
+
+@test "uimpl: specs-side todos do NOT include concurrency-evaluation instruction" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+
+    _uimpl_with_section_todo '## Functional design specifications'
+    [ "$status" -eq 0 ]
+    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+    todos_block="${todos_block%%</instruction>*}"
+    # No concurrency wording when only specs-side todos were completed
+    [[ "$todos_block" != *"--concurrency"* ]]
+}
