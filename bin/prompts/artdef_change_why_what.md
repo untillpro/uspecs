@@ -18,6 +18,7 @@ Basic example:
 Introductory sentence:
 
 - Item 1
+
 - Item 2
 
 ...
@@ -39,4 +40,3 @@ Rules:
   - `build`, `ci`, `chore`: what capability or guarantee changes for contributors, not which files
   - `test`: which behavior gains coverage and at which level
   - `revert`: the commit being reverted and which behavior returns
-- When `breaking: true` in frontmatter (any type), include an explicit bullet describing what previously worked stops working or changes shape
