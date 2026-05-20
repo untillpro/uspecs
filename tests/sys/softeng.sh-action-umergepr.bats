@@ -24,14 +24,17 @@ _make_umergepr_change() {
     git -C "$PROJECT_ROOT" commit -q -m "add $folder_name"
 }
 
-# Helper: set up a feature branch with a WCF and upstream ready for action umergepr.
-# Returns with CWD in $PROJECT_ROOT on the feature branch.
+# Helper: set up a git repo with an `origin` remote and a feature branch with
+# a WCF and upstream ready for action umergepr. Returns with CWD in
+# $PROJECT_ROOT on the feature branch. Tests that need git+origin but don't
+# go through this helper must call _setup_git_origin themselves (the default
+# setup() no longer inits git).
 # shellcheck disable=SC2120  # Arguments are optional with defaults
 _setup_umergepr_branch() {
     local folder_name="${1:-2601010000-test-change}"
     local title="${2:-Test change title}"
 
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b my-feature
     _make_umergepr_change "$folder_name" "$title"
 
@@ -113,7 +116,7 @@ _setup_umergepr_branch() {
 }
 
 @test "action umergepr: PR in OPEN state: WCF is active" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b my-feature
 
     # Create active change folder (not in archive/)
@@ -151,7 +154,7 @@ _setup_umergepr_branch() {
 }
 
 @test "action umergepr: PR in OPEN state: upstream remote exists" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
 
     # Set up upstream bare repo (fork setup)
     local _tmpdir="$BATS_TEST_TMPDIR"
@@ -283,8 +286,7 @@ _setup_umergepr_branch() {
 
 # Git validations#Project inside Git working tree
 @test "action umergepr: Validation rejects, no git repository" {
-    rm -rf "$PROJECT_ROOT/.git"
-    cd "$PROJECT_ROOT"
+    # Uses the cheap default setup() -- no git repo initialised.
 
     uspecs action umergepr
     [ "$status" -ne 0 ]
@@ -304,7 +306,7 @@ _setup_umergepr_branch() {
 
 # Git validations#Git working tree is clean
 @test "action umergepr: Validation rejects, current branch is the default branch" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q main
 
     uspecs action umergepr
@@ -313,7 +315,7 @@ _setup_umergepr_branch() {
 }
 
 @test "action umergepr: Validation rejects, current branch has no upstream" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b no-upstream-branch
     _make_umergepr_change "2601010000-no-upstream" "No upstream"
     # Do NOT set upstream
@@ -325,7 +327,7 @@ _setup_umergepr_branch() {
 
 # Change Folder validations#Exactly one Working Change Folder
 @test "action umergepr: Validation rejects, No Working Change Folder exists" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b empty-branch
     # Create a commit without any change folder
     echo "test" > test.txt
@@ -340,7 +342,7 @@ _setup_umergepr_branch() {
 }
 
 @test "action umergepr: Validation rejects, Multiple Working Change Folder exists" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b multi-wcf-branch
     _make_umergepr_change "2601010000-first-change" "First change"
     _make_umergepr_change "2601010000-second-change" "Second change"

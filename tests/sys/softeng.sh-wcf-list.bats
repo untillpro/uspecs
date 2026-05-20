@@ -4,8 +4,7 @@ set -Eeuo pipefail
 load 'helpers'
 
 @test "change list-wcf: no git repo: returns all non-archive subdirs, empty returns nothing" {
-    rm -rf "$PROJECT_ROOT/.git"
-    cd "$PROJECT_ROOT"
+    # Uses the cheap default setup() -- no git repo initialised.
 
     # Empty changes folder
     uspecs change list-wcf
@@ -28,7 +27,7 @@ load 'helpers'
 }
 
 @test "change list-wcf: git repo: committed, untracked, staged, archived" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
 
     # Folder on main (before branching) should not appear
     _make_change_folder "2601010000-on-main"

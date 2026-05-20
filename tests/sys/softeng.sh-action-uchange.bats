@@ -31,7 +31,7 @@ _assert_frontmatter_contains() {
     # And Git branch <branch_outcome>
     # branch: the default branch
     # branch_outcome: directive to create branch is emitted to the agent
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat
 
@@ -63,7 +63,7 @@ _assert_frontmatter_contains() {
     # And Git branch <branch_outcome>
     # branch: a non-default branch
     # branch_outcome: directive to create branch is NOT emitted
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
     git checkout -q -b feature-branch
 
     uspecs action uchange --kebab-name my-change --type fix
@@ -88,7 +88,7 @@ _assert_frontmatter_contains() {
     # Given Engineer is on a detached HEAD (common in CI or when checked out
     # at a specific commit) the action must not abort under set -Eeuo pipefail
     # and must skip the branch-creation directive (treated as not-on-default).
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
     git checkout -q --detach HEAD
 
     uspecs action uchange --kebab-name my-change --type chore
@@ -104,7 +104,7 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: Issue reference provided" {
     # Without --fetchable: issue_url is recorded in frontmatter but no fetch
     # directive is emitted and change.md uses the legacy ## Why + ## What shape.
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat --issue-url "https://github.com/owner/repo/issues/42"
 
@@ -127,7 +127,7 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: --fetchable with issue reference" {
     # With --fetchable: issue_url is recorded, fetch directive is emitted, and
     # change.md uses the ## Context shape.
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat \
         --issue-url "https://github.com/owner/repo/issues/42" --fetchable
@@ -161,7 +161,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: scn: --no-branch option" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat --no-branch
 
@@ -177,7 +177,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: scn: --branch option" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
     git checkout -q -b feature-branch
 
     uspecs action uchange --kebab-name my-change --type feat --branch
@@ -195,7 +195,7 @@ _assert_frontmatter_contains() {
 
 @test "uchange: scn: --no-impl option is a backwards-compatible no-op" {
     # And the outcome is identical to invocation without the flag
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat
     local out_no_flag="$output"
@@ -214,7 +214,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: scn: --how option" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat --how
 
@@ -227,7 +227,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: scn: --plan option" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat --plan
 
@@ -258,7 +258,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: --specs creates specs folder" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
     uspecs action uchange --kebab-name my-change --type feat --specs
@@ -271,7 +271,7 @@ _assert_frontmatter_contains() {
 # --- bash-side responsibilities exercised via action uchange ---
 
 @test "uchange: changes folder auto-creation" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
     rm -rf "$PROJECT_ROOT/uspecs/changes"
 
     uspecs action uchange --kebab-name my-change --type feat --no-branch
@@ -284,7 +284,7 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: frontmatter artifact contains change_id" {
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat --no-branch
 
@@ -297,7 +297,7 @@ _assert_frontmatter_contains() {
 
 @test "uchange: scn: Issue reference: branch naming" {
     # Then a `git checkout -b <branch_name>` directive is emitted to the agent
-    cd "$PROJECT_ROOT"
+    _setup_git_repo
 
     # GitHub URL
     uspecs action uchange --kebab-name my-feature --type feat --issue-url "https://github.com/owner/repo/issues/42"

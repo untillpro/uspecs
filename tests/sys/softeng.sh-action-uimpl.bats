@@ -3,6 +3,16 @@ set -Eeuo pipefail
 
 load 'helpers'
 
+# Every test in this file needs git with an `origin` remote because uimpl
+# resolves Working Change Folders against `origin/<default-branch>` (via
+# wcf_list's merge-base lookup), so override setup() at file scope to include
+# _setup_git_origin.
+setup() {
+    _setup_project_root
+    _setup_gh_stub
+    _setup_git_origin
+}
+
 # ---------------------------------------------------------------------------
 # scn: No Active Working Change Folders + Multiple Active Working Change Folders + uimpl base behavior
 # ---------------------------------------------------------------------------

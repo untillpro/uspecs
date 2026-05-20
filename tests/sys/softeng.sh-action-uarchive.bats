@@ -9,7 +9,7 @@ load 'helpers'
 
 @test "uarchive: scn: No Active Change Folders" {
     # Then AI Agent displays "No active working change folder found"
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
 
     uspecs action uarchive
@@ -24,7 +24,7 @@ load 'helpers'
 
 @test "uarchive: scn: Multiple Active Change Folders: asks to select" {
     # Then AI Agent asks Engineer to select which folder to archive
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
 
     _make_change_folder "2601010000-alpha"
@@ -45,7 +45,7 @@ load 'helpers'
     # Then all change folders that have modifications vs pr_remote/default_branch are archived
     # And count of archived, unchanged, and failed folders is reported
     # And per-folder ok/failed lines with source and target paths are reported
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
 
     _make_change_folder "2601010000-alpha"
@@ -70,7 +70,7 @@ load 'helpers'
 # ---------------------------------------------------------------------------
 
 @test "uarchive: scn: Archive change request: single + --change-folder + uncompleted" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
 
     # Single WCF, auto-detected
@@ -112,7 +112,7 @@ load 'helpers'
 # ---------------------------------------------------------------------------
 
 @test "uarchive: --all with uncompleted items returns non-zero and reports per-folder details" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
 
     _make_change_folder "2601010000-good"
@@ -138,7 +138,7 @@ load 'helpers'
 # ---------------------------------------------------------------------------
 
 @test "uarchive: error cases: unknown flag + mutually exclusive options" {
-    cd "$PROJECT_ROOT"
+    # Uses the cheap default setup() -- pure argument parsing, no git needed.
 
     # unknown flag rejected
     uspecs action uarchive --bogus
