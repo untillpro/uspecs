@@ -78,8 +78,10 @@ _make_upr_change() {
     git -C "$PROJECT_ROOT" commit -q -m "add $folder_name"
 }
 
-# Helper: set up a feature branch with a WCF ready for action upr.
-# Returns with CWD in $PROJECT_ROOT on the feature branch.
+# Helper: set up a git repo with an `origin` remote and a feature branch with
+# a WCF ready for action upr. Returns with CWD in $PROJECT_ROOT on the feature
+# branch. Tests that need git+origin but don't go through this helper must
+# call _setup_git_origin themselves (the default setup() no longer inits git).
 _setup_upr_branch() {
     local folder_name="${1:-2601010000-test-change}"
     local title="${2:-Test change title}"
@@ -89,7 +91,7 @@ _setup_upr_branch() {
     local breaking="${6:-}"
     local body_shape="${7:-why_what}"
 
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b my-feature
     _make_upr_change "$folder_name" "$title" "$issue_url" "$type" "$scope" "$breaking" "$body_shape"
 }
@@ -253,7 +255,7 @@ _assert_pr_body_format() {
 
 # Verifies: multiple commits are squashed, force-pushed, restore instructions shown
 @test "action upr: No PR for current branch: multiple commits squashed" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b multi-commit-branch
     _make_upr_change "2601010000-multi-commit" "Multi commit change"
 
@@ -268,7 +270,7 @@ _assert_pr_body_format() {
 
 # Verifies WCF is archived by default when engineer creates a PR
 @test "action upr: No PR for current branch: WCF is archived by default" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b active-wcf-branch
     local folder_name="2601010000-active-wcf"
     _make_upr_change "$folder_name" "Active WCF"
@@ -288,7 +290,7 @@ _assert_pr_body_format() {
 
 # Verifies --no-archive keeps WCF active
 @test "action upr: No PR for current branch: --no-archive keeps WCF active" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b no-archive-branch
     local folder_name="2601010000-no-archive-wcf"
     _make_upr_change "$folder_name" "No Archive WCF"
@@ -305,7 +307,7 @@ _assert_pr_body_format() {
 
 # Verifies tracking is set before squash/force-push
 @test "action upr: No PR for current branch: branch has no upstream" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b no-upstream-upr-branch
     _make_upr_change "2601010000-no-upstream-upr" "No upstream"
     # Do NOT push or set upstream -- branch has no tracking remote
@@ -321,7 +323,7 @@ _assert_pr_body_format() {
 }
 
 @test "action upr: No PR for current branch: WCF already archived" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b archived-wcf-branch
 
     # Create archived change folder (simulates post-upr state where folder was already archived)
@@ -421,7 +423,7 @@ _assert_pr_body_format() {
 
 # 60 short lines inside Why section -> line limit (40) truncates
 @test "action upr: No PR for current branch: PR body truncated by line limit" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b large-body-branch
     local folder_name="2601010000-large-change"
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
@@ -458,7 +460,7 @@ _assert_pr_body_format() {
 
 # 10 long lines (~500 chars each, ~5000 total) under 40 lines -> char limit truncates
 @test "action upr: No PR for current branch: PR body truncated by char limit" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b large-chars-branch
     local folder_name="2601010000-large-chars"
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
@@ -539,7 +541,7 @@ _assert_pr_body_format() {
 # --- Edge cases ---
 
 @test "action upr: Validation rejects, no changes since branching from default branch" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b empty-feature
 
     uspecs action upr
@@ -549,8 +551,7 @@ _assert_pr_body_format() {
 
 # Git validations#Project inside Git working tree
 @test "action upr: Validation rejects, no git repository" {
-    rm -rf "$PROJECT_ROOT/.git"
-    cd "$PROJECT_ROOT"
+    # Uses the cheap default setup() -- no git repo initialised.
 
     uspecs action upr
     [ "$status" -ne 0 ]
@@ -569,7 +570,7 @@ _assert_pr_body_format() {
 
 # Git validations#Git working tree is clean
 @test "action upr: Validation rejects, current branch is the default branch" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
 
     uspecs action upr
     [ "$status" -ne 0 ]
@@ -578,7 +579,7 @@ _assert_pr_body_format() {
 
 # Change Folder validations#Exactly one Working Change Folder
 @test "action upr: Validation rejects, No Working Change Folder exists" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b no-wcf-branch
     # Make a change outside changes_folder so diff is non-empty
     echo "content" > "$PROJECT_ROOT/some-file.txt"
@@ -592,7 +593,7 @@ _assert_pr_body_format() {
 
 # Change Folder validations#Exactly one Working Change Folder
 @test "action upr: Validation rejects, Multiple Working Change Folder exists" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b multi-wcf-branch
 
     # Create two change folders
@@ -610,7 +611,7 @@ _assert_pr_body_format() {
 
 # Change Folder validations#All todo items are completed
 @test "action upr: Validation rejects, change folder has uncompleted todo items" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b todo-feature
     local folder_name="2601010000-with-todos"
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
@@ -653,7 +654,7 @@ _assert_pr_body_format() {
     # 'type:' field, and does NOT enumerate the allowed Conventional Commits
     # types inline. The agent is expected to read the list from the uchange
     # dispatch instructions and surface it to the user.
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b missing-type-branch
     local folder_name="2601010000-missing-type"
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
@@ -690,7 +691,7 @@ _assert_pr_body_format() {
 
 # change.md without frontmatter at all -> same hard-fail as missing-type field
 @test "action upr: Validation rejects, change.md has no YAML frontmatter" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b no-frontmatter-branch
     local folder_name="2601010000-no-frontmatter"
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"

@@ -16,4 +16,4 @@ ${unchecked_items}
 - After completing all items (?chain_self_review)
   - Inform the user that a self-review pass will now run, scoped to the work just completed (?chain_self_review)
   - Silently evaluate whether the completed changes touch concurrency-sensitive code paths; only if they do, tell the user and add `--concurrency` to the invocation below.(?chain_self_review_construction)
-  - Invoke `bash bin/softeng.sh self-review --type ${self_review_type} --stage A {optional --concurrency}` (?chain_self_review)
+  - Invoke `bash bin/softeng.sh self-review --type ${self_review_type} --stage A` (?chain_self_review)

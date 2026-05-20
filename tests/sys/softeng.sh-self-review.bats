@@ -3,10 +3,12 @@ set -Eeuo pipefail
 
 load 'helpers'
 
-# self-review is a read-only command that emits a prompt and exits; it does
-# not require a project tree, git repo, or origin remote. Override the heavy
-# generic setup() from helpers.bash with a minimal one that points
-# PROJECT_ROOT at the real repo so $PROJECT_ROOT/bin/softeng.sh resolves.
+# self-review is a read-only command that emits a prompt and exits. It does
+# not need git or an origin remote, but it does need $PROJECT_ROOT/bin/softeng.sh
+# to exist. The default setup() in helpers.bash builds an isolated mirror of
+# bin/ in a temp dir via _setup_project_root, which is unnecessary here -- we
+# can point PROJECT_ROOT at the real repo instead. Override setup() to do
+# only that.
 setup() {
     export PROJECT_ROOT="$REPO_ROOT"
 }

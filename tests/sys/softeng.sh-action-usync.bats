@@ -3,9 +3,11 @@ set -Eeuo pipefail
 
 load 'helpers'
 
-# Helper: set up a feature branch with a WCF and a source change outside uspecs/changes/.
+# Helper: set up a git repo on a feature branch with a WCF and a source change
+# outside uspecs/changes/. Tests that need git but don't go through this helper
+# must call _setup_git_repo themselves (the default setup() no longer inits git).
 _setup_usync_branch() {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-test-change"
     echo "new content" > "$PROJECT_ROOT/src-file.txt"
@@ -38,7 +40,7 @@ _setup_usync_branch() {
 @test "usync: scn: Core output: diff payload entity-escaped" {
     # End-to-end: source bytes containing & < > must surface as XML entities
     # inside the <artifact id="usync_diff"> body, never as raw chars.
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-test-change"
     cat > "$PROJECT_ROOT/markup.html" <<'EOF'
@@ -84,7 +86,7 @@ EOF
 
 @test "usync: scn: Core output: empty diff" {
     # Then WCF Implementation Plan is updated (agent-side no-op for empty diff)
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-test-change"
     # No source changes outside changes folder
@@ -156,7 +158,7 @@ EOF
 
 # Change Folder validations#Exactly one Working Change Folder
 @test "usync: scn: Exactly one Working Change Folder: no WCF" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
     echo "content" > "$PROJECT_ROOT/some-file.txt"
     git add .
@@ -169,7 +171,7 @@ EOF
 
 # Change Folder validations#Exactly one Working Change Folder
 @test "usync: scn: Exactly one Working Change Folder: multiple WCFs" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-first"
     _make_change_folder "2601010000-second"
@@ -183,8 +185,7 @@ EOF
 
 # Git validations#Project inside Git working tree
 @test "usync: scn: Project inside Git working tree: no git repo" {
-    rm -rf "$PROJECT_ROOT/.git"
-    cd "$PROJECT_ROOT"
+    # Uses the cheap default setup() -- no git repo initialised.
 
     uspecs action usync
     [ "$status" -ne 0 ]
@@ -203,7 +204,7 @@ EOF
 
 # Git validations#Git working tree is clean
 @test "usync: scn: Git working tree is clean: current branch is default branch" {
-    cd "$PROJECT_ROOT"
+    _setup_git_origin
 
     uspecs action usync
     [ "$status" -ne 0 ]
