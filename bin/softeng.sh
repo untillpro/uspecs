@@ -278,7 +278,7 @@ convert_links_to_relative() {
         # - # (anchors)
         # - / (absolute paths)
         # - ./ (current directory - stays in same folder)
-        # - filename.ext (same folder files like impl.md, issue.md)
+        # - filename.ext (same folder files like impl.md, issue-{issue-number}.md)
 
         # Add ../../ prefix to paths starting with ../
         # ](../ -> ](../../../
@@ -741,6 +741,8 @@ cmd_action_uchange() {
     [[ -n "$opt_how" ]] && how_maybe="1"
     local fetchable_maybe=""
     [[ -n "$opt_fetchable" ]] && fetchable_maybe="1"
+    local fetchable_no_how_maybe=""
+    [[ -n "$opt_fetchable" && -z "$opt_how" ]] && fetchable_no_how_maybe="1"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_folder]="$change_folder_rel"
@@ -750,6 +752,7 @@ cmd_action_uchange() {
         [specs_folder]="$specs_folder_rel"
         [how_maybe]="$how_maybe"
         [fetchable_maybe]="$fetchable_maybe"
+        [fetchable_no_how_maybe]="$fetchable_no_how_maybe"
         [issue_url]="$issue_url"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
         [domains_defined]="${impl_maybe:+$domains_defined}"
@@ -1295,15 +1298,22 @@ cmd_action_usync() {
     local prompts_dir
     context_prompts_dir prompts_dir
 
-    # Check impl.md and issue.md existence
+    # Check impl.md and issue-*.md existence
     local impl_exists=""
     if [[ -f "$project_dir/$change_folder_rel/impl.md" ]]; then
         impl_exists="1"
     fi
     local issue_exists=""
-    if [[ -f "$project_dir/$change_folder_rel/issue.md" ]]; then
-        issue_exists="1"
-    fi
+    # shellcheck disable=SC2034  # used via nameref in emit_prompt (usync_vars)
+    local issue_file=""
+    local _issue_candidate
+    for _issue_candidate in "$project_dir/$change_folder_rel"/issue-*.md; do
+        if [[ -f "$_issue_candidate" ]]; then
+            issue_exists="1"
+            issue_file=$(basename "$_issue_candidate")
+            break
+        fi
+    done
 
     # Compute merge-base and diff
     local merge_base
@@ -1343,6 +1353,7 @@ cmd_action_usync() {
             [specs_folder]="$specs_folder_rel"
             [impl_exists]="$impl_exists"
             [issue_exists]="$issue_exists"
+            [issue_file]="$issue_file"
             [is_large_diff]="1"
             [softeng_sh]="$softeng_sh"
         )
@@ -1359,6 +1370,7 @@ cmd_action_usync() {
             [specs_folder]="$specs_folder_rel"
             [impl_exists]="$impl_exists"
             [issue_exists]="$issue_exists"
+            [issue_file]="$issue_file"
             [is_large_diff]=""
         )
         prompt_start_instructions "action"

@@ -2,6 +2,8 @@
 
 ## data
 
+Basic example:
+
 ```markdown
 # Change request: {title-derived-from-change-description}
 
@@ -23,6 +25,7 @@ Introductory sentence:
 
 Rules:
 
+- Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why` (?fetchable_maybe)
 - Tailor the `## What` items to the `type:` frontmatter value:
   - `feat`: behavior claims only; no file paths, no symbol names; name the affected domain/context in prose so reviewers can judge blast radius
   - `fix`:

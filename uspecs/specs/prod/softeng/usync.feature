@@ -17,7 +17,7 @@ Feature: Align Working Change Folder plan and specs with source changes
       When Engineer invokes usync action
       Then WCF Implementation Plan in change.md or impl.md (if exists) is updated to reflect changes in diff_scope vs baseline
       And All specifications mentioned in Implementation Plan are updated to reflect changes in diff_scope vs baseline
-      And If issue.md exists, Engineer is informed of any discrepancies between issue.md and actual sources
+      And If an issue-{issue-number}.md file exists in the Change Folder, Engineer is informed of any discrepancies between it and actual sources
       And Correct items or sub-items in changes.md/impl.md are never removed
       And Not more than 5 new sub-items per to-do item are added
 

@@ -126,7 +126,7 @@ _assert_frontmatter_contains() {
 
 @test "uchange: scn: --fetchable with issue reference" {
     # With --fetchable: issue_url is recorded, fetch directive is emitted, and
-    # change.md uses the ## Context shape.
+    # change.md uses the Refs + ## Why + ## What shape (no ## Context).
     _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat \
@@ -136,19 +136,70 @@ _assert_frontmatter_contains() {
 
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
-    # Fetch directive references the issue URL and the change folder's issue.md
+    # Fetch directive references the issue URL and the change folder's
+    # issue-{issue-number}.md file (number extracted by the agent at render
+    # time, so the dispatch placeholder pattern is asserted, not a literal id)
     [[ "$output" == *"Fetch the issue at https://github.com/owner/repo/issues/42"* ]]
-    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue\.md ]]
+    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue-[^/]+\.md ]]
 
     # Fetch directive references the issue-file artdef
     [[ "$output" == *"@artdef_issue_file"* ]]
 
-    # Body shape: Context artdef rendered, legacy Why/What artdef absent
-    [[ "$output" == *'<artdef id="artdef_change_context"'* ]]
-    [[ "$output" != *'<artdef id="artdef_change_why_what"'* ]]
+    # Body shape: Refs + Why/What artdefs rendered, Context artdef absent
+    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
     # Issue file artdef is rendered alongside the fetch directive
     [[ "$output" == *'<artdef id="artdef_issue_file"'* ]]
+}
+
+@test "uchange: scn: --fetchable with --how" {
+    # With --fetchable --how: in addition to the Refs + Why/What shape, the
+    # ## How artdef is rendered and the dispatch instructs the agent to
+    # always emit the section.
+    _setup_git_repo
+
+    uspecs action uchange --kebab-name my-change --type feat \
+        --issue-url "https://github.com/owner/repo/issues/42" --fetchable --how
+
+    _assert_uchange_base_output
+
+    _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
+
+    # Body shape: Refs + Why/What + How artdefs rendered, Context artdef absent
+    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
+}
+
+@test "uchange: scn: --fetchable without --how (content-aware How)" {
+    # With --fetchable but no --how: the artdef_change_how shape is still
+    # rendered so the agent can emit ## How conditionally based on whether
+    # the fetched issue describes an approach/design. The dispatch leaves
+    # the emission decision to the agent (no hard gate in bash); the
+    # content-aware language is present in the rendered instructions.
+    _setup_git_repo
+
+    uspecs action uchange --kebab-name my-change --type feat \
+        --issue-url "https://github.com/owner/repo/issues/42" --fetchable
+
+    _assert_uchange_base_output
+
+    # Body shape: Refs + Why/What rendered, Context absent
+    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
+
+    # artdef_change_how is available to the agent for conditional emission
+    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
+
+    # Dispatch instructions mention the content-aware emission rule so the
+    # agent knows ## How is conditional (no hard gate -- decision is on the
+    # agent based on the fetched issue content)
+    [[ "$output" == *"emit only if"* ]]
+    [[ "$output" == *"contains information for the How section"* ]]
 }
 
 @test "uchange: scn: --fetchable without issue reference errors out" {
