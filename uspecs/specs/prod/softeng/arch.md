@@ -28,6 +28,73 @@ sequenceDiagram
     ai_agent-->>engineer: report result
 ```
 
+### Self-review flow
+
+`self-review` is a top-level softeng command (not an action). It is auto-invoked by the AI Agent at the end of a `uimpl` cycle that completed at least one to-do item, unless `--no-self-review` was passed to `uimpl`. Each stage prompt instructs the Agent to perform a scoped review, fix findings inline, and invoke the next stage. The chain ends with a results report to the Engineer.
+
+```text
+Engineer
+  |
+  v
+uimpl  (processes todos)
+  |
+  +--(--no-self-review)--> stop
+  |
+  v
+Construction todos completed?
+  |
+  +--(no, specs only)--> self-review --type specs --stage A
+  |                         |
+  |                         v
+  |                       review + fix inline
+  |                         |
+  |                         v
+  |                       report -> Engineer
+  |
+  +--(yes)--> evaluate concurrency
+                |
+                v
+              self-review --type construction --stage A [--concurrency]
+                |
+                v
+              review + fix inline
+                |
+                v
+              self-review --type construction --stage B [--concurrency]
+                |
+                v
+              review + fix inline
+                |
+                +--(no --concurrency)--> report -> Engineer
+                |
+                +--(--concurrency)--> self-review --type construction --stage C --concurrency
+                                          |
+                                          v
+                                        review + fix inline
+                                          |
+                                          v
+                                        report -> Engineer
+```
+
+Key artifacts:
+
+- [bin/softeng.sh](../../../../bin/softeng.sh)
+  - `cmd_self_review` dispatch; `cmd_action_uimpl` emits the chain instruction
+- [bin/prompts/instr_uimpl_todos.md](../../../../bin/prompts/instr_uimpl_todos.md)
+  - trailing chain hand-off appended after todos are completed
+- [bin/prompts/instr_self_review_specs_a.md](../../../../bin/prompts/instr_self_review_specs_a.md)
+  - specs Stage A (terminal)
+- [bin/prompts/instr_self_review_construction_a.md](../../../../bin/prompts/instr_self_review_construction_a.md)
+  - construction Stage A -> B
+- [bin/prompts/instr_self_review_construction_b.md](../../../../bin/prompts/instr_self_review_construction_b.md)
+  - construction Stage B (terminal unless `--concurrency`)
+- [bin/prompts/instr_self_review_construction_c.md](../../../../bin/prompts/instr_self_review_construction_c.md)
+  - construction Stage C, concurrency (terminal)
+- [self-review.feature](self-review.feature)
+  - functional design for the `self-review` command
+- [uimpl.feature](uimpl.feature)
+  - functional design for the uimpl auto-invoke scenarios
+
 ### Examples
 
 Non-exhaustive list of actions and their artifacts:
