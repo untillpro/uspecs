@@ -35,7 +35,7 @@ USPECS_VERSION="0.0.0-source"
 #
 # Usage:
 #   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
-#   softeng action uimpl [--change-folder <path>] [--no-self-review]
+#   softeng action uimpl [--change-folder <path>] [--plan] [--no-self-review]
 #   softeng action uarchive [--change-folder <path>] [--all]
 #   softeng action upr [--no-archive]
 #   softeng action umergepr
@@ -798,12 +798,13 @@ cmd_action_uchange() {
 }
 
 
-# cmd_action_uimpl [--change-folder <path>] [--no-self-review]
+# cmd_action_uimpl [--change-folder <path>] [--plan] [--no-self-review]
 # Determines the Implementation Folder and emits AGENT_INSTRUCTIONS
 # for the next implementation step.
 cmd_action_uimpl() {
     local opt_change_folder=""
     local opt_no_self_review=""
+    local opt_plan=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -813,6 +814,10 @@ cmd_action_uimpl() {
                 fi
                 opt_change_folder="$2"
                 shift 2
+                ;;
+            --plan)
+                opt_plan="1"
+                shift
                 ;;
             --no-self-review)
                 opt_no_self_review="1"
@@ -885,6 +890,7 @@ cmd_action_uimpl() {
 
     # Single pass: detect sections, unchecked items, and review item (no grep subprocesses)
     local domains_exists="" fd_exists="" prov_exists="" td_exists="" constr_exists=""
+    local how_exists=""
     local has_unchecked="" has_review_unchecked="" review_item="" review_is_checkbox=""
     local total_unchecked=0
     local _line_num=0
@@ -969,6 +975,24 @@ cmd_action_uimpl() {
         fi
     done < "$impl_file_path" 2>/dev/null || true
     _uimpl_flush_item
+
+    # `## How` lives only on `change.md` (it is part of the change request,
+    # not the implementation plan), so detect it against change.md regardless
+    # of which file was selected as the Implementation Plan File above.
+    # Match level-2 only -- `## How` is the canonical heading per
+    # `@artdef_change_how`; a nested `### How` must not satisfy this check.
+    local _change_md_path="$project_dir/$change_folder_rel/change.md"
+    if [[ -f "$_change_md_path" ]]; then
+        local _how_line
+        while IFS= read -r _how_line; do
+            case "$_how_line" in
+                "## How"|"## How "*)
+                    how_exists="1"
+                    break
+                    ;;
+            esac
+        done < "$_change_md_path"
+    fi
 
     if [[ -n "$_first_review_line" ]]; then
         has_review_unchecked="1"
@@ -1068,6 +1092,19 @@ cmd_action_uimpl() {
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl_todos" todos_vars
+    elif [[ -z "$opt_plan" && -z "$how_exists" \
+            && -z "$domains_exists" && -z "$fd_exists" && -z "$prov_exists" \
+            && -z "$td_exists" && -z "$constr_exists" ]]; then
+        # No unchecked todos, no planning section started, and `## How` is
+        # missing from change.md -- instruct the agent to author `## How`
+        # against change.md per `@artdef_change_how` and stop. `--plan` opts
+        # out and falls through to the section-creation cascade below.
+        # shellcheck disable=SC2034
+        declare -A how_vars=(
+            [change_folder]="$change_folder_rel"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_uimpl_how" how_vars
     else
         # No unchecked todos -- add next section. Section creation chains a
         # specs self-review (with budget) only when a section will actually

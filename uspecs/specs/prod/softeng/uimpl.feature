@@ -40,6 +40,17 @@ Feature: Implementation plan management
       Then AI Agent displays a message "Review item is pending. Please review the implementation plan and check the item when ready"
       And AI Agent does not perform any implementation action
 
+    Scenario Outline: How section creation when missing
+      Given there are no unchecked to-do items in Implementation Plan File
+      And `change.md` does not contain a `## How` section
+      And no planning section (`Domain specifications`, `Functional design`, `Provisioning and configuration`, `Technical design`, `Construction`) exists in Implementation Plan File
+      When Engineer invokes uimpl action <flag>
+      Then AI Agent <outcome>
+      Examples:
+        | flag          | outcome                                                                                                                  |
+        | without flags | appends `## How` to `change.md` per `artdef_change_how.md` and stops execution                                           |
+        | with `--plan` | does not create `## How` and proceeds with the existing planning sections cascade described in the next Scenario Outline |
+
     Scenario Outline: No unchecked to-do items
       Given there are no unchecked to-do items in Implementation Plan File
       When Engineer invokes uimpl action

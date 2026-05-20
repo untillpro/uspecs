@@ -158,6 +158,20 @@ _uimpl_with_review_form() {
 }
 
 # ---------------------------------------------------------------------------
+# Helper: append `## How` to change.md and commit, so the new uimpl
+# How-creation branch is bypassed and tests exercise the cascade / completion
+# paths that follow `## How`.
+# Usage: _add_how_to_change_md "2601010000-my-change"
+# ---------------------------------------------------------------------------
+_add_how_to_change_md() {
+    local folder_name="$1"
+    local change_path="$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    printf '\n%s\n' '## How' >> "$change_path"
+    git -C "$PROJECT_ROOT" add .
+    git -C "$PROJECT_ROOT" commit -q -m "add How to $folder_name"
+}
+
+# ---------------------------------------------------------------------------
 # Helper: write impl.md with given sections (all items checked), commit, run uimpl
 # Usage: _uimpl_with_sections "domains" "fd" "prov" ...
 #   Supported section names: domains, fd, prov, td, constr
@@ -198,6 +212,9 @@ _uimpl_with_sections() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
+    # Pre-populate `## How` so the cascade path under test is reached
+    # (without it, the new uimpl How-creation branch would fire first).
+    _add_how_to_change_md "2601010000-my-change"
     # Create specs folder so specs_maybe=1
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
 
@@ -272,6 +289,9 @@ _uimpl_with_sections() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
+    # Pre-populate `## How` so the cascade path under test is reached
+    # (without it, the new uimpl How-creation branch would fire first).
+    _add_how_to_change_md "2601010000-my-change"
     # Remove specs folder -> specs_maybe="" (empty dir, not tracked by git)
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
@@ -310,6 +330,9 @@ _uimpl_with_sections() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
+    # Pre-populate `## How` so the cascade path under test is reached
+    # (without it, the new uimpl How-creation branch would fire first).
+    _add_how_to_change_md "2601010000-my-change"
 
     # Case 1: specs folder + at least one domain.md -> specs-derived scope branch
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod/softeng"
@@ -750,6 +773,9 @@ _uimpl_with_section_todo() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
+    # Pre-populate `## How` so the chain-emission cascade path under test is
+    # reached (without it, the new uimpl How-creation branch would fire first).
+    _add_how_to_change_md "2601010000-my-change"
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
 
     # No sections present -> the next section to author is Domain
@@ -765,6 +791,9 @@ _uimpl_with_section_todo() {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
+    # Pre-populate `## How` so the no-chain cascade path under test is reached
+    # (without it, the new uimpl How-creation branch would fire first).
+    _add_how_to_change_md "2601010000-my-change"
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
 
     # Re-implement _uimpl_with_sections inline to pass --no-self-review,
@@ -789,4 +818,141 @@ _uimpl_with_section_todo() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"completed"* ]]
     [[ "$output" != *"self-review --type specs --stage A"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# scn: How section creation when missing
+# When no unchecked to-dos exist, no planning section has been started, and
+# `## How` is absent from `change.md`, `uimpl` (without `--plan`) emits the
+# instr_uimpl_how prompt instructing the agent to author `## How` per
+# `@artdef_change_how` against `change.md`, and stops -- no chained
+# self-review, no planning-sections cascade. `--plan` opts out and falls
+# through to the existing cascade.
+# ---------------------------------------------------------------------------
+
+@test "uimpl: How creation: missing How + no planning section + no todos -> emits How prompt targeting change.md" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # _make_change_folder leaves change.md with frontmatter only:
+    # no `## How`, no planning section, no unchecked to-dos.
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+    [[ "$output" == *'@artdef_change_how'* ]]
+    # Targets change.md (How lives on the change request, not impl.md).
+    [[ "$output" == *'uspecs/changes/2601010000-my-change/change.md'* ]]
+    # No chained self-review (How produces no plan bullets to review).
+    [[ "$output" != *"self-review --type specs --stage A"* ]]
+    # No planning-sections cascade prompt.
+    [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
+}
+
+@test "uimpl: How creation: --plan skips How branch and emits planning-sections cascade" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Same setup as above (frontmatter-only change.md, no sections).
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change" --plan
+    [ "$status" -eq 0 ]
+    # The new How branch is skipped...
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+    # ...and the existing cascade runs (Domain specifications is first).
+    [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+}
+
+@test "uimpl: How creation: existing ## How falls through to planning-sections cascade" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Append `## How` to the existing change.md so how_exists="1".
+    _add_how_to_change_md "2601010000-my-change"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+    # Existing cascade prompt is emitted (Domain specifications is the first
+    # missing planning section).
+    [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+}
+
+@test "uimpl: How creation: impl.md present but change.md lacks ## How -> branch still targets change.md" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Add an impl.md with no unchecked to-dos and no planning section.
+    # `## How` lives on change.md only, which still has frontmatter only.
+    local impl_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    printf '%s\n' '# Implementation plan: Test' '' > "$impl_path"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+    # Despite impl.md existing, the How branch targets change.md (not impl.md).
+    [[ "$output" == *'uspecs/changes/2601010000-my-change/change.md'* ]]
+    [[ "$output" != *'uspecs/changes/2601010000-my-change/impl.md'* ]]
+}
+
+@test "uimpl: How creation: unchecked to-dos present run the existing todos branch regardless of --plan" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Add an impl.md with an unchecked Construction to-do; change.md still
+    # lacks `## How`, but the to-dos branch must win.
+    local impl_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    printf '%s\n' \
+        '# Implementation plan: Test' \
+        '' \
+        '## Construction' \
+        '' \
+        '- [ ] update: [file.go](../../file.go)' \
+        '  - fix: something' \
+        > "$impl_path"
+
+    # Without --plan: todos branch wins, How branch does not fire.
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+
+    # With --plan: same -- todos branch still wins.
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change" --plan
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+}
+
+@test "uimpl: How creation: nested ### How does not satisfy how_exists; new branch still fires" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Append a nested `### How` (level 3) to change.md. The canonical heading
+    # per `@artdef_change_how` is `## How` (level 2); a nested heading must
+    # NOT be treated as an existing How section.
+    local change_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/change.md"
+    printf '\n%s\n' '### How' >> "$change_path"
+    git -C "$PROJECT_ROOT" add .
+    git -C "$PROJECT_ROOT" commit -q -m "add nested ### How"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    # The new branch fires (nested `### How` does not bypass it).
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+    [[ "$output" == *'@artdef_change_how'* ]]
 }
