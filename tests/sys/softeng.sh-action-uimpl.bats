@@ -935,3 +935,24 @@ _uimpl_with_section_todo() {
     [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
     [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
 }
+
+@test "uimpl: How creation: nested ### How does not satisfy how_exists; new branch still fires" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Append a nested `### How` (level 3) to change.md. The canonical heading
+    # per `@artdef_change_how` is `## How` (level 2); a nested heading must
+    # NOT be treated as an existing How section.
+    local change_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/change.md"
+    printf '\n%s\n' '### How' >> "$change_path"
+    git -C "$PROJECT_ROOT" add .
+    git -C "$PROJECT_ROOT" commit -q -m "add nested ### How"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    # The new branch fires (nested `### How` does not bypass it).
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+    [[ "$output" == *'@artdef_change_how'* ]]
+}

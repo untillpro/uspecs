@@ -979,12 +979,14 @@ cmd_action_uimpl() {
     # `## How` lives only on `change.md` (it is part of the change request,
     # not the implementation plan), so detect it against change.md regardless
     # of which file was selected as the Implementation Plan File above.
+    # Match level-2 only -- `## How` is the canonical heading per
+    # `@artdef_change_how`; a nested `### How` must not satisfy this check.
     local _change_md_path="$project_dir/$change_folder_rel/change.md"
     if [[ -f "$_change_md_path" ]]; then
         local _how_line
         while IFS= read -r _how_line; do
             case "$_how_line" in
-                "## How"|"## How "*|"### How"|"### How "*)
+                "## How"|"## How "*)
                     how_exists="1"
                     break
                     ;;
