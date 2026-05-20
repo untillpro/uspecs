@@ -22,4 +22,4 @@ Rules:
 
 - Source changes are provided in `@artifact_usync_diff`. (?!is_large_diff)
 - Source changes are provided as a list of changed files in `@artifact_usync_file_list`. (?is_large_diff)
-- For each listed file, read its per-file diff by running `${softeng_sh} diff file <path>`, then apply the rules above to that file. (?is_large_diff)
+- For each listed file, read its per-file diff by running `"${softeng_sh}" diff file <path>`, then apply the rules above to that file. (?is_large_diff)

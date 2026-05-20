@@ -758,7 +758,7 @@ _uimpl_with_section_todo() {
     _uimpl_with_sections
     [ "$status" -eq 0 ]
     [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type specs --stage A -b 4"* ]]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type specs --stage A -b 4"* ]]
 }
 
 @test "uimpl: --no-self-review on a section-creation cycle suppresses the chain" {

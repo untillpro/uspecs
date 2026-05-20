@@ -304,7 +304,7 @@ _assert_frontmatter_contains() {
     _assert_uchange_base_output
     # The chained self-review invocation must use the absolute softeng_sh
     # path (rendered from $_CTX_SCRIPT_DIR) and include the default budget.
-    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type specs --stage A -b 4"* ]]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type specs --stage A -b 4"* ]]
 }
 
 @test "uchange: --plan --no-self-review suppresses the chain" {

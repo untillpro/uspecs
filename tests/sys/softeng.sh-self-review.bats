@@ -212,20 +212,22 @@ setup() {
     cd "$PROJECT_ROOT"
 
     # Specs Stage A with budget: retry line must use the absolute path, not
-    # a hardcoded "bin/softeng.sh" relative reference.
+    # a hardcoded "bin/softeng.sh" relative reference. The path is double-quoted
+    # in the rendered command so spaces in install paths (e.g. C:\Program Files)
+    # do not split the bash invocation.
     uspecs self-review --type specs --stage A -b 2
     [ "$status" -eq 0 ]
-    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type specs --stage A -b 1"* ]]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type specs --stage A -b 1"* ]]
     [[ "$output" != *"bash bin/softeng.sh self-review --type specs"* ]]
 
     # Construction Stage A: advance to Stage B must use the absolute path
     uspecs self-review --type construction --stage A
     [ "$status" -eq 0 ]
-    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type construction --stage B"* ]]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage B"* ]]
     [[ "$output" != *"bash bin/softeng.sh self-review --type construction --stage B"* ]]
 
     # Construction Stage B with --concurrency: advance to Stage C must use abs path
     uspecs self-review --type construction --stage B --concurrency
     [ "$status" -eq 0 ]
-    [[ "$output" == *"$PROJECT_ROOT/bin/softeng.sh self-review --type construction --stage C"* ]]
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage C"* ]]
 }
