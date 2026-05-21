@@ -73,7 +73,7 @@ _DISPATCH_PLUGIN_ROOT: str = (
 #)
 
 _DISPATCH_DIRECT: str = (
-    "run `bash bin/softeng.sh action {{action}} [options]`"
+    "run `bash softeng.sh action {{action}} [options]`"
 )
 
 AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
