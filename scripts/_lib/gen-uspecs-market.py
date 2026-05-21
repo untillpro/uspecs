@@ -65,14 +65,15 @@ class ActionData:
 
 _DISPATCH_PLUGIN_ROOT: str = (
     "Identify the root directory of the plugin (PLUGIN_ROOT), "
-    "set cwd to the uspecs-using project root, and "
     "run `bash {PLUGIN_ROOT}/bin/softeng.sh action {{action}} [options]`"
 )
 
-_DISPATCH_REL_BIN: str = (
-    "Set cwd to the uspecs-using project root and "
-    "run `bash ../../bin/softeng.sh action {{action}} [options]` "
-    "(the path is relative to this skill folder, resolve it before changing cwd)"
+#_DISPATCH_REL_BIN: str = (
+#    "run `bash ../../bin/softeng.sh action {{action}} [options]` "
+#)
+
+_DISPATCH_DIRECT: str = (
+    "run `bash bin/softeng.sh action {{action}} [options]`"
 )
 
 AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
@@ -81,10 +82,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         market_description="uspecs framework plugins for Claude Code",
         action_template="action-command-claude.md",
         output_kind="commands",
-        dispatch=(
-            "Set cwd to the uspecs-using project root and "
-            "run `softeng.sh action {{action}} [options]`"
-        ),
+        dispatch=_DISPATCH_DIRECT,
         host="Claude Code",
         cli="claude",
         install_verb="install",
@@ -104,7 +102,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         market_description="uspecs framework plugins for Codex",
         action_template="action-skill-generic.md",
         output_kind="skills",
-        dispatch=_DISPATCH_REL_BIN,
+        dispatch=_DISPATCH_DIRECT,
         host="Codex",
         cli="codex",
         install_verb="add",
