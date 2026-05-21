@@ -68,13 +68,9 @@ _DISPATCH_PLUGIN_ROOT: str = (
     "run `bash {PLUGIN_ROOT}/bin/softeng.sh action {{action}} [options]`"
 )
 
-#_DISPATCH_REL_BIN: str = (
-#    "run `bash ../../bin/softeng.sh action {{action}} [options]` "
-#)
+_DISPATCH_REL_BIN: str = "run `bash ../../bin/softeng.sh action {{action}} [options]` "
 
-_DISPATCH_DIRECT: str = (
-    "run `bash softeng.sh action {{action}} [options]`"
-)
+_DISPATCH_DIRECT: str = "run `bash softeng.sh action {{action}} [options]`"
 
 AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
     "claude": AgentConfig(
@@ -102,7 +98,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         market_description="uspecs framework plugins for Codex",
         action_template="action-skill-generic.md",
         output_kind="skills",
-        dispatch=_DISPATCH_DIRECT,
+        dispatch=_DISPATCH_REL_BIN,
         host="Codex",
         cli="codex",
         install_verb="add",
