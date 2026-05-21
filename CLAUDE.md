@@ -16,6 +16,7 @@
 
 ## Execution instructions
 
+- Always set cwd to the uspecs-using project root before running `bin/softeng.sh` (otherwise the script aborts when cwd is a uspecs plugin or skill directory)
 - When user input starts with `uclarify [options] {other-input}` then
   - read `scripts/templates/actions/uclarify.md` and follow its instructions, treating `{other-input}` as the clarification input
   - Do not run `bin/softeng.sh` for this action

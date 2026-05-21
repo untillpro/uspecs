@@ -8,7 +8,7 @@ templates, and writes a complete marketplace to the marketplace repo.
 Agents:
   claude  -- commands/ + knowledge skills, dispatch: bare `softeng.sh`
   augment -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
-  codex   -- action skills + knowledge skills, dispatch: {PLUGIN_ROOT}/bin/softeng.sh
+  codex   -- action skills + knowledge skills, dispatch: ../../bin/softeng.sh (relative to the skill folder)
 
 Version must be supplied via --version (this script does not read version.txt).
 
@@ -64,11 +64,16 @@ class ActionData:
 
 
 _DISPATCH_PLUGIN_ROOT: str = (
-    "Identify the root directory of the plugin (PLUGIN_ROOT) and "
+    "Identify the root directory of the plugin (PLUGIN_ROOT), "
+    "set cwd to the uspecs-using project root, and "
     "run `bash {PLUGIN_ROOT}/bin/softeng.sh action {{action}} [options]`"
 )
 
-_DISPATCH_REL_BIN: str = "run `bash ../../bin/softeng.sh action {{action}} [options]`"
+_DISPATCH_REL_BIN: str = (
+    "Set cwd to the uspecs-using project root and "
+    "run `bash ../../bin/softeng.sh action {{action}} [options]` "
+    "(the path is relative to this skill folder, resolve it before changing cwd)"
+)
 
 AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
     "claude": AgentConfig(
@@ -76,7 +81,10 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         market_description="uspecs framework plugins for Claude Code",
         action_template="action-command-claude.md",
         output_kind="commands",
-        dispatch="run `softeng.sh action {{action}} [options]`",
+        dispatch=(
+            "Set cwd to the uspecs-using project root and "
+            "run `softeng.sh action {{action}} [options]`"
+        ),
         host="Claude Code",
         cli="claude",
         install_verb="install",
