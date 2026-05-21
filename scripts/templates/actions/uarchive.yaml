@@ -3,4 +3,3 @@ raw_text: |
   Parse user input as `[options]`.
 
   {{dispatch}} and follow the instructions in the output.
-options: "`--change-folder <path>`, `--all`"

@@ -20,5 +20,3 @@ raw_text: |
   - If the user asks to derive specifications from the codebase, add `--specs` option
   - {{dispatch}} and follow the instructions in the output how to process {description}.
   - Do not pass {description} verbatim to the command
-options: "`--kebab-name <name>` (required), `--type <type>` (required),
-  `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`"
