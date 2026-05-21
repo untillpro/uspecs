@@ -68,7 +68,7 @@ _DISPATCH_PLUGIN_ROOT: str = (
     "run `bash {PLUGIN_ROOT}/bin/softeng.sh action {{action}} [options]`"
 )
 
-_DISPATCH_REL_BIN: str = "run `bash ../../bin/softeng.sh action {{action}} [options]` "
+_DISPATCH_REL_BIN: str = "set cwd to project root and run `bash {SKILL_FOLDER}/../../bin/softeng.sh action {{action}} [options]` "
 
 _DISPATCH_DIRECT: str = "run `bash softeng.sh action {{action}} [options]`"
 
