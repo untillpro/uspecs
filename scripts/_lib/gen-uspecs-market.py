@@ -252,6 +252,35 @@ def read_feature_description(source: Path, action: str) -> str:
     return description
 
 
+def read_action_options(source: Path, action: str) -> str:
+    """Read an action's rendered options from `softeng meta options <action>`."""
+    softeng_path: Path = source / "bin" / "softeng.sh"
+    result: subprocess.CompletedProcess[str] = subprocess.run(
+        ["bash", str(softeng_path), "meta", "options", action],
+        cwd=source,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(
+            f"error: failed to read options for action {action!r} from {softeng_path}: "
+            f"{result.stderr.strip() or result.stdout.strip()}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    line: str = result.stdout.rstrip("\n")
+    prefix: str = "Options: "
+    if not line.startswith(prefix):
+        print(
+            f"error: unexpected options output for action {action!r}: {line!r}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return line[len(prefix) :]
+
+
 def load_actions(source: Path) -> list[ActionData]:
     """Load action YAML files; read descriptions from feature files in source repo.
 
@@ -289,7 +318,7 @@ def load_actions(source: Path) -> list[ActionData]:
                 action=action_name,
                 description=read_feature_description(source, action_name),
                 raw_text=raw_text,
-                options=data.get("options", ""),
+                options="" if has_file else read_action_options(source, action_name),
             )
         )
     return actions

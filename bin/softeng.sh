@@ -31,21 +31,27 @@ set -Eeuo pipefail
 
 USPECS_VERSION="0.0.0-source"
 
-# softeng automation
-#
-# Usage:
-#   softeng action uchange --kebab-name <name> [--how] [--plan] [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
-#   softeng action uimpl [--change-folder <path>] [--plan] [--no-self-review]
-#   softeng action uarchive [--change-folder <path>] [--all]
-#   softeng action upr [--no-archive]
-#   softeng action umergepr
-#   softeng action usync [-y]
-#   softeng action uversion
-#   softeng change list-wcf
-#   softeng diff specs
-#   softeng diff file <path>
-#   softeng self-review --type {specs|construction} --stage {A|B|C} [--concurrency]
-#
+declare -A ACTION_OPTIONS=(
+    [uchange]='`--kebab-name <name>` (required), `--type <type>` (required), `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`, `--no-self-review`'
+    [uimpl]='`--change-folder <path>`, `--plan`, `--no-self-review`'
+    [uarchive]='`--change-folder <path>`, `--all`'
+    [upr]='`--no-archive`'
+    [umergepr]=''
+    [usync]='`-y`'
+    [uversion]=''
+)
+
+action_keywords_display() {
+    local keyword result=""
+    while IFS= read -r keyword; do
+        if [[ -n "$result" ]]; then
+            result+=", "
+        fi
+        result+="$keyword"
+    done < <(printf '%s\n' "${!ACTION_OPTIONS[@]}" | sort)
+    printf '%s\n' "$result"
+}
+
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
 # diff file <path>:
@@ -567,9 +573,6 @@ changes_validate_todos_completed() {
 }
 
 
-# cmd_action_uchange --kebab-name <name> --type <type> [--how] [--plan]
-#     [--no-impl] [--branch] [--no-branch] [--issue-url <url>] [--fetchable] [--specs]
-#     [--no-self-review]
 # Side-effect-free with respect to the Change Folder: bash only ensures the
 # parent uspecs/changes/ directory exists and emits AGENT_INSTRUCTIONS telling
 # the agent to create the Change Folder, write change.md from the supplied
@@ -798,7 +801,6 @@ cmd_action_uchange() {
 }
 
 
-# cmd_action_uimpl [--change-folder <path>] [--plan] [--no-self-review]
 # Determines the Implementation Folder and emits AGENT_INSTRUCTIONS
 # for the next implementation step.
 cmd_action_uimpl() {
@@ -1162,7 +1164,6 @@ cmd_action_uimpl() {
 }
 
 
-# cmd_action_uarchive [--change-folder <path>] [--all]
 # Archives a change folder or all modified change folders.
 cmd_action_uarchive() {
     local opt_change_folder=""
@@ -1352,7 +1353,6 @@ cmd_action_uarchive() {
 }
 
 
-# cmd_action_usync [-y]
 # Aligns Working Change Folder plan and specs with source changes.
 # Emits prompt with diff or file list depending on diff size.
 cmd_action_usync() {
@@ -2017,6 +2017,19 @@ cmd_action_uversion() {
     emit_prompt "$prompts_dir" "instr_uversion" version_vars
 }
 
+cmd_meta_options() {
+    if [ $# -ne 1 ]; then
+        error "Usage: softeng meta options <action>"
+    fi
+
+    local action="$1"
+    if [[ -z "${ACTION_OPTIONS[$action]+isset}" ]]; then
+        error "Unknown action keyword: $action. Available: $(action_keywords_display)"
+    fi
+
+    printf 'Options: %s\n' "${ACTION_OPTIONS[$action]}"
+}
+
 # cmd_self_review --type {specs|construction} --stage {A|B|C} [--concurrency] [-b N]
 # Top-level command (not under `action`). Auto-invoked by the AI Agent at the
 # end of a uimpl cycle; can also be called manually. Emits the stage prompt
@@ -2167,7 +2180,22 @@ main() {
                     cmd_action_uversion "$@"
                     ;;
                 *)
-                    error "Unknown action keyword: $keyword. Available: uchange, uimpl, uarchive, upr, umergepr, usync, uversion"
+                    error "Unknown action keyword: $keyword. Available: $(action_keywords_display)"
+                    ;;
+            esac
+            ;;
+        meta)
+            if [ $# -lt 1 ]; then
+                error "Usage: softeng meta <subcommand> [args...]"
+            fi
+            local subcommand="$1"
+            shift
+            case "$subcommand" in
+                options)
+                    cmd_meta_options "$@"
+                    ;;
+                *)
+                    error "Unknown meta subcommand: $subcommand. Available: options"
                     ;;
             esac
             ;;
