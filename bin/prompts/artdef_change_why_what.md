@@ -18,7 +18,6 @@ Basic example:
 Introductory sentence:
 
 - Item 1
-
 - Item 2
 
 ...
