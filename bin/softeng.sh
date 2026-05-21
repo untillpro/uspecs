@@ -31,8 +31,6 @@ set -Eeuo pipefail
 
 USPECS_VERSION="0.0.0-source"
 
-ACTION_KEYWORDS_DISPLAY="uchange, uimpl, uarchive, upr, umergepr, usync, uversion"
-
 declare -A ACTION_OPTIONS=(
     [uchange]='`--kebab-name <name>` (required), `--type <type>` (required), `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`, `--no-self-review`'
     [uimpl]='`--change-folder <path>`, `--plan`, `--no-self-review`'
@@ -42,6 +40,17 @@ declare -A ACTION_OPTIONS=(
     [usync]='`-y`'
     [uversion]=''
 )
+
+action_keywords_display() {
+    local keyword result=""
+    while IFS= read -r keyword; do
+        if [[ -n "$result" ]]; then
+            result+=", "
+        fi
+        result+="$keyword"
+    done < <(printf '%s\n' "${!ACTION_OPTIONS[@]}" | sort)
+    printf '%s\n' "$result"
+}
 
 # diff specs:
 #   Outputs git diff of the specs folder between HEAD and pr_remote/default_branch.
@@ -2015,7 +2024,7 @@ cmd_meta_options() {
 
     local action="$1"
     if [[ -z "${ACTION_OPTIONS[$action]+isset}" ]]; then
-        error "Unknown action keyword: $action. Available: $ACTION_KEYWORDS_DISPLAY"
+        error "Unknown action keyword: $action. Available: $(action_keywords_display)"
     fi
 
     printf 'Options: %s\n' "${ACTION_OPTIONS[$action]}"
@@ -2171,7 +2180,7 @@ main() {
                     cmd_action_uversion "$@"
                     ;;
                 *)
-                    error "Unknown action keyword: $keyword. Available: $ACTION_KEYWORDS_DISPLAY"
+                    error "Unknown action keyword: $keyword. Available: $(action_keywords_display)"
                     ;;
             esac
             ;;
