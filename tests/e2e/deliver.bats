@@ -324,3 +324,24 @@ load 'helpers'
     [[ "${stderr:-}" == *"non-bootstrap files"* ]]
     [[ "${stderr:-}" == *"src"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Case 9: relative --uspecs-repo path (matches CI invocation)
+# ---------------------------------------------------------------------------
+
+@test "deliver accepts a relative --uspecs-repo path" {
+    # Regression: read_action_options passed a relative softeng.sh path to
+    # bash while also setting cwd=source, causing bash to look for
+    # <repo>/<repo>/bin/softeng.sh. CI hits this because it invokes
+    # `bash uspecs/scripts/deliver.sh --uspecs-repo uspecs ...`.
+    local parent base
+    parent="$(dirname "$REPO_ROOT")"
+    base="$(basename "$REPO_ROOT")"
+    run --separate-stderr bash -c \
+        "cd '$parent' && bash '$REPO_ROOT/scripts/deliver.sh' \
+            --agent augment --uspecs-repo '$base' \
+            --marketplace-repo '$MKT_REPO' --local"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Generated augment (--local: no commit, no push)"* ]]
+    [ -f "$MKT_REPO/uspecs-dev/.claude-plugin/plugin.json" ]
+}

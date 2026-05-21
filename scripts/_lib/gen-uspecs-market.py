@@ -515,8 +515,8 @@ def main() -> None:
     args: argparse.Namespace = parser.parse_args()
 
     config: AgentConfig = AGENT_CONFIGS[args.agent]
-    source: Path = Path(args.uspecs_repo)
-    output: Path = Path(args.marketplace_repo)
+    source: Path = Path(args.uspecs_repo).resolve()
+    output: Path = Path(args.marketplace_repo).resolve()
 
     # Validate the destructive arg first to fail fast on unsafe wipe targets.
     validate_marketplace_repo(output)
