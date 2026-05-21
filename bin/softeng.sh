@@ -891,7 +891,7 @@ cmd_action_uimpl() {
     # Single pass: detect sections, unchecked items, and review item (no grep subprocesses)
     local domains_exists="" fd_exists="" prov_exists="" td_exists="" constr_exists=""
     local how_exists=""
-    local has_unchecked="" has_review_unchecked="" review_item="" review_is_checkbox=""
+    local has_unchecked="" has_review_unchecked="" review_item="" review_is_checkbox="" review_is_bare=""
     local total_unchecked=0
     local _line_num=0
     local _first_review_line=""
@@ -999,17 +999,19 @@ cmd_action_uimpl() {
         review_item="${_first_review_line#*:}"
         if [[ "$review_item" =~ ^-[[:space:]]+\[ ]]; then
             review_is_checkbox="1"
+        else
+            review_is_bare="1"
         fi
     fi
 
     # Count non-review unchecked items
     local non_review_unchecked_count=0
-    if [[ -n "$has_unchecked" ]]; then
-        if [[ -n "$review_is_checkbox" ]]; then
-            non_review_unchecked_count=$((total_unchecked - 1))
-        else
-            non_review_unchecked_count=$total_unchecked
-        fi
+    if [[ -n "$review_is_checkbox" ]]; then
+        non_review_unchecked_count=$((total_unchecked - 1))
+    elif [[ -n "$review_is_bare" ]]; then
+        non_review_unchecked_count=$total_unchecked
+    elif [[ -n "$has_unchecked" ]]; then
+        non_review_unchecked_count=$total_unchecked
     fi
 
     # Detect specs_maybe

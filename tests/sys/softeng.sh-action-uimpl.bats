@@ -155,6 +155,26 @@ _uimpl_with_review_form() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"Review item is pending"* ]]
 
+    # scn: Only Review Item unchecked: "- review" (no checkbox, lowercase) -> review pending
+    # Then AI Agent displays a message "Review item is pending"
+    # And does not emit next todo instructions
+    printf '%s\n' \
+        '# Implementation plan: Test' \
+        '' \
+        '## Construction' \
+        '' \
+        '- [x] update: [file.go](../../file.go)' \
+        '  - fix: something' \
+        '- review' \
+        > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+
+    uspecs action uimpl
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Review item is pending"* ]]
+    [[ "$output" == *'<instruction id="instr_uimpl_review_pending"'* ]]
+    [[ "$output" != *'<instruction id="instr_uimpl_todos"'* ]]
+    [[ "$output" != *"Complete to-do items"* ]]
+
 }
 
 # ---------------------------------------------------------------------------

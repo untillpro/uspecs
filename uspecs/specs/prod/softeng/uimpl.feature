@@ -34,11 +34,16 @@ Feature: Implementation plan management
         | does not exist | {impl_folder}/change.md |
         | already exists | {impl_folder}/impl.md   |
 
-    Scenario: Only Review Item unchecked
-      Given only Review Item in Implementation Plan File is unchecked
+    Scenario Outline: Only Review Item unchecked
+      Given only Review Item `<item>` in Implementation Plan File is unchecked
       When Engineer invokes uimpl action
       Then AI Agent displays a message "Review item is pending. Please review the implementation plan and check the item when ready"
+      And AI Agent does not emit next todo instructions
       And AI Agent does not perform any implementation action
+      Examples:
+        | item         |
+        | - [ ] Review |
+        | - review     |
 
     Scenario Outline: How section creation when missing
       Given there are no unchecked to-do items in Implementation Plan File
