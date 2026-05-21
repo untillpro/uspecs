@@ -2140,7 +2140,22 @@ cmd_self_review() {
     emit_prompt "$prompts_dir" "$prompt_id" review_vars
 }
 
+guard_cwd_not_plugin_or_skill() {
+    local marker=""
+    if [[ -f "SKILL.md" ]]; then
+        marker="SKILL.md"
+    elif [[ -f ".claude-plugin/plugin.json" ]]; then
+        marker=".claude-plugin/plugin.json"
+    elif [[ -f ".claude-plugin/marketplace.json" ]]; then
+        marker=".claude-plugin/marketplace.json"
+    fi
+    if [[ -n "$marker" ]]; then
+        error "cwd is a uspecs plugin or skill directory (detected $marker); set cwd to the uspecs-using project root and retry"
+    fi
+}
+
 main() {
+    guard_cwd_not_plugin_or_skill
     git_path
 
     if [ $# -lt 1 ]; then
