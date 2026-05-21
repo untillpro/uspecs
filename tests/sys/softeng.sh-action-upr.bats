@@ -516,6 +516,62 @@ _assert_pr_body_format() {
     _assert_pr_body_format "context"
 }
 
+@test "action upr: Construct PR body: stops after first real ## What" {
+    _setup_git_origin
+    git checkout -q -b duplicate-what-body-branch
+    local folder_name="2601010000-duplicate-what"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '---'
+        echo "registered_at: 2026-01-01T00:00:00Z"
+        echo "change_id: $folder_name"
+        echo 'type: fix'
+        echo '---'
+        echo ''
+        echo '# Change request: Duplicate What body'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'Why narrative.'
+        echo ''
+        echo '## What'
+        echo ''
+        echo 'What narrative.'
+        echo ''
+        echo '## Quick start'
+        echo ''
+        echo '```markdown'
+        echo '## What'
+        echo ''
+        echo 'DUPLICATE_WHAT_FROM_FENCED_EXAMPLE'
+        echo '```'
+        echo ''
+        echo '## Functional design'
+        echo ''
+        echo 'SENTINEL_FILTERED_OUT'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add duplicate what body change"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *'```yaml'*"change_id: $folder_name"*'```'* ]]
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## What"*"What narrative."* ]]
+    [[ "$gh_body" == *"See change.md for details."* ]]
+    [[ "$gh_body" != *"## Quick start"* ]]
+    [[ "$gh_body" != *"## Functional design"* ]]
+    [[ "$gh_body" != *"DUPLICATE_WHAT_FROM_FENCED_EXAMPLE"* ]]
+    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+
+    local what_count
+    what_count=$(printf '%s\n' "$gh_body" | grep -c '^## What$')
+    [ "$what_count" -eq 1 ]
+}
+
 # change.md has neither ## Context nor ## Why/## What (frontmatter-only body)
 @test "action upr: Construct PR body: no body sections (frontmatter-only)" {
     _setup_upr_branch "2601010000-no-body" "No body sections" \
