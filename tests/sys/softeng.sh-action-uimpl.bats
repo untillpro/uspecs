@@ -94,6 +94,44 @@ _uimpl_with_review_form() {
     _uimpl_with_review_form '- [ ] review'
     [ "$status" -eq 0 ]
 
+    # scn: Review checkbox outside the first unchecked block does not reduce
+    # the counted non-review todo items.
+    printf '%s\n' \
+        '# Implementation plan: Test' \
+        '' \
+        '## Construction' \
+        '' \
+        '- [ ] update: [file.go](../../file.go)' \
+        '  - fix: something' \
+        '' \
+        'Notes' \
+        '- [ ] Review' \
+        > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+
+    uspecs action uimpl
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Complete to-do items"* ]]
+    [[ "$output" != *'<instruction id="instr_uimpl_review_pending"'* ]]
+
+    # scn: Bare review item outside the first unchecked block also does not
+    # reduce the counted non-review todo items.
+    printf '%s\n' \
+        '# Implementation plan: Test' \
+        '' \
+        '## Construction' \
+        '' \
+        '- [ ] update: [file.go](../../file.go)' \
+        '  - fix: something' \
+        '' \
+        'Notes' \
+        '- review' \
+        > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+
+    uspecs action uimpl
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Complete to-do items"* ]]
+    [[ "$output" != *'<instruction id="instr_uimpl_review_pending"'* ]]
+
     # scn: Some unchecked to-do items: with review item "- Review" (no checkbox)
     _uimpl_with_review_form '- Review'
     [ "$status" -eq 0 ]

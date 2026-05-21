@@ -891,7 +891,8 @@ cmd_action_uimpl() {
     # Single pass: detect sections, unchecked items, and review item (no grep subprocesses)
     local domains_exists="" fd_exists="" prov_exists="" td_exists="" constr_exists=""
     local how_exists=""
-    local has_unchecked="" has_review_unchecked="" review_item="" review_is_checkbox="" review_is_bare=""
+    local has_unchecked="" has_review_unchecked="" review_item=""
+    local counted_review_unchecked_count=0
     local total_unchecked=0
     local _line_num=0
     local _first_review_line=""
@@ -927,8 +928,33 @@ cmd_action_uimpl() {
         fi
     }
 
+    _uimpl_start_unchecked_item() {
+        local _item_line="$1"
+        local _is_review="$2"
+
+        _uimpl_flush_item
+        has_unchecked="1"
+        ((total_unchecked++)) || true
+        _current_buf="${_item_line}"$'\n'
+        _in_item=1
+        _seen_item=1
+        if (( _is_review )); then
+            _current_is_review=1
+            ((counted_review_unchecked_count++)) || true
+        elif [[ -z "$_items_section" ]]; then
+            # Record section of the first non-review unchecked item.
+            _items_section="$_active_section"
+        fi
+    }
+
+    _uimpl_is_review_item() {
+        local _lower_item="$1"
+        [[ "$_lower_item" =~ ^-[[:space:]]+(\[[[:space:]]+\][[:space:]]+)?review($|[[:space:]]) ]]
+    }
+
     while IFS= read -r _line; do
         ((_line_num++)) || true
+        local _lower="${_line,,}"
         case "$_line" in
             "##"*"Domain specifications"*) domains_exists="1"; _active_section="domains"; _flush_and_close_area ;;
             "##"*"Functional design"*)     fd_exists="1";      _active_section="fd";      _flush_and_close_area ;;
@@ -939,19 +965,18 @@ cmd_action_uimpl() {
                 if (( _area_closed )); then
                     :
                 else
-                    _uimpl_flush_item
-                    has_unchecked="1"
-                    ((total_unchecked++)) || true
-                    _current_buf="${_line}"$'\n'
-                    _in_item=1
-                    _seen_item=1
-                    local _lower_item="${_line,,}"
-                    if [[ "$_lower_item" =~ ^-[[:space:]]+\[[[:space:]]+\][[:space:]]+review($|[[:space:]]) ]]; then
-                        _current_is_review=1
-                    elif [[ -z "$_items_section" ]]; then
-                        # Record section of the first non-review unchecked item.
-                        _items_section="$_active_section"
+                    local _is_review=0
+                    if _uimpl_is_review_item "$_lower"; then
+                        _is_review=1
                     fi
+                    _uimpl_start_unchecked_item "$_line" "$_is_review"
+                fi
+                ;;
+            "- "*)
+                if _uimpl_is_review_item "$_lower" && (( ! _area_closed )); then
+                    _uimpl_start_unchecked_item "$_line" 1
+                elif (( _in_item )); then
+                    _flush_and_close_area
                 fi
                 ;;
             *)
@@ -968,8 +993,7 @@ cmd_action_uimpl() {
         esac
         # Detect review item (case-insensitive): "- [ ] Review...", "- Review..."
         if [[ -z "$_first_review_line" ]]; then
-            local _lower="${_line,,}"
-            if [[ "$_lower" =~ ^-[[:space:]]+(\[[[:space:]]+\][[:space:]]+)?review($|[[:space:]]) ]]; then
+            if _uimpl_is_review_item "$_lower"; then
                 _first_review_line="$_line_num:$_line"
             fi
         fi
@@ -997,20 +1021,13 @@ cmd_action_uimpl() {
     if [[ -n "$_first_review_line" ]]; then
         has_review_unchecked="1"
         review_item="${_first_review_line#*:}"
-        if [[ "$review_item" =~ ^-[[:space:]]+\[ ]]; then
-            review_is_checkbox="1"
-        else
-            review_is_bare="1"
-        fi
     fi
 
     # Count non-review unchecked items
     local non_review_unchecked_count=0
-    if [[ -n "$review_is_checkbox" ]]; then
-        non_review_unchecked_count=$((total_unchecked - 1))
-    elif [[ -n "$review_is_bare" ]]; then
-        non_review_unchecked_count=$total_unchecked
-    elif [[ -n "$has_unchecked" ]]; then
+    if [[ -n "$has_unchecked" ]]; then
+        non_review_unchecked_count=$((total_unchecked - counted_review_unchecked_count))
+    elif [[ -n "$has_review_unchecked" ]]; then
         non_review_unchecked_count=$total_unchecked
     fi
 
