@@ -1,3 +1,5 @@
+# Decisions
+
 ## Uncertainty: whether `upr` should preserve special `## Context` handling or use one uniform "first two sections" rule
 
 Decision: Uniform first two `##` sections after frontmatter
