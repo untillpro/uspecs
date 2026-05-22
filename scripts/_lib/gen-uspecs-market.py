@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -68,7 +69,9 @@ _DISPATCH_PLUGIN_ROOT: str = (
     "run `bash {PLUGIN_ROOT}/bin/softeng.sh action {{action}} [options]`"
 )
 
-_DISPATCH_REL_BIN: str = "set cwd to project root and run `bash {SKILL_FOLDER}/../../bin/softeng.sh action {{action}} [options]` "
+_DISPATCH_REL_BIN: str = (
+    "set cwd to project root and run `bash {SKILL_FOLDER}/../../bin/softeng.sh action {{action}} [options]` "
+)
 
 _DISPATCH_DIRECT: str = "run `bash softeng.sh action {{action}} [options]`"
 
@@ -254,11 +257,37 @@ def read_feature_description(source: Path, action: str) -> str:
     return description
 
 
+def _resolve_bash() -> str:
+    """Locate a bash executable, skipping the Windows System32 WSL launcher.
+
+    On Windows, ``C:\\Windows\\System32\\bash.exe`` is the WSL launcher and
+    fails when WSL/Hyper-V is unavailable. Walk PATH and return the first
+    ``bash`` that is not under System32; fall back to Git Bash on Windows.
+    """
+    is_windows: bool = os.name == "nt"
+    exts: list[str] = [".exe", ""] if is_windows else [""]
+    for raw_dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
+        if not raw_dir:
+            continue
+        d: Path = Path(raw_dir)
+        if is_windows and d.name.lower() == "system32":
+            continue
+        for ext in exts:
+            cand: Path = d / f"bash{ext}"
+            if cand.is_file():
+                return str(cand)
+    if is_windows:
+        git_bash: Path = Path("C:/Program Files/Git/usr/bin/bash.exe")
+        if git_bash.is_file():
+            return str(git_bash)
+    return "bash"
+
+
 def read_action_options(source: Path, action: str) -> str:
     """Read an action's rendered options from `softeng meta options <action>`."""
     softeng_path: Path = source / "bin" / "softeng.sh"
     result: subprocess.CompletedProcess[str] = subprocess.run(
-        ["bash", str(softeng_path), "meta", "options", action],
+        [_resolve_bash(), str(softeng_path), "meta", "options", action],
         cwd=source,
         text=True,
         capture_output=True,

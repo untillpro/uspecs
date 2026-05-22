@@ -6,11 +6,13 @@ load 'helpers'
 # Helper: create a change folder with a proper heading for md_read_title.
 # Usage: _make_upr_change <folder_name> <title> [issue_url] [type] [scope] [breaking] [body_shape]
 # type defaults to "feat"; scope and breaking are omitted when empty.
-# body_shape controls which body section(s) are written:
-#   "why_what" (default) -- ## Why + ## What sections (legacy / non-issue shape)
+# body_shape controls which initial body section(s) are written:
+#   "why_what" (default) -- ## Why + ## What sections
+#   "why_how"            -- ## Why + ## How sections
 #   "context"            -- ## Context section (issue-case shape, --fetchable)
 #   "none"               -- no body sections (frontmatter-only body)
-# ## How and ## Functional design are always appended (filtered out by upr).
+# ## How and ## Functional design are appended unless body_shape is "why_how" or "none".
+# upr emits all body sections that fit within the PR body size limits.
 _make_upr_change() {
     local folder_name="$1"
     local title="${2:-Test change title}"
@@ -50,6 +52,16 @@ _make_upr_change() {
                 echo 'What narrative.'
                 echo ''
                 ;;
+            why_how)
+                echo '## Why'
+                echo ''
+                echo 'Why narrative.'
+                echo ''
+                echo '## How'
+                echo ''
+                echo 'How narrative.'
+                echo ''
+                ;;
             context)
                 echo '## Context'
                 echo ''
@@ -65,13 +77,17 @@ _make_upr_change() {
                 return 1
                 ;;
         esac
-        echo '## How'
-        echo ''
-        echo 'How narrative.'
-        echo ''
-        echo '## Functional design'
-        echo ''
-        echo 'SENTINEL_FILTERED_OUT'
+        if [[ "$body_shape" != "why_how" && "$body_shape" != "none" ]]; then
+            echo '## How'
+            echo ''
+            echo 'How narrative.'
+            echo ''
+        fi
+        if [[ "$body_shape" != "none" ]]; then
+            echo '## Functional design'
+            echo ''
+            echo 'SENTINEL_FILTERED_OUT'
+        fi
     } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
 
     git -C "$PROJECT_ROOT" add .
@@ -158,10 +174,11 @@ _assert_subject_and_trailers() {
 # Invariants always asserted:
 #   - frontmatter wrapped in a ```yaml fenced code block
 #   - no bare "---" delimiters outside the fence
-#   - non-Why/What/Context sections filtered out (SENTINEL, ## Functional design)
+#   - no omission note when the PR body fits within the size limits
 # body_shape selects which body sections must be present:
-#   "why_what" (default) -- ## Why and ## What present, ## Context absent
-#   "context"            -- ## Context present, ## Why and ## What absent
+#   "why_what" (default) -- ## Why, ## What, ## How, and ## Functional design present
+#   "why_how"            -- ## Why and ## How present, ## What absent
+#   "context"            -- ## Context, ## How, and ## Functional design present, ## Why and ## What absent
 #   "none"               -- no body sections (frontmatter-only body)
 _assert_pr_body_format() {
     local body_shape="${1:-why_what}"
@@ -169,17 +186,28 @@ _assert_pr_body_format() {
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
     [[ "$gh_body" != *"---"* ]]
-    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
-    [[ "$gh_body" != *"## Functional design"* ]]
+    [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
 
     case "$body_shape" in
         why_what)
             [[ "$gh_body" == *"## Why"* ]]
             [[ "$gh_body" == *"## What"* ]]
+            [[ "$gh_body" == *"## How"* ]]
+            [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
+            [[ "$gh_body" != *"## Context"* ]]
+            ;;
+        why_how)
+            [[ "$gh_body" == *"## Why"* ]]
+            [[ "$gh_body" == *"## How"* ]]
+            [[ "$gh_body" != *"## Functional design"* ]]
+            [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+            [[ "$gh_body" != *"## What"* ]]
             [[ "$gh_body" != *"## Context"* ]]
             ;;
         context)
             [[ "$gh_body" == *"## Context"* ]]
+            [[ "$gh_body" == *"## How"* ]]
+            [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
             [[ "$gh_body" != *"## Why"* ]]
             [[ "$gh_body" != *"## What"* ]]
             ;;
@@ -187,6 +215,7 @@ _assert_pr_body_format() {
             [[ "$gh_body" != *"## Why"* ]]
             [[ "$gh_body" != *"## What"* ]]
             [[ "$gh_body" != *"## Context"* ]]
+            [[ "$gh_body" != *"## How"* ]]
             ;;
         *)
             echo "_assert_pr_body_format: unknown body_shape: $body_shape" >&2
@@ -362,12 +391,12 @@ _assert_pr_body_format() {
 
     _assert_subject_and_trailers "feat: Add feature"
 
-    # PR body still carries the Why/What sections from change.md (How is filtered out)
+    # PR body carries all body sections that fit within the size limits.
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
     [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" != *"## How"* ]] && [[ "$gh_body" != *"How narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
     _assert_pr_body_format
 }
 
@@ -416,10 +445,9 @@ _assert_pr_body_format() {
 
 # --- Construct PR body ---
 #
-# pr_body composition depends on change.md shape: ## Context section,
-# ## Why and ## What sections (including archived files), or neither
-# (frontmatter-only body). Truncated to 40 lines or 4000 characters
-# (whichever hits first) with a "(truncated ...)" notice appended.
+# pr_body composition includes body content from the first top-level ## section
+# after the main heading. It is truncated to 40 lines or 4000 characters
+# (whichever hits first), with an omission note appended when truncated.
 
 # 60 short lines inside Why section -> line limit (40) truncates
 @test "action upr: No PR for current branch: PR body truncated by line limit" {
@@ -451,7 +479,7 @@ _assert_pr_body_format() {
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    [[ "$gh_body" == *"Content omitted. See change.md for full details."* ]]
     # Late lines must be gone (line 57 is well past the 40-line cut)
     [[ "$gh_body" != *"Line 57"* ]]
     # Early lines must be present
@@ -490,7 +518,7 @@ _assert_pr_body_format() {
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    [[ "$gh_body" == *"Content omitted. See change.md for full details."* ]]
     # Body size capped near 4000 (content + notice)
     local body_size
     body_size=${#gh_body}
@@ -510,13 +538,28 @@ _assert_pr_body_format() {
     # ## Context section is rendered in the PR body
     [[ "$gh_body" == *"## Context"*"Context narrative."* ]]
     [[ "$gh_body" == *"See [issue.md](issue.md)"* ]]
-    # Sentinel from ## Functional design is filtered out
-    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
 
     _assert_pr_body_format "context"
 }
 
-@test "action upr: Construct PR body: stops after first real ## What" {
+@test "action upr: Construct PR body: ## Why followed by ## How" {
+    _setup_upr_branch "2601010000-why-how" "Why How body change" \
+        "" "fix" "" "" "why_how"
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
+    [[ "$gh_body" == *"## How"*"How narrative."* ]]
+    [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
+
+    _assert_pr_body_format "why_how"
+}
+
+@test "action upr: Construct PR body: includes all body sections until size limits" {
     _setup_git_origin
     git checkout -q -b duplicate-what-body-branch
     local folder_name="2601010000-duplicate-what"
@@ -561,15 +604,14 @@ _assert_pr_body_format() {
     [[ "$gh_body" == *'```yaml'*"change_id: $folder_name"*'```'* ]]
     [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
     [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" == *"See change.md for details."* ]]
-    [[ "$gh_body" != *"## Quick start"* ]]
-    [[ "$gh_body" != *"## Functional design"* ]]
-    [[ "$gh_body" != *"DUPLICATE_WHAT_FROM_FENCED_EXAMPLE"* ]]
-    [[ "$gh_body" != *"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" == *"## Quick start"* ]]
+    [[ "$gh_body" == *"DUPLICATE_WHAT_FROM_FENCED_EXAMPLE"* ]]
+    [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
+    [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
 
     local what_count
     what_count=$(printf '%s\n' "$gh_body" | grep -c '^## What$')
-    [ "$what_count" -eq 1 ]
+    [ "$what_count" -eq 2 ]
 }
 
 # change.md has neither ## Context nor ## Why/## What (frontmatter-only body)
