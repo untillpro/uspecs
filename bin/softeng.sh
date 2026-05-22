@@ -1691,10 +1691,9 @@ cmd_action_upr() {
     atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
-    # ```yaml code fence and emit at most the first two top-level `##` sections
-    # after the main heading, regardless of section names. Later top-level
-    # sections are replaced by a plain omission note. When change.md has no
-    # top-level `##` sections, only the frontmatter fence is emitted.
+    # ```yaml code fence and emit body content from the first top-level `##`
+    # section after the main heading. When change.md has no top-level `##`
+    # sections, only the frontmatter fence is emitted.
     # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
     # are emitted, and an orphan opening fence is closed in END.
     local pr_body_file
@@ -1705,20 +1704,10 @@ cmd_action_upr() {
         function is_fence(line) {
             return line ~ /^[[:space:]]*(```|~~~)/
         }
-        function print_omission_note() {
-            if (!omission_note_printed) {
-                print ""
-                print "---"
-                print "Content omitted. See change.md for full details."
-                omission_note_printed = 1
-            }
-        }
         BEGIN {
             in_frontmatter=0
             in_body=0
             in_fence=0
-            section_count=0
-            omission_note_printed=0
         }
         NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
         in_frontmatter && /^---$/ { in_frontmatter=0; print "```"; next }
@@ -1730,11 +1719,6 @@ cmd_action_upr() {
                 next
             }
             if (!in_fence && /^## /) {
-                if (section_count >= 2) {
-                    print_omission_note()
-                    exit
-                }
-                section_count++
                 in_body = 1
             }
             if (in_body) print

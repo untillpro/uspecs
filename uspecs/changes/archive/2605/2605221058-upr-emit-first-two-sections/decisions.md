@@ -1,70 +1,66 @@
 # Decisions
 
-## Uncertainty: whether `upr` should preserve special `## Context` handling or use one uniform "first two sections" rule
+## Uncertainty: whether `upr` should preserve named-section handling or use one uniform body rule
 
-Decision: Uniform first two `##` sections after frontmatter
+Decision: Emit all body content from the first top-level `##` section, then apply size limits
 
-- Pros: directly matches issue #105; simplest rule to explain and test; handles `## Why` + `## How` and future section names consistently
-- Cons: changes current special behavior for `## Context` if downstream sections were intentionally excluded differently
+- Pros: simplest reviewer-facing rule; handles arbitrary section names consistently; avoids omitting useful short sections
+- Cons: PR bodies may include more sections than before until the size limit is reached
 - Confidence: high
 
 Alternatives:
 
-1. Uniform first two `##` sections after frontmatter
-   - Pros: directly matches issue #105; simplest rule to explain and test; handles `## Why` + `## How` and future section names consistently
-   - Cons: changes current special behavior for `## Context` if downstream sections were intentionally excluded differently
+1. Emit all body content from the first top-level `##` section, then apply size limits
+   - Pros: simple rule; bounded by existing 40-line and 4000-character guards; no arbitrary section count
+   - Cons: larger PR bodies when change files have several short sections
    - Confidence: high
-2. Preserve `## Context` as a special shape, but apply first-two logic to non-context changes
-   - Pros: minimizes behavior change for fetchable issue-shaped change files; lower regression risk if `## Context` has special semantics
-   - Cons: does not fully satisfy "regardless of their headings"; keeps two body assembly modes
+2. Uniform first two `##` sections after frontmatter
+   - Pros: directly matches issue #105; keeps PR bodies shorter
+   - Cons: arbitrary cutoff; can omit useful content even when the body is still small
    - Confidence: medium
-3. Emit frontmatter plus all sections until the third `##`, then add "See change.md for details."
-   - Pros: preserves the existing detail note pattern for longer files; makes truncation boundary explicit
-   - Cons: mostly equivalent to option 1 but less direct; may duplicate truncation semantics
-   - Confidence: medium
+3. Preserve `## Context` as a special shape, but apply generic logic to non-context changes
+   - Pros: minimizes behavior change for fetchable issue-shaped change files
+   - Cons: keeps two body assembly modes; less predictable for users
+   - Confidence: low
 
-## Uncertainty: whether `upr` should append "See change.md for details." when `change.md` has more than two body sections
+## Uncertainty: when `upr` should append the omission note
 
-Decision: Keep the details note when a third top-level `##` section exists, using a plain omission note instead of a Markdown link
+Decision: Append `Content omitted. See change.md for full details.` only when the PR body is truncated by line or character limits
 
-- Pros: preserves the existing reviewer cue that more content was intentionally omitted; compatible with the current plain-text commit trailer style
-- Cons: slightly expands the requested behavior beyond "emit the first two sections"
+- Pros: the note now means actual content was removed by a size guard; avoids implying section-based omission
+- Cons: reviewers are not reminded to open `change.md` when the full body fits
 - Confidence: high
 
 Alternatives:
 
-1. Keep the details note when a third top-level `##` section exists
-   - Pros: preserves the existing reviewer cue that more content was intentionally omitted; compatible with the current PR body style
-   - Cons: slightly expands the requested behavior beyond "emit the first two sections"
+1. Append the omission note only when size truncation occurs
+   - Pros: precise signal; aligns with the removal of section-count omission
+   - Cons: no extra cue when the body fits
    - Confidence: high
-2. Omit the details note and emit only the first two sections
-   - Pros: literal interpretation of issue #105; simpler output
-   - Cons: reviewers may not realize additional sections exist unless they open `change.md`
+2. Always append a plain `See change.md for details` note
+   - Pros: consistent pointer to source material
+   - Cons: noisy when the full body is already present
    - Confidence: medium
-3. Emit the details note only when body-size truncation occurs
-   - Pros: ties the note strictly to the existing size guards
-   - Cons: loses the current signal for section-based omission; conflates omitted sections with size truncation
+3. Keep section-count omission and append the note at the third `##`
+   - Pros: shorter PR bodies
+   - Cons: preserves the arbitrary cutoff this change removes
    - Confidence: low
 
 ## Uncertainty: which behavior should get system-test coverage for this fix
 
-Decision: Cover both `## Why` + `## How` and a third omitted section
+Decision: Cover arbitrary section names, all-section inclusion, and size truncation
 
-- Pros: verifies the core fix and the retained details-note behavior; covers the boundary where only two sections are emitted
-- Cons: slightly broader than the issue's minimal reproduction
+- Pros: verifies the core fix, the removal of the section limit, and the retained bounded-body behavior
+- Cons: broader than the issue's minimal reproduction
 - Confidence: high
 
 Alternatives:
 
-1. Cover `## Why` + `## How` PR body assembly
-   - Pros: directly reproduces issue #105; proves arbitrary second heading names are retained
-   - Cons: only covers the reported case, not the general first-two-section rule
+1. Cover arbitrary section names, all-section inclusion, and size truncation
+   - Pros: covers the complete behavior contract
+   - Cons: a few more assertions to maintain
    - Confidence: high
-2. Cover both `## Why` + `## How` and a third omitted section
-   - Pros: verifies the core fix and the retained details-note behavior; covers the boundary where only two sections are emitted
-   - Cons: slightly broader than the issue's minimal reproduction
-   - Confidence: high
-3. Cover several arbitrary heading combinations
-   - Pros: strongly validates the uniform heading-agnostic rule
-   - Cons: more test cases for a small parser change; higher maintenance cost
+2. Cover only `## Why` + `## How` PR body assembly
+   - Pros: directly reproduces issue #105
+   - Cons: would not prove the section limit was removed
    - Confidence: medium

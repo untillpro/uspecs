@@ -60,15 +60,15 @@ Feature: Create pull request from current branch
       Given change.md has <change_md_shape>
       Then pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block
       And pr_body includes <body_content>
-      And pr_body includes at most the first two top-level ## sections after the main heading
+      And pr_body includes all body content from the first top-level ## section after the main heading
       And pr_body is truncated at 40 lines or 4000 characters, whichever is reached first
-      And pr_body appends a details note when additional sections or truncated content are omitted
+      And pr_body appends a details note when content is truncated
       Examples:
         | change_md_shape                                | body_content                                                                                         |
         | a single top-level ## Context section           | the ## Context section                                                                               |
         | ## Why and ## What sections                     | the ## Why and ## What sections                                                                      |
         | ## Why and ## How sections                      | the ## Why and ## How sections                                                                       |
-        | three top-level ## sections                     | the first two top-level ## sections and a "Content omitted. See change.md for full details." note    |
+        | three top-level ## sections                     | all three top-level ## sections                                                                      |
         | no top-level ## sections after the main heading | no body sections                                                                                     |
 
   Rule: Edge cases
