@@ -6,7 +6,7 @@ user-invocable: false
 
 Technical Design Specifications describe how functionality is to be implemented.
 
-<!-- // TODO Same text as in artdef_impl_td.md -->
+<!-- // TODO Same text as in uspecs-sec-td -->
 
 Artifact types:
 
@@ -18,8 +18,10 @@ Artifact types:
 - Context Subsystem Architecture (`uspecs/specs/{domain}/{context}/arch-{subsystem}.md`)
 - Feature Technical Design (`uspecs/specs/{domain}/{context}/{feature}--td.md`)
 
-## Structure
+## Structure: Technology Specifications
 
 - Technology: [example-tech.md](./struct-tech.md) - tech stack, architecture patterns, UI/UX guidelines (same structure for domain and context levels)
-- Architecture: [example-arch.md](./struct-arch.md) - key components, key flows, key data models (same structure for domain, context, or subsystem level)
-- Feature TD: [example-td.md](./struct-td.md) - feature-scoped technical design with UI components
+
+## Structure: Architecture and Feature Technical Design Specifications
+
+- [struct-arch-td.md](struct-arch-td.md)
