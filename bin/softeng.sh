@@ -1690,12 +1690,10 @@ cmd_action_upr() {
     atexit_pop
 
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
-    # ```yaml code fence and emit the body sections from change.md that describe
-    # the change itself -- `## Context` (issue-case shape, --fetchable) or
-    # `## Why` through the first real `## What` (non-issue case and archived
-    # files). Later content after the first real `## What` is replaced by a
-    # short details note. When change.md has no recognised body section, only the
-    # frontmatter fence is emitted.
+    # ```yaml code fence and emit at most the first two top-level `##` sections
+    # after the main heading, regardless of section names. Later top-level
+    # sections are replaced by a short details note. When change.md has no
+    # top-level `##` sections, only the frontmatter fence is emitted.
     # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
     # are emitted, and an orphan opening fence is closed in END.
     local pr_body_file
@@ -1709,7 +1707,7 @@ cmd_action_upr() {
         function print_see_details() {
             if (!see_details_printed) {
                 print ""
-                print "See change.md for details."
+                print "See [change.md](change.md) for details."
                 see_details_printed = 1
             }
         }
@@ -1717,8 +1715,7 @@ cmd_action_upr() {
             in_frontmatter=0
             in_body=0
             in_fence=0
-            body_shape=""
-            in_final_what=0
+            section_count=0
             see_details_printed=0
         }
         NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
@@ -1731,24 +1728,12 @@ cmd_action_upr() {
                 next
             }
             if (!in_fence && /^## /) {
-                if (in_final_what) {
+                if (section_count >= 2) {
                     print_see_details()
                     exit
                 }
-                if ($0 ~ /^## Context[[:space:]]*$/) {
-                    in_body = 1
-                    body_shape = "context"
-                } else if (body_shape != "context" && $0 ~ /^## Why[[:space:]]*$/) {
-                    in_body = 1
-                    body_shape = "why_what"
-                    in_final_what = 0
-                } else if (body_shape != "context" && $0 ~ /^## What[[:space:]]*$/) {
-                    in_body = 1
-                    body_shape = "why_what"
-                    in_final_what = 1
-                } else {
-                    in_body = 0
-                }
+                section_count++
+                in_body = 1
             }
             if (in_body) print
         }

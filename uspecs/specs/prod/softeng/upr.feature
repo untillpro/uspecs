@@ -58,13 +58,18 @@ Feature: Create pull request from current branch
 
     Scenario Outline: Construct PR body
       Given change.md has <change_md_shape>
-      Then pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block, <body_content>
-      And pr_body is truncated to 40 lines or 4000 characters (whichever hits first) with "(truncated -- see change.md for full details)" appended when exceeded
+      Then pr_body is composed from change.md with the YAML frontmatter wrapped in a ```yaml fenced code block
+      And pr_body includes <body_content>
+      And pr_body includes at most the first two top-level ## sections after the main heading
+      And pr_body is truncated at 40 lines or 4000 characters, whichever is reached first
+      And pr_body appends a details note when additional sections or truncated content are omitted
       Examples:
-        | change_md_shape                                | body_content                                |
-        | a ## Context section                           | followed by the ## Context section          |
-        | ## Why and ## What sections (or archived file) | followed by the ## Why and ## What sections |
-        | neither ## Context nor ## Why/## What sections | with no body sections appended              |
+        | change_md_shape                                | body_content                                                                                         |
+        | a single top-level ## Context section           | the ## Context section                                                                               |
+        | ## Why and ## What sections                     | the ## Why and ## What sections                                                                      |
+        | ## Why and ## How sections                      | the ## Why and ## How sections                                                                       |
+        | three top-level ## sections                     | the first two top-level ## sections and a "See [change.md](change.md) for details." note             |
+        | no top-level ## sections after the main heading | no body sections                                                                                     |
 
   Rule: Edge cases
 
