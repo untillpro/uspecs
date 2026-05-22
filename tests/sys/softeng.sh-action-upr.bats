@@ -83,7 +83,7 @@ _make_upr_change() {
             echo 'How narrative.'
             echo ''
         fi
-        if [[ "$body_shape" != "none" ]]; then
+        if [[ "$body_shape" != "why_how" && "$body_shape" != "none" ]]; then
             echo '## Functional design'
             echo ''
             echo 'SENTINEL_FILTERED_OUT'

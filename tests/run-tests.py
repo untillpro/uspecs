@@ -15,11 +15,13 @@ Examples:
 """
 
 import argparse
+import atexit
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
@@ -199,6 +201,50 @@ def run_bats_file(bats_file: Path) -> FileResult:
         }
 
 
+def _prebuild_bats_templates() -> str:
+    """Pre-build bats system-test scaffold templates into a shared temp dir.
+
+    Returns the template directory path. Registers an atexit handler so the
+    directory is cleaned up even on KeyboardInterrupt (which routes through
+    os._exit and skips finally blocks).
+
+    Fatal on failure: prints the helper's stderr and aborts the run.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    helper = repo_root / "tests" / "sys" / "prebuild-templates.sh"
+    if not helper.is_file():
+        print(
+            f"Error: prebuild helper not found at {helper}",
+            file=sys.stderr,
+            flush=True,
+        )
+        sys.exit(1)
+
+    tpl_dir = tempfile.mkdtemp(prefix="uspecs-bats-tpl-")
+    atexit.register(shutil.rmtree, tpl_dir, True)
+
+    bash_bin = shutil.which("bash") or "bash"
+    try:
+        subprocess.run(
+            [bash_bin, str(helper), tpl_dir],
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as e:
+        print(
+            f"Error: prebuild-templates.sh failed (rc={e.returncode})",
+            file=sys.stderr,
+            flush=True,
+        )
+        if e.stderr:
+            sys.stderr.write(e.stderr.decode(errors="replace"))
+            sys.stderr.flush()
+        sys.exit(1)
+    return tpl_dir
+
+
 def main() -> int:
     # Ensure each print() is written to terminal immediately
     if hasattr(sys.stdout, "reconfigure"):
@@ -251,6 +297,14 @@ def main() -> int:
     if not bats_files:
         print(f"No .bats files found in {args.folder}")
         return 0
+
+    # Pre-build shared bats scaffold templates once per run when any system
+    # test is in the set; workers inherit USPECS_BATS_TPL_DIR and reuse the
+    # pre-built copy instead of rebuilding per bats invocation.
+    needs_sys_tpl = any("/sys/" in str(p).replace("\\", "/") for p in bats_files)
+    if needs_sys_tpl:
+        tpl_dir = _prebuild_bats_templates()
+        os.environ["USPECS_BATS_TPL_DIR"] = tpl_dir
 
     if args.per_file:
         return _run_per_file(bats_files, args.pattern, workers, args.prof)
