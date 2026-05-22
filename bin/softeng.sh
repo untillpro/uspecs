@@ -31,6 +31,7 @@ set -Eeuo pipefail
 
 USPECS_VERSION="0.0.0-source"
 
+# shellcheck disable=SC2016 # we do not expand by intent
 declare -A ACTION_OPTIONS=(
     [uchange]='`--kebab-name <name>` (required), `--type <type>` (required), `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`, `--no-self-review`'
     [uimpl]='`--change-folder <path>`, `--plan`, `--no-self-review`'
