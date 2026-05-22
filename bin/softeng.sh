@@ -1693,7 +1693,7 @@ cmd_action_upr() {
     # Prepare PR body: wrap YAML frontmatter (when present, opened on line 1) in a
     # ```yaml code fence and emit at most the first two top-level `##` sections
     # after the main heading, regardless of section names. Later top-level
-    # sections are replaced by a short details note. When change.md has no
+    # sections are replaced by a plain omission note. When change.md has no
     # top-level `##` sections, only the frontmatter fence is emitted.
     # Missing or unclosed frontmatter is tolerated -- whatever parts are recognisable
     # are emitted, and an orphan opening fence is closed in END.
@@ -1705,11 +1705,12 @@ cmd_action_upr() {
         function is_fence(line) {
             return line ~ /^[[:space:]]*(```|~~~)/
         }
-        function print_see_details() {
-            if (!see_details_printed) {
+        function print_omission_note() {
+            if (!omission_note_printed) {
                 print ""
-                print "See [change.md](change.md) for details."
-                see_details_printed = 1
+                print "---"
+                print "Content omitted. See change.md for full details."
+                omission_note_printed = 1
             }
         }
         BEGIN {
@@ -1717,7 +1718,7 @@ cmd_action_upr() {
             in_body=0
             in_fence=0
             section_count=0
-            see_details_printed=0
+            omission_note_printed=0
         }
         NR==1 && /^---$/ { in_frontmatter=1; print "```yaml"; next }
         in_frontmatter && /^---$/ { in_frontmatter=0; print "```"; next }
@@ -1730,7 +1731,7 @@ cmd_action_upr() {
             }
             if (!in_fence && /^## /) {
                 if (section_count >= 2) {
-                    print_see_details()
+                    print_omission_note()
                     exit
                 }
                 section_count++
@@ -1757,7 +1758,7 @@ cmd_action_upr() {
         pr_body_truncated=true
     fi
     if [[ "$pr_body_truncated" == "true" ]]; then
-        printf '\n\n---\n(truncated -- see change.md for full details)\n' >> "$pr_body_file"
+        printf '\n\n---\nContent omitted. See change.md for full details.\n' >> "$pr_body_file"
     fi
 
     # Create PR via gh CLI

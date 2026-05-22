@@ -32,7 +32,7 @@ Decisions:
 
 - Update the `upr` PR body assembly to count top-level `##` sections instead of requiring `## Why` and `## What` names.
 - Use one uniform rule for all change body shapes: after frontmatter, emit the first two top-level `##` sections rather than keeping a separate `## Context` mode.
-- Keep the details note when additional top-level sections are omitted, and format file references in that note as Markdown links.
+- Keep the details note when additional top-level sections are omitted, using a plain omission note rather than a Markdown link.
 - Preserve the current frontmatter formatting and body-size truncation behavior: after section selection, truncate at 40 lines or 4000 characters, whichever is reached first.
 - Cover both the reported `## Why` plus `## How` case and the omitted-third-section details note in the `upr` system tests.
 
@@ -47,16 +47,16 @@ References:
   - update: "Construct PR body" examples so `pr_body` is composed from frontmatter followed by at most the first two top-level `##` sections of `change.md`, regardless of section headings
   - update: "Construct PR body" rules so the section limit and size limits are stated separately: at most two top-level sections, then truncate at 40 lines or 4000 characters, whichever is reached first
   - add: example for `## Why` followed by `## How`, asserting both sections are included
-  - add: example for a third top-level section, asserting it is omitted and the details note links to `change.md`
+  - add: example for a third top-level section, asserting it is omitted and the plain omission note points reviewers to `change.md`
 
 ## Construction
 
 - [x] update: [softeng.sh-action-upr.bats](../../../../../tests/sys/softeng.sh-action-upr.bats)
   - update: PR body helper comments and assertions to describe first-two-section selection instead of requiring specific `## Context` / `## Why` / `## What` heading names
   - update: existing PR body tests that currently expect `## How` to be filtered out so `## How` is included when it is one of the first two top-level sections
-  - add: coverage for a third top-level `##` section being omitted with `See [change.md](change.md) for details.`
+  - add: coverage for a third top-level `##` section being omitted with `Content omitted. See change.md for full details.`
 
 - [x] update: [softeng.sh](../../../../../bin/softeng.sh)
   - update: `cmd_action_upr` PR body assembly to emit frontmatter followed by at most the first two top-level `##` sections after the main heading, regardless of section names
-  - update: omitted-section details note to use the Markdown link `See [change.md](change.md) for details.`
-  - preserve: after section selection, keep the existing 40-line and 4000-character truncation guards with the current truncation notice
+  - update: omitted-section details note to use `Content omitted. See change.md for full details.`
+  - update: after section selection, keep the existing 40-line and 4000-character truncation guards with the same plain omission note

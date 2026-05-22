@@ -444,7 +444,7 @@ _assert_pr_body_format() {
 #
 # pr_body composition includes at most the first two top-level ## sections
 # after the main heading. It is truncated to 40 lines or 4000 characters
-# (whichever hits first) with a "(truncated ...)" notice appended.
+# (whichever hits first) with an omission note appended.
 
 # 60 short lines inside Why section -> line limit (40) truncates
 @test "action upr: No PR for current branch: PR body truncated by line limit" {
@@ -476,7 +476,7 @@ _assert_pr_body_format() {
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    [[ "$gh_body" == *"Content omitted. See change.md for full details."* ]]
     # Late lines must be gone (line 57 is well past the 40-line cut)
     [[ "$gh_body" != *"Line 57"* ]]
     # Early lines must be present
@@ -515,7 +515,7 @@ _assert_pr_body_format() {
 
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
-    [[ "$gh_body" == *"(truncated -- see change.md for full details)"* ]]
+    [[ "$gh_body" == *"Content omitted. See change.md for full details."* ]]
     # Body size capped near 4000 (content + notice)
     local body_size
     body_size=${#gh_body}
@@ -603,7 +603,7 @@ _assert_pr_body_format() {
     [[ "$gh_body" == *'```yaml'*"change_id: $folder_name"*'```'* ]]
     [[ "$gh_body" == *"## Why"*"Why narrative."* ]]
     [[ "$gh_body" == *"## What"*"What narrative."* ]]
-    [[ "$gh_body" == *"See [change.md](change.md) for details."* ]]
+    [[ "$gh_body" == *"Content omitted. See change.md for full details."* ]]
     [[ "$gh_body" != *"## Quick start"* ]]
     [[ "$gh_body" != *"## Functional design"* ]]
     [[ "$gh_body" != *"DUPLICATE_WHAT_FROM_FENCED_EXAMPLE"* ]]

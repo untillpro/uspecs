@@ -68,7 +68,7 @@ Feature: Create pull request from current branch
         | a single top-level ## Context section           | the ## Context section                                                                               |
         | ## Why and ## What sections                     | the ## Why and ## What sections                                                                      |
         | ## Why and ## How sections                      | the ## Why and ## How sections                                                                       |
-        | three top-level ## sections                     | the first two top-level ## sections and a "See [change.md](change.md) for details." note             |
+        | three top-level ## sections                     | the first two top-level ## sections and a "Content omitted. See change.md for full details." note    |
         | no top-level ## sections after the main heading | no body sections                                                                                     |
 
   Rule: Edge cases

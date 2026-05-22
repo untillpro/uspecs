@@ -25,9 +25,9 @@ Alternatives:
 
 ## Uncertainty: whether `upr` should append "See change.md for details." when `change.md` has more than two body sections
 
-Decision: Keep the details note when a third top-level `##` section exists, with file references formatted as Markdown links
+Decision: Keep the details note when a third top-level `##` section exists, using a plain omission note instead of a Markdown link
 
-- Pros: preserves the existing reviewer cue that more content was intentionally omitted; compatible with the current PR body style; makes referenced files clickable in rendered Markdown
+- Pros: preserves the existing reviewer cue that more content was intentionally omitted; compatible with the current plain-text commit trailer style
 - Cons: slightly expands the requested behavior beyond "emit the first two sections"
 - Confidence: high
 
