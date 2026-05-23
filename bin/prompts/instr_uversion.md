@@ -8,7 +8,7 @@ Display update availability: ${availability}
 Display latest available version: ${latest_version} (?latest_version)
 Display availability note: ${availability_note} (?availability_note)
 
-When update instructions are present, show them to the user as the marketplace refresh command:
+Explain to the user how to update the plugin: (?update_instructions)
 
 ```sh (?update_instructions)
 ${update_instructions} (?update_instructions)
