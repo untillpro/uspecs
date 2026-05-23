@@ -88,11 +88,11 @@ _commit_count() {
 }
 
 # _softeng_version [plugin-folder]: reads the USPECS_VERSION literal from
-# bin/softeng.sh in MKT_REPO. plugin-folder defaults to "uspecs".
+# bin/_lib/meta.sh in MKT_REPO. plugin-folder defaults to "uspecs".
 _softeng_version() {
     local plugin_folder="${1:-uspecs}"
     local line
-    line="$(grep -m1 '^USPECS_VERSION=' "$MKT_REPO/$plugin_folder/bin/softeng.sh")"
+    line="$(grep -m1 '^USPECS_VERSION=' "$MKT_REPO/$plugin_folder/bin/_lib/meta.sh")"
     line="${line#USPECS_VERSION=}"
     line="${line%\"}"
     line="${line#\"}"

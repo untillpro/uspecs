@@ -54,6 +54,7 @@ class AgentConfig:
     host: str
     cli: str
     install_verb: str
+    marketplace_update_verb: str
 
 
 @dataclass
@@ -85,6 +86,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         host="Claude Code",
         cli="claude",
         install_verb="install",
+        marketplace_update_verb="update",
     ),
     "augment": AgentConfig(
         market_name="uspecs-plugins-augment",
@@ -95,6 +97,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         host="Augment Code",
         cli="auggie",
         install_verb="install",
+        marketplace_update_verb="update",
     ),
     "codex": AgentConfig(
         market_name="uspecs-plugins-codex",
@@ -105,6 +108,7 @@ AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
         host="Codex",
         cli="codex",
         install_verb="add",
+        marketplace_update_verb="upgrade",
     ),
 }
 
@@ -531,6 +535,30 @@ def render_readme(
     return result
 
 
+def bash_double_quoted_value(value: str) -> str:
+    """Escape a value for the simple `NAME="value"` constants in _lib/meta.sh."""
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$")
+
+
+def substitute_meta_constant(text: str, name: str, value: str, meta_path: Path) -> str:
+    replacement: str = f'{name}="{bash_double_quoted_value(value)}"'
+    text, n_subs = re.subn(
+        rf"^{name}=.*$",
+        lambda _match: replacement,
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if n_subs != 1:
+        print(
+            f"error: {meta_path}: expected exactly one {name}=... "
+            f"line to substitute, found {n_subs}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return text
+
+
 def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Generate a uspecs marketplace.",
@@ -597,24 +625,26 @@ def main() -> None:
     # Copy bin/
     shutil.copytree(source / "bin", plugin_dir / "bin")
 
-    # Substitute USPECS_VERSION sentinel in the copied softeng.sh
-    softeng_path: Path = plugin_dir / "bin" / "softeng.sh"
-    softeng_text: str = softeng_path.read_text(encoding="utf-8")
-    softeng_text, n_subs = re.subn(
-        r"^USPECS_VERSION=.*$",
-        f'USPECS_VERSION="{version}"',
-        softeng_text,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    if n_subs != 1:
-        print(
-            f"error: {softeng_path}: expected exactly one USPECS_VERSION=... "
-            f"line to substitute, found {n_subs}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    softeng_path.write_text(softeng_text, encoding="utf-8")
+    # Substitute generated uversion constants in the copied _lib/meta.sh.
+    meta_path: Path = plugin_dir / "bin" / "_lib" / "meta.sh"
+    meta_text: str = meta_path.read_text(encoding="utf-8")
+    stream: str = "development" if is_dev_version(version) else "stable"
+    substitutions: dict[str, str] = {
+        "USPECS_VERSION": version,
+        "USPECS_MARKETPLACE_REPO": f"uspecs/{market_name}",
+        "USPECS_MARKETPLACE_NAME": market_name,
+        "USPECS_STREAM": stream,
+        "USPECS_CLI": config.cli,
+        "USPECS_MARKETPLACE_UPDATE_VERB": config.marketplace_update_verb,
+    }
+    for name, value in substitutions.items():
+        meta_text = substitute_meta_constant(meta_text, name, value, meta_path)
+    meta_path.write_text(meta_text, encoding="utf-8")
+
+    # Guard against stale metadata from source or previous generated output.
+    stale_market_metadata: Path = plugin_dir / "bin" / "uspecs-market.json"
+    if stale_market_metadata.exists():
+        stale_market_metadata.unlink()
 
     # Copy knowledge skills (uspecs-* only, from .claude/skills/)
     src_skills: Path = source / ".claude" / "skills"

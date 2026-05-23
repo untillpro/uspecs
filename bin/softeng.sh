@@ -29,7 +29,10 @@ fi
 
 set -Eeuo pipefail
 
-USPECS_VERSION="0.0.0-source"
+# Marketplace metadata constants live in _lib/meta.sh; sentinel values in the
+# source repo are rewritten by gen-uspecs-market.py during marketplace build.
+# shellcheck source=_lib/meta.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/meta.sh"
 
 # shellcheck disable=SC2016 # we do not expand by intent
 declare -A ACTION_OPTIONS=(
@@ -1969,8 +1972,10 @@ cmd_action_umergepr() {
 
 # cmd_action_uversion
 # Emits an instruction prompt asking the agent to display the plugin version.
-# USPECS_VERSION is rewritten by gen-uspecs-market.py during marketplace build;
-# in the source repo it stays at the sentinel "0.0.0-source".
+# USPECS_* constants come from _lib/meta.sh and are rewritten by
+# gen-uspecs-market.py during marketplace build; in the source repo
+# USPECS_VERSION stays at the sentinel "0.0.0-source" and marketplace
+# metadata remains empty.
 cmd_action_uversion() {
     if [ $# -gt 0 ]; then
         error "Unknown argument: $1"
@@ -1982,8 +1987,23 @@ cmd_action_uversion() {
     prompt_start_log
     echo "Action: uversion"
 
+    local availability="" availability_note="" latest_version="" update_instructions=""
+    local uversion_vars
+    if ! uversion_vars=$(bash "$_CTX_SCRIPT_DIR/_lib/uversion.sh" 2>&1); then
+        availability="unknown"
+        availability_note="$uversion_vars"
+    else
+        eval "$uversion_vars"
+    fi
+
     # shellcheck disable=SC2034  # version_vars used via nameref in emit_prompt
-    declare -A version_vars=([version]="$USPECS_VERSION")
+    declare -A version_vars=(
+        [version]="$USPECS_VERSION"
+        [availability]="$availability"
+        [availability_note]="$availability_note"
+        [latest_version]="$latest_version"
+        [update_instructions]="$update_instructions"
+    )
     prompt_start_instructions "results"
     emit_prompt "$prompts_dir" "instr_uversion" version_vars
 }

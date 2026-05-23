@@ -3,6 +3,17 @@ set -Eeuo pipefail
 
 load 'helpers'
 
+_softeng_constant() {
+    local name="$1"
+    local plugin_folder="${2:-uspecs}"
+    local line
+    line="$(grep -m1 "^${name}=" "$MKT_REPO/$plugin_folder/bin/_lib/meta.sh")"
+    line="${line#"${name}="}"
+    line="${line%\"}"
+    line="${line#\"}"
+    printf '%s' "$line"
+}
+
 # ---------------------------------------------------------------------------
 # cd.feature: Routing by version.txt -- Pre-release routes to Dev Plugin Repos
 # ---------------------------------------------------------------------------
@@ -53,6 +64,12 @@ load 'helpers'
     local ver
     ver="$(_plugin_version uspecs-dev)"
     [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev\+[0-9]{8}-[0-9]{4}\.[0-9a-f]{12}$ ]]
+    [ ! -f "$MKT_REPO/uspecs-dev/bin/uspecs-market.json" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_REPO uspecs-dev)" = "uspecs/uspecs-dev-plugins-augment" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_NAME uspecs-dev)" = "uspecs-dev-plugins-augment" ]
+    [ "$(_softeng_constant USPECS_STREAM uspecs-dev)" = "development" ]
+    [ "$(_softeng_constant USPECS_CLI uspecs-dev)" = "auggie" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_UPDATE_VERB uspecs-dev)" = "update" ]
     [ "$(_commit_count)" -eq 1 ]
     [ -n "$(git -C "$MKT_REPO" status --porcelain)" ]
     _assert_dev_install_block "augment"
@@ -152,6 +169,12 @@ load 'helpers'
     local ver
     ver="$(_plugin_version)"
     [ "$ver" = "$core" ]
+    [ ! -f "$MKT_REPO/uspecs/bin/uspecs-market.json" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_REPO)" = "uspecs/uspecs-plugins-augment" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_NAME)" = "uspecs-plugins-augment" ]
+    [ "$(_softeng_constant USPECS_STREAM)" = "stable" ]
+    [ "$(_softeng_constant USPECS_CLI)" = "auggie" ]
+    [ "$(_softeng_constant USPECS_MARKETPLACE_UPDATE_VERB)" = "update" ]
     [ "$(_commit_count)" -eq 1 ]
     [[ "$output" == *"Done: $core"* ]]
     [ "$(_marketplace_field "['owner']['name']")" = "unTill Software Development Group B.V." ]
