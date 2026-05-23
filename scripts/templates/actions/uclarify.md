@@ -43,6 +43,8 @@ When the condition does not hold (no `change.md` in scope, or the target is unre
 
 The heading uses the specific issue type (`Uncertainty`, `Inconsistency`, `Ambiguity`, or `Vagueness`), not the umbrella term.
 
+The `Alternatives` list MUST contain only the solutions that were NOT chosen. Do not repeat the chosen Decision as an entry in `Alternatives`. If no other solutions were considered, omit the `Alternatives:` heading and its list entirely.
+
 ```text
 # Decisions: {change-request-name}
 
@@ -56,11 +58,11 @@ Decision: {chosen solution}
 
 Alternatives:
 
-1. {solution name}
+1. {other solution name}
    - Pros: ...
    - Cons: ...
    - Confidence: low | medium | high
-2. {solution name}
+2. {other solution name}
    - Pros: ...
    - Cons: ...
    - Confidence: low | medium | high
