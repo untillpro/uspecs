@@ -16,9 +16,7 @@ setup() {
     # Sample markdown file with YAML frontmatter
     cat > "$TEST_TMPDIR/change.md" <<'EOF'
 ---
-registered_at: 2026-03-12T07:00:31Z
 change_id: 2603120700-introduce-umergepr
-baseline: c9614d33d1f10184c96e64781e1fe3b439938e6f
 issue_url: https://github.com/org/repo/issues/42
 ---
 
@@ -60,12 +58,6 @@ EOF
     run md_read_frontmatter_field "$TEST_TMPDIR/change.md" "issue_url"
     [ "$status" -eq 0 ]
     [ "$output" = "https://github.com/org/repo/issues/42" ]
-}
-
-@test "frontmatter: extracts timestamp field" {
-    run md_read_frontmatter_field "$TEST_TMPDIR/change.md" "registered_at"
-    [ "$status" -eq 0 ]
-    [ "$output" = "2026-03-12T07:00:31Z" ]
 }
 
 @test "frontmatter: fails for absent field" {

@@ -258,12 +258,11 @@ _assert_frontmatter_contains() {
     uspecs action uchange --kebab-name my-change --type feat --no-impl
     local out_no_impl="$output"
 
-    # Normalize the embedded timestamps so byte-equality holds across second
-    # boundaries: timestamped folder name (YYMMDDHHMM-) and the ISO
-    # registered_at frontmatter field.
+    # Normalize the timestamped folder name (YYMMDDHHMM-) so byte-equality
+    # holds across second boundaries.
     local norm_no_flag norm_no_impl
-    norm_no_flag=$(printf '%s' "$out_no_flag" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g; s/registered_at: [^[:space:]]+/registered_at: TIMESTAMP/')
-    norm_no_impl=$(printf '%s' "$out_no_impl" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g; s/registered_at: [^[:space:]]+/registered_at: TIMESTAMP/')
+    norm_no_flag=$(printf '%s' "$out_no_flag" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g')
+    norm_no_impl=$(printf '%s' "$out_no_impl" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g')
 
     [ "$norm_no_flag" = "$norm_no_impl" ]
 }
@@ -401,8 +400,6 @@ _assert_frontmatter_contains() {
     _assert_uchange_base_output
     _assert_frontmatter_contains "change_id: "
     [[ "$output" =~ change_id:[[:space:]][0-9]{10}-my-change ]]
-    _assert_frontmatter_contains "registered_at: "
-    _assert_frontmatter_contains "baseline: "
 }
 
 @test "uchange: scn: Issue reference: branch naming" {
