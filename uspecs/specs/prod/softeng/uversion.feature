@@ -10,7 +10,7 @@ Feature: Show plugin version
     And AI Agent displays update availability <availability>
     And AI Agent does not install or update the uspecs plugin
     And AI Agent does not require a separate version-check command
-    And if <availability> reports a newer version, AI Agent shows instructions how to update the uspecs plugin to the latest version
+    And if <availability> reports a newer version, AI Agent shows instructions how to update the uspecs marketplace to the latest version
     Examples:
       | origin                          | version                       | latest_version                | availability                                          |
       | a stable marketplace build      | "2.3.0"                       | "2.3.0"                       | "up to date"                                          |
