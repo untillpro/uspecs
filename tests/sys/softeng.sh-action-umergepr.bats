@@ -13,7 +13,6 @@ _make_umergepr_change() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo '---'
         echo ''

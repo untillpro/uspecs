@@ -25,7 +25,6 @@ _make_upr_change() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         if [[ -n "$issue_url" ]]; then
             echo "issue_url: $issue_url"
@@ -360,10 +359,8 @@ _assert_pr_body_format() {
     mkdir -p "$archive_path"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: 2601010000-archived-change"
         echo "type: feat"
-        echo "archived_at: 2026-01-01T01:00:00Z"
         echo '---'
         echo ''
         echo '# Change request: Archived change'
@@ -457,7 +454,6 @@ _assert_pr_body_format() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo 'type: feat'
         echo '---'
@@ -494,7 +490,6 @@ _assert_pr_body_format() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo 'type: feat'
         echo '---'
@@ -566,7 +561,6 @@ _assert_pr_body_format() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo 'type: fix'
         echo '---'
@@ -717,7 +711,6 @@ _assert_pr_body_format() {
     # Create change.md with uncompleted item
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo '---'
         echo ''
@@ -758,7 +751,6 @@ _assert_pr_body_format() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     {
         echo '---'
-        echo "registered_at: 2026-01-01T00:00:00Z"
         echo "change_id: $folder_name"
         echo '---'
         echo ''

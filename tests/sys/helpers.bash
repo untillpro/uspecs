@@ -202,7 +202,6 @@ _make_change_folder() {
     mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
     printf '%s\n' \
         '---' \
-        "registered_at: 2026-01-01T00:00:00Z" \
         "change_id: $folder_name" \
         '---' \
         > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"

@@ -61,20 +61,6 @@ action_keywords_display() {
 # diff file <path>:
 #   Outputs git diff of a single file between merge-base and HEAD.
 
-get_timestamp() {
-    date -u +"%Y-%m-%dT%H:%M:%SZ"
-}
-
-get_baseline() {
-    local _is_git
-    context_is_git_repo _is_git
-    if [[ "$_is_git" == "1" ]]; then
-        git rev-parse HEAD 2>/dev/null || echo ""
-    else
-        echo ""
-    fi
-}
-
 get_folder_name() {
     local path="$1"
     basename "$path"
@@ -219,21 +205,12 @@ _uchange_compute() {
     local folder_name="${timestamp}-${change_name}"
     _out_folder_rel="$changes_folder_rel/$folder_name"
 
-    local registered_at baseline
-    registered_at=$(get_timestamp)
-    baseline=$(get_baseline "$project_dir")
-
     # Local var names here must NOT collide with the caller-supplied target
     # names of the namerefs above (Bash dynamic scoping makes a same-name local
     # turn the nameref into a self-reference).
     local _fm="---"$'\n'
-    _fm+="registered_at: $registered_at"$'\n'
     _fm+="change_id: $folder_name"$'\n'
     _fm+="type: $type"$'\n'
-
-    if [ -n "$baseline" ]; then
-        _fm+="baseline: $baseline"$'\n'
-    fi
 
     if [ -n "$issue_url" ]; then
         _fm+="issue_url: $issue_url"$'\n'
@@ -347,32 +324,6 @@ changes_archive() {
     move_folder "$abs_change" "$dest" "$project_dir"
 
     local rel_dest="${dest#"$project_dir/"}"
-
-    # Insert archived_at into YAML front matter (before closing ---)
-    local change_file="$dest/change.md"
-    local timestamp
-    timestamp=$(get_timestamp)
-    local temp_file
-    temp_create_file temp_file
-    awk -v ts="$timestamp" '
-        /^---$/ {
-            if (count == 0) {
-                print
-                count++
-            } else {
-                print "archived_at: " ts
-                print
-            }
-            next
-        }
-        /^archived_at:/ { next }
-        { print }
-    ' "$change_file" > "$temp_file"
-    if cat "$temp_file" > "$change_file"; then
-        :  # Success, continue
-    else
-        error "failed to update $change_file"
-    fi
 
     # Add ../../ prefix to relative links for archive folder depth
     if ! convert_links_to_relative "$dest"; then

@@ -3,7 +3,9 @@
 Parallel test runner for bats tests.
 
 Usage:
-    python tests/run-tests.py <folder> [pattern] [--workers N] [--per-file] [--prof]
+    python tests/run-tests.py <path> [pattern] [--workers N] [--per-file] [--prof]
+
+<path> may be a folder (recursively scanned for *.bats) or a single .bats file.
 
 Examples:
     python tests/run-tests.py tests/unit
@@ -12,6 +14,7 @@ Examples:
     python tests/run-tests.py tests/unit "emit_prompt"
     python tests/run-tests.py tests/unit "emit_prompt" --per-file
     python tests/run-tests.py tests/unit --prof
+    python tests/run-tests.py tests/sys/softeng.sh-action-uchange.bats
 """
 
 import argparse
@@ -47,14 +50,23 @@ class FileResult(TypedDict):
     duration: float
 
 
-def discover_bats_files(folder: str) -> list[Path]:
-    """Recursively discover all .bats files in the given folder."""
-    folder_path = Path(folder)
-    if not folder_path.is_dir():
-        print(f"Error: '{folder}' is not a directory", file=sys.stderr)
+def discover_bats_files(path: str) -> list[Path]:
+    """Discover .bats files at the given path.
+
+    Accepts either a directory (recursively scanned for *.bats) or a single
+    .bats file.
+    """
+    p = Path(path)
+    if p.is_file():
+        if p.suffix != ".bats":
+            print(f"Error: '{path}' is not a .bats file", file=sys.stderr)
+            sys.exit(1)
+        return [p]
+    if not p.is_dir():
+        print(f"Error: '{path}' is not a directory or file", file=sys.stderr)
         sys.exit(1)
 
-    bats_files = list(folder_path.rglob("*.bats"))
+    bats_files = list(p.rglob("*.bats"))
     return sorted(bats_files)
 
 
@@ -255,7 +267,10 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("folder", help="Folder to scan for .bats files")
+    parser.add_argument(
+        "path",
+        help="Folder to scan for .bats files, or a single .bats file",
+    )
     parser.add_argument(
         "pattern",
         nargs="?",
@@ -292,10 +307,10 @@ def main() -> int:
     )
 
     # Discover bats files
-    bats_files = discover_bats_files(args.folder)
+    bats_files = discover_bats_files(args.path)
 
     if not bats_files:
-        print(f"No .bats files found in {args.folder}")
+        print(f"No .bats files found in {args.path}")
         return 0
 
     # Pre-build shared bats scaffold templates once per run when any system
