@@ -8,7 +8,7 @@ Feature: Show plugin version
     When Engineer invokes uversion action
     Then AI Agent displays the uspecs framework plugin version <version>
     And AI Agent displays update availability <availability>
-    And AI Agent does not install or update the uspecs plugin
+    And AI Agent does not execute the update command
     And AI Agent does not require a separate version-check command
     And if <availability> reports a newer version, AI Agent shows instructions how to update the uspecs marketplace to the latest version
     Examples:
@@ -24,7 +24,7 @@ Feature: Show plugin version
     When Engineer invokes uversion action
     Then AI Agent displays the uspecs framework plugin version "2.3.0"
     And AI Agent displays update availability "unknown"
-    And AI Agent does not install or update the uspecs plugin
+    And AI Agent does not execute the update command
     And AI Agent does not require a separate version-check command
 
   Scenario: Display source repository version without checking update availability
@@ -33,5 +33,5 @@ Feature: Show plugin version
     When Engineer invokes uversion action
     Then AI Agent displays the uspecs framework plugin version "0.0.0-source"
     And AI Agent skips update availability checking
-    And AI Agent does not install or update the uspecs plugin
+    And AI Agent does not execute the update command
     And AI Agent does not require a separate version-check command

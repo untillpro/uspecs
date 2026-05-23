@@ -95,7 +95,6 @@ SH
     [[ "$output" == *"Display update availability: up to date"* ]]
     [[ "$output" != *"codex plugin marketplace upgrade"* ]]
     [[ "$output" != *"codex plugin add uspecs@uspecs-plugins-codex"* ]]
-    [[ "$output" == *"Do not install the uspecs plugin."* ]]
 }
 
 @test "uversion: stable marketplace build reports newer version with update instructions" {
@@ -115,7 +114,6 @@ SH
     [[ "$output" == *"Display latest available version: 2.4.0"* ]]
     [[ "$output" == *"codex plugin marketplace upgrade uspecs-plugins-codex"* ]]
     [[ "$output" != *"codex plugin add uspecs@uspecs-plugins-codex"* ]]
-    [[ "$output" == *"Do not install the uspecs plugin."* ]]
     [[ "$output" == *"Do not execute the update command."* ]]
     [[ "$output" == *"Do not require a separate version-check command."* ]]
 }

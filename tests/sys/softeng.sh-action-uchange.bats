@@ -120,6 +120,10 @@ _assert_frontmatter_contains() {
     [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
+    # Refs artdef and the "Insert Refs:" rule are gated on --fetchable
+    [[ "$output" != *'<artdef id="artdef_change_refs"'* ]]
+    [[ "$output" != *"Insert the "*"Refs:"*"block"* ]]
+
     # Issue file artdef is gated on --fetchable, so it must not appear here
     [[ "$output" != *'<artdef id="artdef_issue_file"'* ]]
 }
