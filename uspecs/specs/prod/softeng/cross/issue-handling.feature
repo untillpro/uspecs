@@ -9,33 +9,12 @@ Cross-reference hub for issue handling across softeng actions.
 #
 # ## Scenarios across features
 #
-# - [uchange.feature](../uchange.feature) -- Scenario: Agent is instructed to determine whether issue URL is fetchable
+# - [uchange.feature](../uchange.feature) -- Rule: Handling issue URLs
 #   uchange action instructions tell the agent to pass --issue-url when user
 #   input contains a URL and to also pass --fetchable when it can fetch the
-#   issue body from that URL.
-#
-# - [uchange.feature](../uchange.feature) -- Scenario: Issue URL is fetchable
-#   uchange records the issue URL in frontmatter, instructs the agent to
-#   fetch the issue and save it to issue-{issue-number}.md, and change.md
-#   begins with a Refs bulleted list whose entries have the form
-#   [{issue-number}: {issue-title}](./issue-{issue-number}.md), followed by
-#   ## Why and ## What (with conditional ## How per separate scenarios).
-#
-# - [uchange.feature](../uchange.feature) -- Scenario: Issue URL is not fetchable
-#   uchange records the issue URL in frontmatter, emits no fetch instruction,
-#   and change.md uses the ## Why + ## What shape.
-#
-# - [uchange.feature](../uchange.feature) -- Scenario: Why and What sourced from issue under --fetchable
-#   ## Why and ## What are populated by distilling the fetched issue in
-#   the change's terms, not by verbatim restatement; semantics and per-type
-#   guidance for both sections are preserved from the non-fetchable shape.
-#
-# - [uchange.feature](../uchange.feature) -- Scenario Outline: ## How section under --fetchable
-#   With --how, ## How is always produced. Without --how, ## How is
-#   produced only when the fetched issue describes an approach/design.
-#
-# - [uchange.feature](../uchange.feature) -- Scenario: --fetchable without an issue URL
-#   --fetchable requires an issue URL.
+#   issue body. With --fetchable, change.md uses Refs + Why/What distilled
+#   from the fetched issue, with conditional How; without --fetchable, no
+#   fetch instruction is emitted and change.md uses the Why + What shape.
 #
 # - [uchange.feature](../uchange.feature) -- Scenario Outline: Issue URL: branch naming
 #   Git branch name is derived from the issue id and the change name.

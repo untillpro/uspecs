@@ -173,11 +173,18 @@ _assert_frontmatter_contains() {
     # Fetch directive mentions the issue-file artdef
     [[ "$output" == *"@artdef_issue_file"* ]]
 
-    # And Change File body continues with ## Why and ## What sections
+    # And Change File body continues with Why and What sections
     # Body shape: Refs + Why/What artdefs rendered, Context artdef absent
     [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
     [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
+
+    # And Why and What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
+    [[ "$output" == *'distilling the fetched issue'* ]]
+    [[ "$output" == *'do not restate the issue body verbatim'* ]]
+
+    # And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
+    [[ "$output" == *'Tailor the `## What` items to the `type:` frontmatter value'* ]]
 
     # And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
     # And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
@@ -247,7 +254,7 @@ _assert_frontmatter_contains() {
     [[ "$output" == *"contains information for the How section"* ]]
 }
 
-@test "uchange: scn: --fetchable without an issue URL" {
+@test "uchange: scn: error: --fetchable without an issue URL" {
     cd "$PROJECT_ROOT"
 
     uspecs action uchange --kebab-name my-change --type feat --fetchable

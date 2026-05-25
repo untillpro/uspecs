@@ -20,6 +20,23 @@ Feature: Create change request
     And How section is produced in Change File
     And uimpl action is not invoked automatically
 
+  Rule: Branch creation options
+
+    Scenario: --no-branch option
+      When Engineer invokes uchange action with --no-branch option
+      Then base change request is created
+      And Git branch is not created
+
+    Scenario: --branch option
+      When Engineer invokes uchange action with --branch option
+      Then base change request is created
+      And Git branch is created with name following branch naming rules
+
+    Scenario: error: --fetchable without an issue URL
+      When Engineer invokes uchange action with --fetchable but no issue URL
+      Then error is displayed: "--fetchable requires an issue URL"
+      And change request is not created
+
 
   Rule: Handling issue URLs
 
@@ -37,32 +54,17 @@ Feature: Create change request
       Then Frontmatter has issue_url value set to the provided issue URL
       And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
       And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
-      And Change File body continues with ## Why and ## What sections
+      And Change File body continues with Why and What sections
       And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
       And AI Agent is instructed to fetch the issue and save its body to Issue File named issue-{issue-number}.md as markdown
+      And Why and What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
+      And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
 
     Scenario: Issue URL is not fetchable
       When fetchable status is determined as omitted
       Then Frontmatter has issue_url value set to the provided issue URL
       And Change File body shape is ## Why and ## What sections
       And AI Agent is not instructed to fetch the issue and Issue File is not created
-
-    Scenario: Why and What sourced from issue under --fetchable
-      When Engineer invokes uchange action with --fetchable and an issue URL
-      Then ## Why and ## What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
-      And the semantics and per-type guidance for ## Why and ## What sections are preserved from the non-fetchable shape
-
-    Scenario Outline: ## How section under --fetchable
-      When Engineer invokes uchange action with --fetchable, an issue URL, <how_flag>, and the issue <approach_in_issue>
-      Then ## How section <how_outcome> in Change File
-      Examples:
-        | how_flag  | approach_in_issue             | how_outcome     |
-        | (omitted) | describes an approach         | is produced     |
-        | (omitted) | does not describe an approach | is not produced |
-        | --how     | describes an approach         | is produced     |
-        | --how     | does not describe an approach | is produced     |
-
-  Rule: Branch creation
 
     Scenario Outline: Issue URL: branch naming
       When Engineer invokes uchange action with issue URL <issue_url> and change name <change_name>
@@ -74,15 +76,16 @@ Feature: Create change request
         | https://gitlab.com/group/project/-/issues/7 | add-validation | 7-add-validation |
         | https://example.com/projects/#!766766       | fix-crash      | 766766-fix-crash |
 
-    Scenario: --no-branch option
-      When Engineer invokes uchange action with --no-branch option
-      Then base change request is created
-      And Git branch is not created
 
-    Scenario: --branch option
-      When Engineer invokes uchange action with --branch option
-      Then base change request is created
-      And Git branch is created with name following branch naming rules
+    Scenario Outline: ## How section under --fetchable
+      When Engineer invokes uchange action with --fetchable, an issue URL, <how_flag>, and the issue <approach_in_issue>
+      Then ## How section <how_outcome> in Change File
+      Examples:
+        | how_flag  | approach_in_issue             | how_outcome     |
+        | (omitted) | describes an approach         | is produced     |
+        | (omitted) | does not describe an approach | is not produced |
+        | --how     | describes an approach         | is produced     |
+        | --how     | does not describe an approach | is produced     |
 
   Rule: Chaining to implementation
 
@@ -99,10 +102,10 @@ Feature: Create change request
       When Engineer invokes uchange action <invocation>
       Then AI Agent does not invoke self-review
       Examples:
-        | invocation                              |
-        | with default options                    |
-        | with --how option                       |
-        | with --fetchable and an issue URL        |
+        | invocation                        |
+        | with default options              |
+        | with --how option                 |
+        | with --fetchable and an issue URL |
 
     Scenario: --specs option
       When Engineer invokes uchange action with --specs option
@@ -129,8 +132,3 @@ Feature: Create change request
         | other  |
         | --how  |
         | --plan |
-
-    Scenario: --fetchable without an issue URL
-      When Engineer invokes uchange action with --fetchable but no issue URL
-      Then error is displayed: "--fetchable requires an issue URL"
-      And change request is not created
