@@ -130,11 +130,9 @@ _assert_frontmatter_contains() {
     _assert_uchange_base_output
 
     # Then Frontmatter has issue_url value set to the provided issue URL
-    # change_frontmatter artifact carries the issue_url
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
-    # And Change File body shape is ## Why and ## What sections
-    # Body shape: legacy Why + What artdef rendered, Context artdef absent
+    # And Change File body shape is Why and What sections
     [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
@@ -143,7 +141,6 @@ _assert_frontmatter_contains() {
     [[ "$output" != *"Insert the "*"Refs:"*"block"* ]]
 
     # And AI Agent is not instructed to fetch the issue and Issue File is not created
-    # No fetch directive (the AI Agent was not asked to fetch issue.md)
     [[ "$output" != *"Fetch the issue at"* ]]
 
     # Issue file artdef is gated on --fetchable, so it must not appear here

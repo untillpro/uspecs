@@ -63,7 +63,7 @@ Feature: Create change request
     Scenario: Issue URL is not fetchable
       When fetchable status is determined as omitted
       Then Frontmatter has issue_url value set to the provided issue URL
-      And Change File body shape is ## Why and ## What sections
+      And Change File body shape is Why and What sections
       And AI Agent is not instructed to fetch the issue and Issue File is not created
 
     Scenario Outline: Issue URL: branch naming
