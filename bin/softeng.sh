@@ -624,7 +624,7 @@ cmd_action_uchange() {
     fi
 
     if [[ -n "$opt_fetchable" && -z "$issue_url" ]]; then
-        error "--fetchable requires an issue reference (pass --issue-url <url>)"
+        error "--fetchable requires an issue URL (pass --issue-url <url>)"
     fi
 
     if [[ -n "$opt_no_impl" && ( -n "$opt_how" || -n "$opt_plan" ) ]]; then

@@ -1,27 +1,29 @@
 Feature: Issue handling (cross-action)
 Cross-reference hub for issue handling across softeng actions.
 
-# Issue handling is a cross-action concept: a change request may reference
-# an external issue URL, and downstream actions derive behaviour from it.
+# Issue handling is a cross-action concept: a change request may include an
+# external issue URL, and downstream actions derive behaviour from it.
 # This feature has no scenarios of its own -- each scenario lives in its
 # natural home feature. Update this hub when adding or renaming any
 # scenario listed below.
 #
 # ## Scenarios across features
 #
-# - [uchange.feature](../uchange.feature) -- Scenario Outline: Issue reference provided
-#   uchange records the issue URL in frontmatter; with --fetchable the agent
-#   is instructed to fetch the issue and save it to issue-{issue-number}.md,
-#   and change.md uses the Refs + ## Why + ## What shape (with conditional
-#   ## How per separate scenarios); without --fetchable no fetch instruction
-#   is emitted and change.md uses the ## Why + ## What shape.
+# - [uchange.feature](../uchange.feature) -- Scenario: Agent is instructed to determine whether issue URL is fetchable
+#   uchange action instructions tell the agent to pass --issue-url when user
+#   input contains a URL and to also pass --fetchable when it can fetch the
+#   issue body from that URL.
 #
-# - [uchange.feature](../uchange.feature) -- Scenario: Refs block under --fetchable
-#   change.md body begins with a Refs bulleted list whose entries have the
-#   form [{issue-number}: {issue-title}](./issue-{issue-number}.md); the
-#   agent extracts {issue-number} from --issue-url per its prompt
-#   instructions, independently of the bash extractor used for branch
-#   naming and Closes #<id>.
+# - [uchange.feature](../uchange.feature) -- Scenario: Issue URL is fetchable
+#   uchange records the issue URL in frontmatter, instructs the agent to
+#   fetch the issue and save it to issue-{issue-number}.md, and change.md
+#   begins with a Refs bulleted list whose entries have the form
+#   [{issue-number}: {issue-title}](./issue-{issue-number}.md), followed by
+#   ## Why and ## What (with conditional ## How per separate scenarios).
+#
+# - [uchange.feature](../uchange.feature) -- Scenario: Issue URL is not fetchable
+#   uchange records the issue URL in frontmatter, emits no fetch instruction,
+#   and change.md uses the ## Why + ## What shape.
 #
 # - [uchange.feature](../uchange.feature) -- Scenario: Why and What sourced from issue under --fetchable
 #   ## Why and ## What are populated by distilling the fetched issue in
@@ -32,10 +34,10 @@ Cross-reference hub for issue handling across softeng actions.
 #   With --how, ## How is always produced. Without --how, ## How is
 #   produced only when the fetched issue describes an approach/design.
 #
-# - [uchange.feature](../uchange.feature) -- Scenario: --fetchable without an issue reference
-#   --fetchable requires an issue reference.
+# - [uchange.feature](../uchange.feature) -- Scenario: --fetchable without an issue URL
+#   --fetchable requires an issue URL.
 #
-# - [uchange.feature](../uchange.feature) -- Scenario Outline: Issue reference: branch naming
+# - [uchange.feature](../uchange.feature) -- Scenario Outline: Issue URL: branch naming
 #   Git branch name is derived from the issue id and the change name.
 #
 # - [upr.feature](../upr.feature) -- Scenario Outline: Construct PR title and commit message
