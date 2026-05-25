@@ -27,11 +27,13 @@ _assert_frontmatter_contains() {
 # --- Basic change request creation ---
 
 @test "uchange: scn: Basic change request creation: default branch creates branch" {
+    # | branch               | type | branch_outcome                                     |
+    # | the default branch   | feat | is created with name following branch naming rules |
+
     # Given Engineer is on <branch>
-    # branch: the default branch
     _setup_git_repo
 
-    # type: feat
+    # When Engineer invokes uchange action with --type <type>
     uspecs action uchange --kebab-name my-change --type feat
 
     _assert_uchange_base_output
@@ -39,22 +41,19 @@ _assert_frontmatter_contains() {
     # Then base change request is created with Why and What sections
     # Bash did NOT create the timestamped Change Folder
     [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
-
     # Instructions reference the change file path that the agent will create
     [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/change.md ]]
-
     # Instructions contain Why/What section content from artdefs
     [[ "$output" == *"Why"* ]]
     [[ "$output" == *"What"* ]]
 
-    # And Git branch <branch_outcome>
-    # branch_outcome: directive to create branch is emitted to the agent
-    # Branch directive emitted (default branch + no opt)
-    [[ "$output" == *"git checkout -b my-change"* ]]
-
     # And Frontmatter has type field set to <type>
     # change_frontmatter artifact carries the supplied --type value
     _assert_frontmatter_contains "type: feat"
+
+    # And Git branch <branch_outcome>
+    # Branch directive emitted (default branch + no opt)
+    [[ "$output" == *"git checkout -b my-change"* ]]
 
     # And uimpl action is not invoked automatically
     # Defaults: neither How artdef nor impl-menu bullets emitted
@@ -63,12 +62,14 @@ _assert_frontmatter_contains() {
 }
 
 @test "uchange: scn: Basic change request creation: non-default branch skips branch creation" {
+    # | branch               | type | branch_outcome |
+    # | a non-default branch | fix  | is not created |
+
     # Given Engineer is on <branch>
-    # branch: a non-default branch
     _setup_git_repo
     git checkout -q -b feature-branch
 
-    # type: fix
+    # When Engineer invokes uchange action with --type <type>
     uspecs action uchange --kebab-name my-change --type fix
 
     _assert_uchange_base_output
@@ -76,12 +77,14 @@ _assert_frontmatter_contains() {
     # Then base change request is created with Why and What sections
     # Bash did NOT create the timestamped Change Folder
     [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
-
     [[ "$output" == *"Why"* ]]
     [[ "$output" == *"What"* ]]
 
+    # And Frontmatter has type field set to <type>
+    # change_frontmatter artifact carries the supplied --type value
+    _assert_frontmatter_contains "type: fix"
+
     # And Git branch <branch_outcome>
-    # branch_outcome: directive to create branch is NOT emitted
     # No branch directive
     [[ "$output" != *"git checkout -b"* ]]
 
