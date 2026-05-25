@@ -1,7 +1,7 @@
 Feature: Print text with echo
   User runs echo command to print text to stdout
 
-  Rule: Core behavior
+  Rule: Basic flow
 
     Scenario Outline: Print arguments
       When User runs `echo <args>`
@@ -22,13 +22,20 @@ Feature: Print text with echo
       When User runs `echo $USER at $HOME`
       Then stdout is "alice at /home/alice{NEWLINE}"
 
-  Rule: Options
+  Rule: Alternative flows
 
     Scenario: -n suppresses the trailing newline
       When User runs `echo -n hello`
       Then stdout is "hello"
 
-    # Recognized escape sequences are listed in [echo--reqs.md](./echo--reqs.md)
+    Scenario: Unknown option is treated as literal text
+      When User runs `echo --unknown`
+      Then stdout is "--unknown{NEWLINE}"
+      And exit code is 0
+
+  Rule: Escape sequences
+
+    # Recognized escape sequences are listed in echo--reqs.md#escape-sequences
     Scenario Outline: -e enables backslash escapes
       When User runs `echo -e <args>`
       Then stdout is <output>
@@ -37,9 +44,10 @@ Feature: Print text with echo
         | "a\tb"         | "a{TAB}b{NEWLINE}"             |
         | "line1\nline2" | "line1{NEWLINE}line2{NEWLINE}" |
 
-  Rule: Edge cases
+    Scenario: Unrecognized escape is printed literally
+      When User runs `echo -e "a\zb"`
+      Then stdout is "a\zb{NEWLINE}"
 
-    Scenario: Unknown option is treated as literal text
-      When User runs `echo --unknown`
-      Then stdout is "--unknown{NEWLINE}"
-      And exit code is 0
+    Scenario: \c suppresses further output
+      When User runs `echo -e "before\cafter"`
+      Then stdout is "before"

@@ -17,8 +17,9 @@ Artifacts:
 - Focus on user-facing behavior (what the user observes), not internal implementation steps
 - Prefer Scenario Outlines with Examples tables over multiple similar Scenarios
 - Use data tables in steps for inline structured data
-- If appropriate group scenarios under `Rule: {aspect}` e.g. "Core behavior", "Options"
-- Place validation errors, failures, and error recovery under `Rule: Edge cases`
+- If appropriate group scenarios under `Rule: {aspect}`
+  - Default to generic names: `Basic flow` (happy path), `Alternative flows`, `Exception flows`
+  - Use an aspect-specific name (e.g. `Variable expansion`, `Escape sequences`, `Option parsing`) if all scenarios in the rule share one clearly named behavior and the specific name is more informative than the generic one
 
 See [echo.feature](./echo.feature) as an example.
 

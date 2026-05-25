@@ -1,6 +1,6 @@
 # Requirements: Print text with echo
 
-## Recognized backslash escape sequences (with -e)
+## Escape sequences
 
 | sequence | output                                 |
 |----------|----------------------------------------|
