@@ -163,15 +163,12 @@ _assert_frontmatter_contains() {
     # Then Frontmatter has issue_url value set to the provided issue URL
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
-    # And AI Agent is instructed to fetch the issue and save its body to Issue File named issue-{issue-number}.md as markdown
-    # Fetch directive mentions the issue URL and the change folder's
-    # issue-{issue-number}.md file (number extracted by the agent at render
-    # time, so the dispatch placeholder pattern is asserted, not a literal id)
-    [[ "$output" == *"Fetch the issue at https://github.com/owner/repo/issues/42"* ]]
-    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue-[^/]+\.md ]]
+    # And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
+    [[ "$output" == *'Refs:'* ]]
+    [[ "$output" == *'Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why`'* ]]
 
-    # Fetch directive mentions the issue-file artdef
-    [[ "$output" == *"@artdef_issue_file"* ]]
+    # And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
+    [[ "$output" == *'- [{issue-number}: {issue-title}](./issue-{issue-number}.md)'* ]]
 
     # And Change File body continues with Why and What sections
     # Body shape: Refs + Why/What artdefs rendered, Context artdef absent
@@ -179,23 +176,20 @@ _assert_frontmatter_contains() {
     [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
+    # And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
+    [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue-[^/]+\.md ]]
+
+    # And AI Agent is instructed to fetch the issue and save its body to Issue File named issue-{issue-number}.md as markdown
+    [[ "$output" == *"Fetch the issue at https://github.com/owner/repo/issues/42"* ]]
+    [[ "$output" == *"@artdef_issue_file"* ]]
+    [[ "$output" == *'<artdef id="artdef_issue_file"'* ]]
+
     # And Why and What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
     [[ "$output" == *'distilling the fetched issue'* ]]
     [[ "$output" == *'do not restate the issue body verbatim'* ]]
 
     # And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
     [[ "$output" == *'Tailor the `## What` items to the `type:` frontmatter value'* ]]
-
-    # And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
-    # And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
-    # And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
-    # Refs artdef and placement rule describe the Refs block shape.
-    [[ "$output" == *'Refs:'* ]]
-    [[ "$output" == *'- [{issue-number}: {issue-title}](./issue-{issue-number}.md)'* ]]
-    [[ "$output" == *'Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why`'* ]]
-
-    # Issue file artdef is rendered alongside the fetch directive
-    [[ "$output" == *'<artdef id="artdef_issue_file"'* ]]
 }
 
 @test "uchange: scn: ## How section under --fetchable: --how always emits How" {
