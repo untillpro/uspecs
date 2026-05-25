@@ -42,10 +42,10 @@ Feature: Create change request
       Given Engineer invokes uchange action with issue URL
 
     Scenario: Agent is instructed to determine whether issue URL is fetchable
-      Given user input contains an issue URL
       When AI Agent reads uchange action instructions
-      Then AI Agent is instructed to pass --issue-url {URL}
-      And AI Agent is instructed to also pass --fetchable when it can fetch the issue body from that URL
+      Then AI Agent is instructed to check if input contains issue URL
+      And Agent is instructed to pass the URL (if any) as --issue-url option to the softeng.sh
+      And AI Agent is instructed to pass --fetchable when it can fetch the issue body from that URL
 
     Scenario: Issue URL is fetchable
       When fetchable status is determined as --fetchable

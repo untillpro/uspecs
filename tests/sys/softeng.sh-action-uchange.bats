@@ -112,13 +112,17 @@ _assert_frontmatter_contains() {
 # --- Issue URLs ---
 
 @test "uchange: scn: Agent is instructed to determine whether issue URL is fetchable" {
+    # When AI Agent reads uchange action instructions
     local prompt
     prompt="$(cat "$REPO_ROOT/scripts/templates/actions/uchange.yaml")"
 
-    # Then AI Agent is instructed to pass --issue-url {URL}
+    # Then AI Agent is instructed to check if input contains issue URL
+    [[ "$prompt" == *'contains a URL'* ]]
+
+    # And Agent is instructed to pass the URL (if any) as --issue-url option to the softeng.sh
     [[ "$prompt" == *'--issue-url {URL}'* ]]
 
-    # And AI Agent is instructed to also pass --fetchable when it can fetch the issue body from that URL
+    # And AI Agent is instructed to pass --fetchable when it can fetch the issue body from that URL
     [[ "$prompt" == *'--fetchable'* ]]
     [[ "$prompt" == *'fetch the issue body'* ]]
 }
