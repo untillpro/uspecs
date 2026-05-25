@@ -476,32 +476,32 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: Issue URL: branch naming" {
     _setup_git_repo
 
-    # GitHub URL
+    # | issue_url                                   | change_name    | branch_name      |
+    # | https://github.com/owner/repo/issues/42     | my-feature     | 42-my-feature    |
     uspecs action uchange --kebab-name my-feature --type feat --issue-url "https://github.com/owner/repo/issues/42"
     [ "$status" -eq 0 ]
     # Then Git branch is created with name <branch_name>
-    # branch_name: 42-my-feature
     [[ "$output" == *"git checkout -b 42-my-feature"* ]]
 
-    # GitLab URL
+    # | issue_url                                   | change_name    | branch_name      |
+    # | https://gitlab.com/group/project/-/issues/7 | add-validation | 7-add-validation |
     uspecs action uchange --kebab-name add-validation --type feat --issue-url "https://gitlab.com/group/project/-/issues/7"
     [ "$status" -eq 0 ]
     # Then Git branch is created with name <branch_name>
-    # branch_name: 7-add-validation
     [[ "$output" == *"git checkout -b 7-add-validation"* ]]
 
-    # Jira URL
+    # | issue_url                                   | change_name    | branch_name      |
+    # | https://jira.example.com/browse/PROJ-123    | fix-bug        | PROJ-123-fix-bug |
     uspecs action uchange --kebab-name fix-bug --type fix --issue-url "https://jira.example.com/browse/PROJ-123"
     [ "$status" -eq 0 ]
     # Then Git branch is created with name <branch_name>
-    # branch_name: PROJ-123-fix-bug
     [[ "$output" == *"git checkout -b PROJ-123-fix-bug"* ]]
 
-    # Hash-fragment URL
+    # | issue_url                                   | change_name    | branch_name      |
+    # | https://example.com/projects/#!766766       | fix-crash      | 766766-fix-crash |
     uspecs action uchange --kebab-name fix-crash --type fix --issue-url "https://example.com/projects/#!766766"
     [ "$status" -eq 0 ]
     # Then Git branch is created with name <branch_name>
-    # branch_name: 766766-fix-crash
     [[ "$output" == *"git checkout -b 766766-fix-crash"* ]]
 
     # Comment anchor ignored
