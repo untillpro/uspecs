@@ -709,8 +709,6 @@ cmd_action_uchange() {
     [[ -n "$opt_how" ]] && how_maybe="1"
     local fetchable_maybe=""
     [[ -n "$opt_fetchable" ]] && fetchable_maybe="1"
-    local fetchable_no_how_maybe=""
-    [[ -n "$opt_fetchable" && -z "$opt_how" ]] && fetchable_no_how_maybe="1"
 
     # Chain self-review is triggered only when `--plan` authored an impl plan
     # (i.e. `impl_maybe="1"`) and `--no-self-review` was not passed. On non-plan
@@ -732,7 +730,6 @@ cmd_action_uchange() {
         [specs_folder]="$specs_folder_rel"
         [how_maybe]="$how_maybe"
         [fetchable_maybe]="$fetchable_maybe"
-        [fetchable_no_how_maybe]="$fetchable_no_how_maybe"
         [issue_url]="$issue_url"
         [domains_maybe]="${impl_maybe:+$specs_maybe}"
         [domains_defined]="${impl_maybe:+$domains_defined}"

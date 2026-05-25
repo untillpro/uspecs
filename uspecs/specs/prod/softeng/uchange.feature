@@ -13,7 +13,6 @@ Feature: Create change request
       | the default branch   | feat | is created with name following branch naming rules |
       | a non-default branch | fix  | is not created                                     |
 
-
   Scenario: --how option forces How section creation
     When Engineer invokes uchange action with --how option
     Then base change request is created
@@ -36,7 +35,6 @@ Feature: Create change request
       When Engineer invokes uchange action with --fetchable but no issue URL
       Then error is displayed: "--fetchable requires an issue URL"
       And change request is not created
-
 
   Rule: Handling issue URLs
 
@@ -75,17 +73,6 @@ Feature: Create change request
         | https://jira.example.com/browse/PROJ-123    | fix-bug        | PROJ-123-fix-bug |
         | https://gitlab.com/group/project/-/issues/7 | add-validation | 7-add-validation |
         | https://example.com/projects/#!766766       | fix-crash      | 766766-fix-crash |
-
-
-    Scenario Outline: ## How section under --fetchable
-      When Engineer invokes uchange action with --fetchable, an issue URL, <how_flag>, and the issue <approach_in_issue>
-      Then ## How section <how_outcome> in Change File
-      Examples:
-        | how_flag  | approach_in_issue             | how_outcome     |
-        | (omitted) | describes an approach         | is produced     |
-        | (omitted) | does not describe an approach | is not produced |
-        | --how     | describes an approach         | is produced     |
-        | --how     | does not describe an approach | is produced     |
 
   Rule: Chaining to implementation
 

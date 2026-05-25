@@ -168,10 +168,11 @@ _assert_frontmatter_contains() {
     [[ "$output" == *'- [{issue-number}: {issue-title}](./issue-{issue-number}.md)'* ]]
 
     # And Change File body continues with Why and What sections
-    # Body shape: Refs + Why/What artdefs rendered, Context artdef absent
+    # Body shape: Refs + Why/What artdefs rendered, Context and How artdefs absent
     [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
     [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
 
     # And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
     [[ "$output" =~ uspecs/changes/[0-9]{10}-my-change/issue-[^/]+\.md ]]
@@ -187,62 +188,6 @@ _assert_frontmatter_contains() {
 
     # And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
     [[ "$output" == *'Tailor the `## What` items to the `type:` frontmatter value'* ]]
-}
-
-@test "uchange: scn: ## How section under --fetchable: --how always emits How" {
-    # how_flag: --how
-    # approach_in_issue: describes an approach, does not describe an approach
-    # With --fetchable --how: in addition to the Refs + Why/What shape, the
-    # ## How artdef is rendered and the dispatch instructs the agent to
-    # always emit the section.
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat \
-        --issue-url "https://github.com/owner/repo/issues/42" --fetchable --how
-
-    _assert_uchange_base_output
-
-    _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
-
-    # Then ## How section <how_outcome> in Change File
-    # how_outcome: is produced
-    # Body shape: Refs + Why/What + How artdefs rendered, Context artdef absent
-    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
-    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
-    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
-    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
-}
-
-@test "uchange: scn: ## How section under --fetchable: omitted --how uses issue-content gate" {
-    # how_flag: (omitted)
-    # approach_in_issue: describes an approach, does not describe an approach
-    # With --fetchable but no --how: the artdef_change_how shape is still
-    # rendered so the agent can emit ## How conditionally based on whether
-    # the fetched issue describes an approach/design. The dispatch leaves
-    # the emission decision to the agent (no hard gate in bash); the
-    # content-aware language is present in the rendered instructions.
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat \
-        --issue-url "https://github.com/owner/repo/issues/42" --fetchable
-
-    _assert_uchange_base_output
-
-    # Then ## How section <how_outcome> in Change File
-    # how_outcome: is produced only when issue content contains How information
-    # Body shape: Refs + Why/What rendered, Context absent
-    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
-    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
-    [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
-
-    # artdef_change_how is available to the agent for conditional emission
-    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
-
-    # Dispatch instructions mention the content-aware emission rule so the
-    # agent knows ## How is conditional (no hard gate -- decision is on the
-    # agent based on the fetched issue content)
-    [[ "$output" == *"emit only if"* ]]
-    [[ "$output" == *"contains information for the How section"* ]]
 }
 
 @test "uchange: scn: error: --fetchable without an issue URL" {

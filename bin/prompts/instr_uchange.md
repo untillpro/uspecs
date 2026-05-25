@@ -10,7 +10,6 @@ Create file `${change_file}` containing the verbatim contents of `@artifact_chan
 
 - Change request, Why and What, see `@artdef_change_why_what`
 - How, see `@artdef_change_how` (?how_maybe)
-- How (emit only if the fetched issue contains information for the How section; omit otherwise), see `@artdef_change_how` (?fetchable_no_how_maybe)
 `@include_impl_sections`
 
 Run `git checkout -b ${branch_name}` (?create_branch)
