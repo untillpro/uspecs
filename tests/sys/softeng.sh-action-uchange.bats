@@ -324,27 +324,30 @@ _assert_frontmatter_contains() {
 @test "uchange: scn: uchange without --plan does not chain self-review: default, --how, fetchable" {
     _setup_git_repo
 
-    # invocation: with default options
-    # Default invocation: no plan bullets, no chain
+    # | invocation                        |
+    # | with default options              |
+    # When Engineer invokes uchange action <invocation>
     uspecs action uchange --kebab-name my-change --type feat
     _assert_uchange_base_output
     # Then AI Agent does not invoke self-review
-    [[ "$output" != *"self-review --type specs --stage A"* ]]
+    [[ "$output" != *"self-review"* ]]
 
-    # invocation: with --how option
-    # --how alone: no chain
+    # | invocation                        |
+    # | with --how option                 |
+    # When Engineer invokes uchange action <invocation>
     uspecs action uchange --kebab-name my-change --type feat --how
     _assert_uchange_base_output
     # Then AI Agent does not invoke self-review
-    [[ "$output" != *"self-review --type specs --stage A"* ]]
+    [[ "$output" != *"self-review"* ]]
 
-    # invocation: with --fetchable and an issue URL
-    # --fetchable alone (no --plan): no chain
+    # | invocation                        |
+    # | with --fetchable and an issue URL |
+    # When Engineer invokes uchange action <invocation>
     uspecs action uchange --kebab-name my-change --type feat \
         --issue-url "https://github.com/owner/repo/issues/42" --fetchable
     _assert_uchange_base_output
     # Then AI Agent does not invoke self-review
-    [[ "$output" != *"self-review --type specs --stage A"* ]]
+    [[ "$output" != *"self-review"* ]]
 }
 
 @test "uchange: --no-self-review without --plan is accepted as a no-op" {
