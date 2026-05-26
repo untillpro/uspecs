@@ -293,7 +293,7 @@ _assert_frontmatter_contains() {
 
     # And uimpl action is invoked automatically
     # impl-menu bullets are emitted (Construction is always emitted when
-    # impl_maybe is set, since constr_maybe mirrors impl_maybe)
+    # plan_requested is set, since constr_maybe mirrors plan_requested)
     [[ "$output" == *"- Construction and Quick start sections"* ]]
     # How artdef is not emitted
     [[ "$output" != *'<artdef id="artdef_change_how"'* ]]

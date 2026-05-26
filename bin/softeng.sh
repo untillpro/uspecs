@@ -699,23 +699,21 @@ cmd_action_uchange() {
         done
     fi
 
-    # Cascade `_maybe` flags collapse here because `cmd_uchange` has no impl
-    # file: spec-tier flags follow `specs_maybe`; prov/constr follow impl_maybe.
-    # `--plan` opts into the impl sections menu; `--how` opts into the `## How`
-    # bullet. `--no-impl` is a parsed no-op retained for backwards compatibility.
-    local impl_maybe=""
-    [[ -n "$opt_plan" ]] && impl_maybe="1"
-    local how_maybe=""
-    [[ -n "$opt_how" ]] && how_maybe="1"
-    local fetchable_maybe=""
-    [[ -n "$opt_fetchable" ]] && fetchable_maybe="1"
+    # Option-driven gates are named by what the user requested; the remaining
+    # `_maybe` flags below are derived section gates.
+    local plan_requested=""
+    [[ -n "$opt_plan" ]] && plan_requested="1"
+    local how_requested=""
+    [[ -n "$opt_how" ]] && how_requested="1"
+    local fetchable_issue=""
+    [[ -n "$opt_fetchable" ]] && fetchable_issue="1"
 
     # Chain self-review is triggered only when `--plan` authored an impl plan
-    # (i.e. `impl_maybe="1"`) and `--no-self-review` was not passed. On non-plan
-    # branches `--no-self-review` is a parsed no-op.
+    # (i.e. `plan_requested="1"`) and `--no-self-review` was not passed. On
+    # non-plan branches `--no-self-review` is a parsed no-op.
     local chain_self_review="" chain_self_review_construction=""
     local self_review_type="" self_review_budget=""
-    if [[ -n "$impl_maybe" && -z "$opt_no_self_review" ]]; then
+    if [[ -n "$plan_requested" && -z "$opt_no_self_review" ]]; then
         chain_self_review="1"
         self_review_type="specs"
         self_review_budget="4"
@@ -728,15 +726,15 @@ cmd_action_uchange() {
         [branch_name]="$branch_name"
         [create_branch]="$create_branch"
         [specs_folder]="$specs_folder_rel"
-        [how_maybe]="$how_maybe"
-        [fetchable_maybe]="$fetchable_maybe"
+        [how_requested]="$how_requested"
+        [fetchable_issue]="$fetchable_issue"
         [issue_url]="$issue_url"
-        [domains_maybe]="${impl_maybe:+$specs_maybe}"
-        [domains_defined]="${impl_maybe:+$domains_defined}"
-        [fd_maybe]="${impl_maybe:+$specs_maybe}"
-        [prov_maybe]="$impl_maybe"
-        [td_maybe]="${impl_maybe:+$specs_maybe}"
-        [constr_maybe]="$impl_maybe"
+        [domains_maybe]="${plan_requested:+$specs_maybe}"
+        [domains_defined]="${plan_requested:+$domains_defined}"
+        [fd_maybe]="${plan_requested:+$specs_maybe}"
+        [prov_maybe]="$plan_requested"
+        [td_maybe]="${plan_requested:+$specs_maybe}"
+        [constr_maybe]="$plan_requested"
         [change_file_rel_path]="$change_file"
         [chain_self_review]="$chain_self_review"
         [chain_self_review_construction]="$chain_self_review_construction"

@@ -22,8 +22,8 @@ Introductory sentence:
 Rules:
 
 - `{title}`: short noun phrase, sentence case, no trailing period, <= 80 characters, no file paths or symbol names
-- Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why` (?fetchable_maybe)
-- Under `--fetchable`, populate `## Why` and `## What` by distilling the fetched issue in the change's terms; do not restate the issue body verbatim (?fetchable_maybe)
+- Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why` (?fetchable_issue)
+- Under `--fetchable`, populate `## Why` and `## What` by distilling the fetched issue in the change's terms; do not restate the issue body verbatim (?fetchable_issue)
 - `## What` content (default format, applies to all types except `fix`):
   - 2-6 bullets, optionally preceded by one lead-in sentence
   - each bullet is a behavior claim, not an implementation step
