@@ -1,9 +1,10 @@
-# Refs block
+# Resolves block
 
 ## data
 
 ```markdown
-Refs:
+Resolves:
 
 - [{issue-number}: {issue-title}](./issue-{issue-number}.md)
+...
 ```

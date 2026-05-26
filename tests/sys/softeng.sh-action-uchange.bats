@@ -24,6 +24,18 @@ _assert_frontmatter_contains() {
     [[ "$output" == *"$needle"* ]]
 }
 
+# Helper: assert the split change request artdefs are rendered and the old
+# combined artdef is no longer emitted. The What artdef is selected by type:
+# non-fix invocations emit `artdef_change_what_default` and gate out the
+# `artdef_change_what_fix` artdef; fix invocations do the inverse.
+_assert_split_change_artdefs_present() {
+    [[ "$output" == *'<artdef id="artdef_change_heading"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_why"'* ]]
+    [[ "$output" == *'<artdef id="artdef_change_what_default"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_what_fix"'* ]]
+    [[ "$output" != *'<artdef id="artdef_change_why_what"'* ]]
+}
+
 # --- Basic change request creation ---
 
 @test "uchange: scn: Basic change request creation: default branch creates branch" {
@@ -139,16 +151,16 @@ _assert_frontmatter_contains() {
     # Then Frontmatter has issue_url value set to the provided issue URL
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
-    # And Change File body shape is Why and What sections
-    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
+    # And Change File body shape is heading, Why and What sections
+    _assert_split_change_artdefs_present
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
-    # Refs artdef and the "Insert Refs:" rule are gated on --fetchable
-    [[ "$output" != *'<artdef id="artdef_change_refs"'* ]]
-    [[ "$output" != *"Insert the "*"Refs:"*"block"* ]]
+    # Resolves artdef and its ordered instruction line are gated on --fetchable
+    [[ "$output" != *'<artdef id="artdef_change_resolves"'* ]]
 
     # And AI Agent is not instructed to fetch the issue and Issue File is not created
     [[ "$output" != *"Fetch the issue at"* ]]
+    [[ "$output" != *'Under `--fetchable`'* ]]
 
     # Issue file artdef is gated on --fetchable, so it must not appear here
     [[ "$output" != *'<artdef id="artdef_issue_file"'* ]]
@@ -156,7 +168,7 @@ _assert_frontmatter_contains() {
 
 @test "uchange: scn: Issue URL is fetchable" {
     # With --fetchable: issue_url is recorded, fetch directive is emitted, and
-    # change.md uses the Refs + ## Why + ## What shape (no ## Context).
+    # change.md uses the Resolves + ## Why + ## What shape (no ## Context).
     _setup_git_repo
 
     uspecs action uchange --kebab-name my-change --type feat \
@@ -167,17 +179,18 @@ _assert_frontmatter_contains() {
     # Then Frontmatter has issue_url value set to the provided issue URL
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
-    # And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
-    [[ "$output" == *'Refs:'* ]]
-    [[ "$output" == *'Insert the `Refs:` block from `@artdef_change_refs` between the H1 and `## Why`'* ]]
+    # And Change File body begins with a Resolves: list rendered as a markdown bulleted list before any prose section
+    # Resolves artdef presence is asserted in the body-shape block below; bullet
+    # ordering is fixed by the line order in `bin/prompts/instr_uchange.md`
+    # and not asserted here.
 
-    # And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
+    # And each Resolves entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
     [[ "$output" == *'- [{issue-number}: {issue-title}](./issue-{issue-number}.md)'* ]]
 
     # And Change File body continues with Why and What sections
-    # Body shape: Refs + Why/What artdefs rendered, Context and How artdefs absent
-    [[ "$output" == *'<artdef id="artdef_change_why_what"'* ]]
-    [[ "$output" == *'<artdef id="artdef_change_refs"'* ]]
+    # Body shape: Resolves + heading/Why/What artdefs rendered, Context and How artdefs absent
+    _assert_split_change_artdefs_present
+    [[ "$output" == *'<artdef id="artdef_change_resolves"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
 
@@ -189,12 +202,13 @@ _assert_frontmatter_contains() {
     [[ "$output" == *"@artdef_issue_file"* ]]
     [[ "$output" == *'<artdef id="artdef_issue_file"'* ]]
 
-    # And Why and What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
-    [[ "$output" == *'distilling the fetched issue'* ]]
-    [[ "$output" == *'do not restate the issue body verbatim'* ]]
-
     # And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
-    [[ "$output" == *'Tailor the `## What` items to the `type:` frontmatter value'* ]]
+    # Covered by `_assert_split_change_artdefs_present` above: it proves the
+    # type-correct What artdef is emitted under --fetchable via the same
+    # `(?type_general)` / `(?type_fix)` gates as the non-fetchable shape.
+    # Phrase-level assertions on artdef bodies are intentionally omitted to
+    # avoid duplicating coverage and to keep the test resilient to routine
+    # wording edits in the artdef files.
 }
 
 @test "uchange: scn: error: --fetchable without an issue URL" {

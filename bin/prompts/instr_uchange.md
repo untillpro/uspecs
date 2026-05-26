@@ -6,9 +6,13 @@ Create folder `${change_folder}` (its parent `uspecs/changes/` already exists).
 
 Fetch the issue at ${issue_url} and save it to ${change_folder}/issue-{issue-number}.md following `@artdef_issue_file`. (?fetchable_issue)
 
-Create file `${change_file}` containing the verbatim contents of `@artifact_change_frontmatter`, then append the following sections:
+Create file `${change_file}` containing the verbatim contents of `@artifact_change_frontmatter`, then append the following parts:
 
-- Change request, Why and What, see `@artdef_change_why_what`
+- Change request heading, see `@artdef_change_heading`
+- Resolves, see `@artdef_change_resolves` (?fetchable_issue)
+- Why, see `@artdef_change_why`
+- What, see `@artdef_change_what_default` (?type_general)
+- What, see `@artdef_change_what_fix` (?type_fix)
 - How, see `@artdef_change_how` (?how_requested)
 `@include_impl_sections`
 

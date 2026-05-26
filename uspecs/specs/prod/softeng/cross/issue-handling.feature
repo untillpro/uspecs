@@ -12,7 +12,7 @@ Cross-reference hub for issue handling across softeng actions.
 # - [uchange.feature](../uchange.feature) -- Rule: Handling issue URLs
 #   uchange action instructions tell the agent to pass --issue-url when user
 #   input contains a URL and to also pass --fetchable when it can fetch the
-#   issue body. With --fetchable, change.md uses Refs + Why/What distilled
+#   issue body. With --fetchable, change.md uses Resolves + Why/What distilled
 #   from the fetched issue, with conditional How; without --fetchable, no
 #   fetch instruction is emitted and change.md uses the Why + What shape.
 #
@@ -25,7 +25,7 @@ Cross-reference hub for issue handling across softeng actions.
 #
 # - [upr.feature](../upr.feature) -- Scenario Outline: Construct PR body
 #   When change.md uses the legacy ## Context shape (archived --fetchable
-#   changes pre-dating the Refs + Why/What/How shape), pr_body includes the
+#   changes pre-dating the Resolves + Why/What/How shape), pr_body includes the
 #   ## Context section instead of ## Why and ## What.
 #
 # - [usync.feature](../usync.feature) -- Scenario: Core output
