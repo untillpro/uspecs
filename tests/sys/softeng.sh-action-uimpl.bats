@@ -478,34 +478,36 @@ _uimpl_with_sections() {
     [[ "$output" == *'  - fix: beta detail'* ]]
 }
 
-@test "uimpl: review item is excluded from emitted unchecked items" {
+@test "uimpl: pending review item bounds emitted unchecked items" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
 
-    printf '%s\n' \
-        '# Implementation plan: Test' \
-        '' \
-        '## Construction' \
-        '' \
-        '- [ ] update: [alpha.go](../../alpha.go)' \
-        '  - fix: alpha detail' \
-        '- [ ] Review' \
-        '- [ ] update: [beta.go](../../beta.go)' \
-        '  - fix: beta detail' \
-        > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
+    local review_line
+    for review_line in '- [ ] Review' '- [ ] review' '- Review' '- review'; do
+        printf '%s\n' \
+            '# Implementation plan: Test' \
+            '' \
+            '## Construction' \
+            '' \
+            '- [ ] update: [alpha.go](../../alpha.go)' \
+            '  - fix: alpha detail' \
+            "$review_line" \
+            '- [ ] update: [beta.go](../../beta.go)' \
+            '  - fix: beta detail' \
+            > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/impl.md"
 
-    uspecs action uimpl
-    [ "$status" -eq 0 ]
-    # Both non-review items are present in the output
-    [[ "$output" == *'alpha.go'* ]]
-    [[ "$output" == *'beta.go'* ]]
-    # Review item must not appear inside the ${unchecked_items} block.
-    # Extract the instr_uimpl_todos block and check it does not contain the
-    # bare "- [ ] Review" line.
-    local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
-    todos_block="${todos_block%%</instruction>*}"
-    [[ "$todos_block" != *$'\n- [ ] Review\n'* ]]
+        uspecs action uimpl
+        [ "$status" -eq 0 ]
+        [[ "$output" == *'<instruction id="instr_uimpl_todos"'* ]]
+        local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
+        todos_block="${todos_block%%</instruction>*}"
+        [[ "$todos_block" == *'alpha.go'* ]]
+        [[ "$todos_block" == *'  - fix: alpha detail'* ]]
+        [[ "$todos_block" != *"$review_line"* ]]
+        [[ "$todos_block" != *'beta.go'* ]]
+        [[ "$todos_block" != *'  - fix: beta detail'* ]]
+    done
 }
 
 @test "uimpl: multi-line item with blank line inside is preserved" {
