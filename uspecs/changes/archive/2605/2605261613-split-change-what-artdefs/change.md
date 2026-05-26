@@ -70,7 +70,7 @@ References:
   - preserve the symptom, flowchart, and corrected behavior claim requirements
 
 - [x] update: [instr_uchange.md](../../../../../bin/prompts/instr_uchange.md)
-  - compose the change request body from `@artdef_change_heading`, `@artdef_change_refs` gated on fetchable issue flows, `@artdef_change_why`, and one What format selected from `@artdef_change_what_default` or `@artdef_change_what_fix`
+  - compose the change request body from `@artdef_change_heading`, `@artdef_change_resolves` gated on fetchable issue flows, `@artdef_change_why`, and one What format selected from `@artdef_change_what_default` or `@artdef_change_what_fix`
   - keep `@artdef_change_how` and implementation-section inclusion behavior unchanged
 
 - [x] remove: [artdef_change_why_what.md](../../../../../bin/prompts/artdef_change_why_what.md)
