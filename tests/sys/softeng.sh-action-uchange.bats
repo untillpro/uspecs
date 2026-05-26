@@ -26,13 +26,19 @@ _assert_frontmatter_contains() {
 
 # Helper: assert the split change request artdefs are rendered and the old
 # combined artdef is no longer emitted. The What artdef is selected by type:
-# non-fix invocations emit `artdef_change_what_default` and gate out the
-# `artdef_change_what_fix` artdef; fix invocations do the inverse.
+# `default` asserts `artdef_change_what_default` is emitted and
+# `artdef_change_what_fix` is gated out; `fix` asserts the inverse.
 _assert_split_change_artdefs_present() {
+    local what="$1"
     [[ "$output" == *'<artdef id="artdef_change_heading"'* ]]
     [[ "$output" == *'<artdef id="artdef_change_why"'* ]]
-    [[ "$output" == *'<artdef id="artdef_change_what_default"'* ]]
-    [[ "$output" != *'<artdef id="artdef_change_what_fix"'* ]]
+    if [ "$what" = "fix" ]; then
+        [[ "$output" == *'<artdef id="artdef_change_what_fix"'* ]]
+        [[ "$output" != *'<artdef id="artdef_change_what_default"'* ]]
+    else
+        [[ "$output" == *'<artdef id="artdef_change_what_default"'* ]]
+        [[ "$output" != *'<artdef id="artdef_change_what_fix"'* ]]
+    fi
     [[ "$output" != *'<artdef id="artdef_change_why_what"'* ]]
 }
 
@@ -91,6 +97,8 @@ _assert_split_change_artdefs_present() {
     [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
     [[ "$output" == *"Why"* ]]
     [[ "$output" == *"What"* ]]
+    # Fix-typed invocations emit the fix-specific What artdef and gate out the default
+    _assert_split_change_artdefs_present fix
 
     # And Frontmatter has type field set to <type>
     # change_frontmatter artifact carries the supplied --type value
@@ -152,7 +160,7 @@ _assert_split_change_artdefs_present() {
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
     # And Change File body shape is heading, Why and What sections
-    _assert_split_change_artdefs_present
+    _assert_split_change_artdefs_present default
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
     # Resolves artdef and its ordered instruction line are gated on --fetchable
@@ -189,7 +197,7 @@ _assert_split_change_artdefs_present() {
 
     # And Change File body continues with Why and What sections
     # Body shape: Resolves + heading/Why/What artdefs rendered, Context and How artdefs absent
-    _assert_split_change_artdefs_present
+    _assert_split_change_artdefs_present default
     [[ "$output" == *'<artdef id="artdef_change_resolves"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
