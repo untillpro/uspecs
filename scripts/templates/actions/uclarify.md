@@ -70,6 +70,13 @@ Alternatives:
 
 For free-form user answers, populate Pros and Cons with the agent's best-effort assessment and set Confidence to `user-provided`.
 
+## Change.md section boundaries
+
+When clarifying a `change.md` `## What` section:
+
+- Treat `## What` as behavior-level change scope: what externally observable behavior changes, which contract/output/workflow is affected, and what behavior must be preserved.
+- Do not ask for file names, symbol names, implementation steps, dependency choices, reference links, or exact construction locations just to make `## What` more concrete. Those details are clarified later in `## How`.
+
 ## Interactive mode
 
 Terminology:

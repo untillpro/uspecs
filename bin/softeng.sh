@@ -707,6 +707,12 @@ cmd_action_uchange() {
     [[ -n "$opt_how" ]] && how_requested="1"
     local fetchable_issue=""
     [[ -n "$opt_fetchable" ]] && fetchable_issue="1"
+    local type_fix="" type_general=""
+    if [[ "$change_type" == "fix" ]]; then
+        type_fix="1"
+    else
+        type_general="1"
+    fi
 
     # Chain self-review is triggered only when `--plan` authored an impl plan
     # (i.e. `plan_requested="1"`) and `--no-self-review` was not passed. On
@@ -728,6 +734,8 @@ cmd_action_uchange() {
         [specs_folder]="$specs_folder_rel"
         [how_requested]="$how_requested"
         [fetchable_issue]="$fetchable_issue"
+        [type_fix]="$type_fix"
+        [type_general]="$type_general"
         [issue_url]="$issue_url"
         [domains_maybe]="${plan_requested:+$specs_maybe}"
         [domains_defined]="${plan_requested:+$domains_defined}"

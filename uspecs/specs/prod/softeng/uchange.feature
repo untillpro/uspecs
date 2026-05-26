@@ -50,12 +50,11 @@ Feature: Create change request
     Scenario: Issue URL is fetchable
       When fetchable status is determined as --fetchable
       Then Frontmatter has issue_url value set to the provided issue URL
-      And Change File body begins with a Refs section rendered as a markdown bulleted list before any prose section
-      And each Refs entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
+      And Change File body begins with a Resolves: list rendered as a markdown bulleted list before any prose section
+      And each Resolves entry has the link form "[{issue-number}: {issue-title}](./issue-{issue-number}.md)"
       And Change File body continues with Why and What sections
       And AI Agent extracts {issue-number} from --issue-url per its prompt instructions, independently of the bash extractor used for branch naming and Closes #<id>
       And AI Agent is instructed to fetch the issue and save its body to Issue File named issue-{issue-number}.md as markdown
-      And Why and What sections in Change File are populated by AI Agent by distilling the fetched issue in the change's terms, not by verbatim restatement
       And the semantics and per-type guidance for Why and What sections are preserved from the non-fetchable shape
 
     Scenario: Issue URL is not fetchable
