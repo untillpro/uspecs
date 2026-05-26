@@ -29,7 +29,7 @@ _assert_frontmatter_contains() {
 # `default` asserts `artdef_change_what_default` is emitted and
 # `artdef_change_what_fix` is gated out; `fix` asserts the inverse.
 _assert_split_change_artdefs_present() {
-    local what="$1"
+    local what="${1:-default}"
     [[ "$output" == *'<artdef id="artdef_change_heading"'* ]]
     [[ "$output" == *'<artdef id="artdef_change_why"'* ]]
     if [ "$what" = "fix" ]; then
@@ -160,7 +160,7 @@ _assert_split_change_artdefs_present() {
     _assert_frontmatter_contains "issue_url: https://github.com/owner/repo/issues/42"
 
     # And Change File body shape is heading, Why and What sections
-    _assert_split_change_artdefs_present default
+    _assert_split_change_artdefs_present
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
 
     # Resolves artdef and its ordered instruction line are gated on --fetchable
@@ -197,7 +197,7 @@ _assert_split_change_artdefs_present() {
 
     # And Change File body continues with Why and What sections
     # Body shape: Resolves + heading/Why/What artdefs rendered, Context and How artdefs absent
-    _assert_split_change_artdefs_present default
+    _assert_split_change_artdefs_present
     [[ "$output" == *'<artdef id="artdef_change_resolves"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_context"'* ]]
     [[ "$output" != *'<artdef id="artdef_change_how"'* ]]

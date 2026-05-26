@@ -852,14 +852,12 @@ cmd_action_uimpl() {
     local domains_exists="" fd_exists="" prov_exists="" td_exists="" constr_exists=""
     local how_exists=""
     local has_unchecked="" has_review_unchecked="" review_item=""
-    local counted_review_unchecked_count=0
     local total_unchecked=0
     local _line_num=0
     local _first_review_line=""
     local unchecked_items=""
     local _in_item=0
     local _current_buf=""
-    local _current_is_review=0
     local _seen_item=0
     local _area_closed=0
     # Section tracking for the first contiguous run of unchecked items. Drives
@@ -869,11 +867,10 @@ cmd_action_uimpl() {
     local _items_section=""
 
     _uimpl_flush_item() {
-        if (( ! _current_is_review )) && [[ -n "$_current_buf" ]]; then
+        if [[ -n "$_current_buf" ]]; then
             unchecked_items+="$_current_buf"
         fi
         _current_buf=""
-        _current_is_review=0
         _in_item=0
     }
 
@@ -888,9 +885,13 @@ cmd_action_uimpl() {
         fi
     }
 
+    _uimpl_close_at_review_boundary() {
+        _uimpl_flush_item
+        _area_closed=1
+    }
+
     _uimpl_start_unchecked_item() {
         local _item_line="$1"
-        local _is_review="$2"
 
         _uimpl_flush_item
         has_unchecked="1"
@@ -898,11 +899,8 @@ cmd_action_uimpl() {
         _current_buf="${_item_line}"$'\n'
         _in_item=1
         _seen_item=1
-        if (( _is_review )); then
-            _current_is_review=1
-            ((counted_review_unchecked_count++)) || true
-        elif [[ -z "$_items_section" ]]; then
-            # Record section of the first non-review unchecked item.
+        if [[ -z "$_items_section" ]]; then
+            # Record section of the first emitted unchecked item.
             _items_section="$_active_section"
         fi
     }
@@ -925,16 +923,16 @@ cmd_action_uimpl() {
                 if (( _area_closed )); then
                     :
                 else
-                    local _is_review=0
                     if _uimpl_is_review_item "$_lower"; then
-                        _is_review=1
+                        _uimpl_close_at_review_boundary
+                    else
+                        _uimpl_start_unchecked_item "$_line"
                     fi
-                    _uimpl_start_unchecked_item "$_line" "$_is_review"
                 fi
                 ;;
             "- "*)
                 if _uimpl_is_review_item "$_lower" && (( ! _area_closed )); then
-                    _uimpl_start_unchecked_item "$_line" 1
+                    _uimpl_close_at_review_boundary
                 elif (( _in_item )); then
                     _flush_and_close_area
                 fi
@@ -983,11 +981,10 @@ cmd_action_uimpl() {
         review_item="${_first_review_line#*:}"
     fi
 
-    # Count non-review unchecked items
+    # Count emitted non-review unchecked items. Pending Review Items are
+    # boundaries and are not included in total_unchecked.
     local non_review_unchecked_count=0
     if [[ -n "$has_unchecked" ]]; then
-        non_review_unchecked_count=$((total_unchecked - counted_review_unchecked_count))
-    elif [[ -n "$has_review_unchecked" ]]; then
         non_review_unchecked_count=$total_unchecked
     fi
 

@@ -76,6 +76,16 @@ Feature: Implementation plan management
       Then AI Agent implements each unchecked To-Do Item and checks it immediately after implementation
       But it stops on Review Item if it is unchecked
 
+    Scenario Outline: Review item bounds the emitted Construction todos
+      Given unchecked Construction to-do items exist before and after Review Item `<item>` in Implementation Plan File
+      When Engineer invokes uimpl action
+      Then AI Agent emits next todo instructions containing only the unchecked Construction to-do items before Review Item
+      And unchecked Construction to-do items after Review Item are left for a later implementation cycle
+      Examples:
+        | item         |
+        | - [ ] Review |
+        | - review     |
+
     Scenario Outline: Auto-invoke self-review after todos
       Given some to-do items in <section> are unchecked in Implementation Plan File
       When Engineer invokes uimpl action <flag>

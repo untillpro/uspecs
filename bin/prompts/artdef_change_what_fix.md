@@ -5,11 +5,11 @@
 The `## What` section consists of three blocks in this order:
 
 ```markdown
-[symptom]
+Symptom: [symptom]
 
 [flow]
 
-[corrected behavior claim]
+Corrected behavior: [corrected behavior claim]
 ```
 
 Rules:
