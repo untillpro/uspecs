@@ -63,13 +63,31 @@ Feature: Create pull request from current branch
       And pr_body includes all body content from the first top-level ## section after the main heading
       And pr_body is truncated at 40 lines or 4000 characters, whichever is reached first
       And pr_body appends a details note when content is truncated
+      And every relative file link `[text](path)` in pr_body outside fenced code blocks is defanged: leading `(../)+` segments are stripped, a single `/` is prepended to the path, and the whole `[text](path)` literal is wrapped in backticks
       Examples:
-        | change_md_shape                                | body_content                                                                                         |
-        | a single top-level ## Context section           | the ## Context section                                                                               |
-        | ## Why and ## What sections                     | the ## Why and ## What sections                                                                      |
-        | ## Why and ## How sections                      | the ## Why and ## How sections                                                                       |
-        | three top-level ## sections                     | all three top-level ## sections                                                                      |
-        | no top-level ## sections after the main heading | no body sections                                                                                     |
+        | change_md_shape                                 | body_content                    |
+        | a single top-level ## Context section           | the ## Context section          |
+        | ## Why and ## What sections                     | the ## Why and ## What sections |
+        | ## Why and ## How sections                      | the ## Why and ## How sections  |
+        | three top-level ## sections                     | all three top-level ## sections |
+        | no top-level ## sections after the main heading | no body sections                |
+
+    Scenario Outline: PR body link handling
+      Given change.md body contains a Markdown link with target <link_target> in <link_context>
+      Then pr_body renders the link as <rendered_link>
+      Examples:
+        | link_target                   | link_context           | rendered_link                                                                              |
+        | ../../../bin/softeng.sh       | regular paragraph      | `[text](/bin/softeng.sh)` (defanged: prefix stripped, `/` prepended, wrapped in backticks) |
+        | ../../../../../bin/softeng.sh | regular paragraph      | `[text](/bin/softeng.sh)` (any depth of `../` is stripped)                                 |
+        | https://example.com/page      | regular paragraph      | the link unchanged                                                                         |
+        | http://example.com/page       | regular paragraph      | the link unchanged                                                                         |
+        | mailto:user@example.com       | regular paragraph      | the link unchanged                                                                         |
+        | #section-anchor               | regular paragraph      | the link unchanged                                                                         |
+        | /already/root-absolute.md     | regular paragraph      | the link unchanged                                                                         |
+        | ./sibling.md                  | regular paragraph      | the link unchanged                                                                         |
+        | sibling.md                    | regular paragraph      | the link unchanged                                                                         |
+        | ../../../bin/softeng.sh       | inside ``` fenced code | the link unchanged                                                                         |
+        | ../../../../../etc/passwd     | regular paragraph      | `[text](/etc/passwd)` (escape-the-repo inputs are treated uniformly; the link is inert)    |
 
   Rule: Edge cases
 

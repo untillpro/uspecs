@@ -413,6 +413,46 @@ md_read_title() {
     printf '%s\n' "$title"
 }
 
+# md_defang_relative_link
+# Reads markdown from stdin and writes the transformed markdown to stdout.
+# Outside fenced code blocks, every Markdown link `[text](path)` whose path
+# starts with `../` is rewritten: the leading `(../)+` segments are stripped,
+# a single `/` is prepended to the path, and the whole `[text](path)` literal
+# is wrapped in backticks so it renders as inert monospace text rather than
+# a clickable link that would 404 when rendered outside the repository tree
+# (e.g. on a GitHub PR page).
+# Targets starting with `http://`, `https://`, `mailto:`, `#`, `/`, `./`,
+# or bare filenames (no path separator) are left unchanged. Lines inside
+# fenced code blocks (``` or ~~~) are emitted verbatim.
+md_defang_relative_link() {
+    awk '
+        function is_fence(line) {
+            return line ~ /^[[:space:]]*(```|~~~)/
+        }
+        BEGIN { in_fence = 0 }
+        {
+            if (is_fence($0)) { in_fence = !in_fence; print; next }
+            if (in_fence)     { print; next }
+            line = $0
+            out = ""
+            while (match(line, /\[[^]]*\]\([^)]+\)/)) {
+                link = substr(line, RSTART, RLENGTH)
+                bracket = index(link, "](")
+                path = substr(link, bracket + 2, length(link) - bracket - 2)
+                if (path ~ /^(\.\.\/)+/) {
+                    label = substr(link, 1, bracket)
+                    sub(/^(\.\.\/)+/, "", path)
+                    out = out substr(line, 1, RSTART - 1) "`" label "(/" path ")`"
+                } else {
+                    out = out substr(line, 1, RSTART + RLENGTH - 1)
+                }
+                line = substr(line, RSTART + RLENGTH)
+            }
+            print out line
+        }
+    '
+}
+
 # ---------------------------------------------------------------------------
 # Temp file/dir management with automatic cleanup
 # ---------------------------------------------------------------------------

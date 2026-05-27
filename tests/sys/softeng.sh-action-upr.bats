@@ -186,6 +186,14 @@ _assert_pr_body_format() {
     [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
     [[ "$gh_body" != *"---"* ]]
     [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
+    # Defang invariant from upr.feature "Construct PR body": every relative
+    # file link `[text](../...)` in pr_body outside fenced code blocks must
+    # be defanged (leading `(../)+` stripped, `/` prepended, wrapped in
+    # backticks). After defanging the rewritten link contains no `../`, so
+    # any surviving `](../` in pr_body indicates a regression. The standard
+    # body shapes built by _make_upr_change contain no fenced relative
+    # links, so the check applies uniformly.
+    [[ "$gh_body" != *"](../"* ]]
 
     case "$body_shape" in
         why_what)
@@ -777,6 +785,68 @@ _assert_pr_body_format() {
         gh_calls=$(cat "$BATS_TEST_TMPDIR/gh.calls")
         [[ "$gh_calls" != *"pr create"* ]]
     fi
+}
+
+# --- PR body link defanging ---
+#
+# Verifies that md_defang_relative_link is wired into cmd_action_upr
+# (positioned between the awk pass and the truncation guards) and that
+# fence tracking survives end-to-end. Per-input-class coverage of the
+# `PR body link handling` Scenario Outline lives in unit tests
+# (tests/unit/utils-md.bats).
+@test "upr: scn: PR body link handling: wiring covers paragraph and fenced rows" {
+    _setup_git_origin
+    git checkout -q -b defang-link-branch
+    local folder_name="2601010000-defang-link"
+    mkdir -p "$PROJECT_ROOT/uspecs/changes/$folder_name"
+    {
+        echo '---'
+        echo "change_id: $folder_name"
+        echo 'type: feat'
+        echo '---'
+        echo ''
+        echo '# Change request: Defang link'
+        echo ''
+        echo '## Why'
+        echo ''
+        echo 'See [softeng entrypoint](../../../bin/softeng.sh) for the wiring.'
+        echo ''
+        echo 'Example:'
+        echo ''
+        echo '```markdown'
+        echo '[fenced label](../../../bin/softeng.sh)'
+        echo '```'
+    } > "$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    git add .
+    git commit -q -m "add $folder_name"
+
+    # Pass --no-archive so the WCF stays at uspecs/changes/<wcf>/change.md
+    # (3 levels deep). With archive, uarchive moves the folder under
+    # uspecs/changes/archive/<yyyymm>/<wcf>/ and rewrites relative links to
+    # account for the deeper nesting, which is orthogonal to the defang
+    # behavior under test.
+    uspecs action upr --no-archive
+    [ "$status" -eq 0 ]
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+
+    # | link_target                   | link_context           | rendered_link                                                                              |
+    # | ../../../bin/softeng.sh       | regular paragraph      | `[text](/bin/softeng.sh)` (defanged: prefix stripped, `/` prepended, wrapped in backticks) |
+    # Then pr_body renders the link as <rendered_link>
+    # link_target = ../../../bin/softeng.sh
+    # link_context = regular paragraph
+    # rendered_link = `[text](/bin/softeng.sh)` (defanged: prefix stripped, `/` prepended, wrapped in backticks)
+    [[ "$gh_body" == *'`[softeng entrypoint](/bin/softeng.sh)`'* ]]
+    [[ "$gh_body" != *'[softeng entrypoint](../../../bin/softeng.sh)'* ]]
+
+    # | link_target                   | link_context           | rendered_link                                                                              |
+    # | ../../../bin/softeng.sh       | inside ``` fenced code | the link unchanged                                                                         |
+    # Then pr_body renders the link as <rendered_link>
+    # link_target = ../../../bin/softeng.sh
+    # link_context = inside ``` fenced code
+    # rendered_link = the link unchanged
+    [[ "$gh_body" == *'[fenced label](../../../bin/softeng.sh)'* ]]
+    [[ "$gh_body" != *'`[fenced label]'* ]]
 }
 
 # change.md without frontmatter at all -> same hard-fail as missing-type field
