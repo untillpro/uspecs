@@ -1679,6 +1679,11 @@ cmd_action_upr() {
         }
         END { if (in_frontmatter) print "```" }
     ' "$change_file" > "$pr_body_file"
+    # Defang relative file links so that `[text](../...)` references render as
+    # inert monospace text on the PR page instead of broken hyperlinks that
+    # would 404 when GitHub resolves them against the PR URL.
+    md_defang_relative_link < "$pr_body_file" > "${pr_body_file}.tmp"
+    mv "${pr_body_file}.tmp" "$pr_body_file"
     local pr_body_truncated=false
     local pr_body_lines
     pr_body_lines=$(wc -l < "$pr_body_file")
