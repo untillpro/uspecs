@@ -793,7 +793,7 @@ _assert_pr_body_format() {
 # (positioned between the awk pass and the truncation guards) and that
 # fence tracking survives end-to-end. Per-input-class coverage of the
 # `PR body link handling` Scenario Outline lives in unit tests
-# (tests/unit/utils-md.bats).
+# (tests/unit/utils-md-defang.bats).
 @test "upr: scn: PR body link handling: wiring covers paragraph and fenced rows" {
     _setup_git_origin
     git checkout -q -b defang-link-branch

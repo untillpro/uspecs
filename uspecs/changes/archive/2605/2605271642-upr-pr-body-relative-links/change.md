@@ -76,7 +76,7 @@ References:
 
 ## Construction
 
-- [x] update: [unit/utils-md.bats](../../../../../tests/unit/utils-md.bats)
+- [x] update: [unit/utils-md-defang.bats](../../../../../tests/unit/utils-md-defang.bats)
   - add: unit tests for `md_defang_relative_link` covering each input class from the `PR body link handling` example rows (rewritten relative, archived-depth, http/https/mailto, anchor, root-absolute, `./`, bare filename, fenced-code, escape-the-repo)
 
 - [x] update: [sys/softeng.sh-action-upr.bats](../../../../../tests/sys/softeng.sh-action-upr.bats)
