@@ -8,6 +8,8 @@ user-invocable: false
 
 Section contains to-do items for modifying technical specification files under `uspecs/specs/`:
 
+<!-- // TODO Same text as in uspecs-sec -->
+
 - Domain Technology: `uspecs/specs/{domain}/tech.md`
 - Domain Architecture: `uspecs/specs/{domain}/arch.md`
 - Domain Subsystem Architecture: `uspecs/specs/{domain}/arch-{subsystem}.md`
