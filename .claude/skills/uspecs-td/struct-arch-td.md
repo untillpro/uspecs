@@ -21,16 +21,6 @@ Systems:
   - {Description}
 ...
 
-## Scenarios overview
-
-- **Scenario-1**
-  - Description of the scenario
-
-- **Scenario-2**
-  - Description of the scenario
-
-...
-
 ## Components
 
 ### Layers
@@ -43,8 +33,8 @@ Systems:
 
 - `[Name1]`
   - {Description}
-  - Path to file or folder, if applicable: [{parent-folder/file-or-folder}]({relative-path-to-code-artifact})
-    - Example: [sys/auth.sql](../../../pkg/sys/auth.sql)
+  - decl: [{parent-folder/file}]({relative-path-to-declaration}) // if applicable
+  - impl: [{parent-folder/file-or-folder}]({relative-path-to-implementation}) // if applicable
 
 - `[(Name2)]`
   - {Description}
@@ -57,13 +47,15 @@ Systems:
 
 ## Scenarios
 
-### Scenario-1
+### {Rule name}
+
+#### {Scenario name}
 
 ```text
 {ASCII flow diagram -- tree/outline, ladder/lifeline, or step list}
 ```
 
-### Scenario-2
+#### {Scenario name}
 
 ```mermaid
 sequenceDiagram
@@ -95,21 +87,22 @@ sequenceDiagram
   - `Context subsystem architecture: {domain}/{context}/{subsystem}` -- `{context}/arch-{subsystem}.md`
   - `Feature technical design: {feature}` -- `{feature}--td.md`
 - Components diagram: layered tree -- named layers stacked top-to-bottom (plain-text layer header on its own line), nodes within a layer listed as tree branches (`+--`), arrows (`|`, `v`) between layers. External actors, when shown, occupy their own layer (typically the topmost). Layer names describe what the layer contains (e.g. `Email producers`, `Execution state`); do not append the word "layer" to the name
-- Scenario diagrams: use ASCII in a `text` fenced block (tree/outline, ladder/lifeline, or step list -- pick what fits the scenario). For complex scenarios (many participants, branches/loops, or long interactions) use a Mermaid `sequenceDiagram` in a `mermaid` fenced block instead
+- Scenarios section layout follows corresponding `.feature` files: if `Rule:` blocks exist, create one `### {Rule name}` section per rule and one `#### {Scenario name}` subsection per scenario under that rule; if no `Rule:` blocks exist, create one `### {Scenario name}` section per scenario directly under `## Scenarios`
+- Scenario diagrams: place diagrams inside the matching Scenario section or subsection. Use ASCII in a `text` fenced block (tree/outline, ladder/lifeline, or step list -- pick what fits the scenario). For complex scenarios (many participants, branches/loops, or long interactions) use a Mermaid `sequenceDiagram` in a `mermaid` fenced block instead
 - ASCII diagram notation:
   - `@Name` -- external Role (person)
   - `*Name` -- external System
   - `[Name]` -- internal Component
   - `[(Name)]` -- internal Storage
-  - `[/Name/]` -- internal Queue, Topic, or similar message channel
+  - `[/Name/]` -- internal callable Endpoint (HTTP, RPC, stored procedure, CLI command, etc.); endpoint names MUST follow established project conventions or external interface rules when they exist, such as route syntax, RPC naming, database routine naming, or CLI command naming. When no convention is defined, use a kind-prefixed endpoint name such as `[/POST /sessions/]`, `[/rpc CreateSession/]`, `[/proc sys.create_session/]`, or `[/cli uspecs sync/]`
+  - `[>Name>]` -- internal Queue, Topic, Stream, or similar asynchronous message channel
   - `[[Name]]` -- internal Subsystem
   - `[~Name~]` -- internal Scheduler/Timer etc.
 - External actors section lists `Roles:` (`@Name`) and `Systems:` (`*Name`); omit either sub-list when empty; omit the whole section when there are no external actors
-- Components section lists only internal components; external actors must not be repeated there. Each Component name in the Descriptions list MUST use the shape notation (`[Name]`, `[[Name]]`, `[(Name)]`, `[/Name/]`, `[~Name~]`) matching how it appears in the diagram, and likewise each External actor name in its section MUST use `@Name` / `*Name`
+- Components section lists only internal components; external actors must not be repeated there. Each Component name in the Descriptions list MUST use the shape notation (`[Name]`, `[[Name]]`, `[(Name)]`, `[/Name/]`, `[>Name>]`, `[~Name~]`) matching how it appears in the diagram, and likewise each External actor name in its section MUST use `@Name` / `*Name`
 - Every participant name appearing in any diagram must resolve to exactly one entry in either External actors or Components; non-participant tokens in scenario diagrams (parameters, derived values, conditions) are unconstrained
-- Every entry in `## Scenarios overview` must have a matching `### {Scenario name}` subsection under `## Scenarios`, and vice versa. Scenario names are written in backticks in the overview bullets and without backticks in the `###` heading; the name text must match exactly
-- Top-level sections (`## External actors`, `## Scenarios overview`, `## Scenarios`, `## Cross-cutting concerns`) may be omitted when empty
-- Feature TD only: when a corresponding `*.feature` file exists, scenario names must exactly match the `Scenario:` names in that feature file
+- Top-level sections (`## External actors`, `## Scenarios`, `## Cross-cutting concerns`) may be omitted when empty
+- Feature TD only: when a corresponding `*.feature` file exists, the `## Scenarios` heading structure must mirror its `Rule:` grouping; scenario and scenario outline names must match exactly
 - External actors notation is per-spec-type by design: `@Name` / `*Name` in architecture and Feature TD specs; emoji prefixes (`👤` / `⚙️`) in domain specs (see `uspecs-domains`)
 - For architecture specifications prefer to describe generic flows, like handling queries, handling commands
   - If there are only a few specific scenarios that are important to call out, then it's ok to describe those specific scenarios instead of generic flows
@@ -121,7 +114,7 @@ sequenceDiagram
 
 Each `### {Concern}` subsection in `## Cross-cutting concerns`:
 
-- MUST list meta-rule bullets. Each meta-rule quantifies over a declared set in this spec (e.g. "Every Component in {Layer} ...", "Every `*System` interaction ...", "Every `[/Queue/]` ...") and is checkable: it specifies a convention (naming, signal kind, test kind, structural requirement), not implementation choices
+- MUST list meta-rule bullets. Each meta-rule quantifies over a declared set in this spec (e.g. "Every Component in {Layer} ...", "Every `*System` interaction ...", "Every `[>Queue>]` ...") and is checkable: it specifies a convention (naming, signal kind, test kind, structural requirement), not implementation choices
 - MAY be followed by a brief high-level design (narrative, ASCII diagrams), only when it follows this spec's conventions (diagram notation, name resolution, fenced-block style) and established codebase patterns and agent rules
 - Lower-level specs inherit and may add but not contradict
 
