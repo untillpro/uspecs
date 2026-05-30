@@ -376,7 +376,7 @@ def render_action_file(
     raw_text_with_dispatch: str = raw_text.replace("{{dispatch}}", dispatch_line)
 
     options_line: str = (
-        f"Options: {action.options}\n\n"
+        f"Possible options: {action.options}\n\n"
         "Do not pass options that are not implied by the instructions above "
         "or explicitly requested by the user."
         if action.options
