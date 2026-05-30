@@ -145,9 +145,13 @@ _assert_split_change_artdefs_present() {
 
     # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
     [[ "$output" == *'<artdef id="artdef_change_domains"'* ]]
+    [[ "$output" == *'YAML flow list'* ]]
 
     # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
     [[ "$output" == *'best-effort'* ]]
+
+    # And AI Agent is instructed to use relevant domain concepts and terminology while authoring the change request
+    [[ "$output" == *use*concepts*terminology*affected*domain* ]]
 
     # | exist        | instructed     |
     # | do not exist | not instructed |
@@ -163,9 +167,11 @@ _assert_split_change_artdefs_present() {
     # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
     [[ "$output" != *'<artdef id="artdef_change_domains"'* ]]
     [[ "$output" != *'@artdef_change_domains'* ]]
+    [[ "$output" != *'domains: [prod]'* ]]
 
     # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
     [[ "$output" != *'best-effort'* ]]
+    [[ "$output" != *'use relevant concepts and terminology from the affected domain specifications'* ]]
 }
 
 # --- Issue URLs ---

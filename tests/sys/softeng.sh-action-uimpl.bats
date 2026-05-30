@@ -399,6 +399,7 @@ _uimpl_with_sections() {
     _uimpl_with_sections
     [ "$status" -eq 0 ]
     [[ "$output" == *"frontmatter \`scope:\` from the contexts listed under \`## Contexts\` in \`uspecs/specs/{domain}/domain.md\`"* ]]
+    [[ "$output" == *"YAML flow list"*"scope: [softeng]"* ]]
     [[ "$output" != *"short free-form name from the code area"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 
@@ -408,6 +409,7 @@ _uimpl_with_sections() {
     _uimpl_with_sections
     [ "$status" -eq 0 ]
     [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
+    [[ "$output" == *"YAML flow list"*"scope: [auth]"* ]]
     [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 
@@ -417,6 +419,7 @@ _uimpl_with_sections() {
     _uimpl_with_sections
     [ "$status" -eq 0 ]
     [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
+    [[ "$output" == *"YAML flow list"*"scope: [auth]"* ]]
     [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 

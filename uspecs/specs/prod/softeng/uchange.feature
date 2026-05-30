@@ -24,12 +24,17 @@ Feature: Create change request
     Scenario Outline: Domain frontmatter emission
       Given project domain specifications <exist>
       When AI Agent reads uchange action instructions
-      Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+      Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to a YAML flow list of affected domains
       And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
       Examples:
         | exist        | instructed     |
         | exist        | instructed     |
         | do not exist | not instructed |
+
+    Scenario: Domain terminology guidance
+      Given project domain specifications exist
+      When AI Agent reads uchange action instructions
+      Then AI Agent is instructed to use relevant domain concepts and terminology while authoring the change request
 
   Rule: Branch creation options
 

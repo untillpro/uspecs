@@ -49,12 +49,12 @@ Feature: Create pull request from current branch
       And commit body is <body>
       And change_title is text after ":" in the first `#` heading of change.md, trimmed
       Examples:
-        | type     | scope          | breaking | issue_condition                | subject                                           | body                                   |
-        | feat     | (absent)       | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
-        | fix      | softeng        | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
-        | feat     | softeng,devops | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
-        | refactor | softeng        | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
-        | chore    | (absent)       | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
+        | type     | scope             | breaking | issue_condition                | subject                                           | body                                   |
+        | feat     | (absent)          | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
+        | fix      | [softeng]         | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
+        | feat     | [softeng, devops] | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
+        | refactor | softeng           | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
+        | chore    | (absent)          | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
 
     Scenario Outline: Construct PR body
       Given change.md has <change_md_shape>
