@@ -129,6 +129,45 @@ _assert_split_change_artdefs_present() {
     [[ "$output" != *"git checkout -b"* ]]
 }
 
+@test "uchange: scn: Domain frontmatter emission" {
+    # | exist | instructed |
+    # | exist | instructed |
+
+    # Given project domain specifications <exist>
+    _setup_git_repo
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+    touch "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
+
+    # When AI Agent reads uchange action instructions
+    uspecs action uchange --kebab-name my-change --type feat
+
+    _assert_uchange_base_output
+
+    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+    [[ "$output" == *'<artdef id="artdef_change_domains"'* ]]
+
+    # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+    [[ "$output" == *'best-effort'* ]]
+
+    # | exist        | instructed     |
+    # | do not exist | not instructed |
+
+    # Given project domain specifications <exist>
+    rm -rf "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # When AI Agent reads uchange action instructions
+    uspecs action uchange --kebab-name my-change --type feat
+
+    _assert_uchange_base_output
+
+    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+    [[ "$output" != *'<artdef id="artdef_change_domains"'* ]]
+    [[ "$output" != *'@artdef_change_domains'* ]]
+
+    # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+    [[ "$output" != *'best-effort'* ]]
+}
+
 # --- Issue URLs ---
 
 @test "uchange: scn: Agent is instructed to determine whether issue URL is fetchable" {
@@ -168,6 +207,7 @@ _assert_split_change_artdefs_present() {
 
     # And AI Agent is not instructed to fetch the issue and Issue File is not created
     [[ "$output" != *"Fetch the issue at"* ]]
+    # shellcheck disable=SC2016 # literal markdown backticks in expected prompt text
     [[ "$output" != *'Under `--fetchable`'* ]]
 
     # Issue file artdef is gated on --fetchable, so it must not appear here
