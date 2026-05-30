@@ -94,6 +94,24 @@ _build_git_template() {
     printf '%s\n' "$tpl"
 }
 
+# _git_with_test_bare_repo_allowed <git> <args...>
+# The system-test origin template is an intentional temporary bare repository.
+# Some local Git configs set safe.bareRepository=explicit, which rejects
+# commands that operate inside that bare fixture. Append a process-scoped Git
+# config entry without discarding any GIT_CONFIG_* entries already set by the
+# caller.
+_git_with_test_bare_repo_allowed() {
+    local _count="${GIT_CONFIG_COUNT:-0}"
+    if [[ ! "$_count" =~ ^[0-9]+$ ]]; then
+        _count=0
+    fi
+    env \
+        "GIT_CONFIG_COUNT=$((_count + 1))" \
+        "GIT_CONFIG_KEY_${_count}=safe.bareRepository" \
+        "GIT_CONFIG_VALUE_${_count}=all" \
+        "$@"
+}
+
 # _build_origin_template: build the paired (_tpl/project, _tpl/origin.git)
 # templates: a project clone of _tpl/git with `origin` set to "../origin.git"
 # (relative, so the pair stays valid when cloned to any sibling location),
@@ -108,13 +126,13 @@ _build_origin_template() {
     fi
     local git_src; git_src="$(_build_git_template)"
     cp -a "$git_src" "$proj_tpl"
-    git -c init.defaultBranch=main init -q --bare "$origin_tpl"
-    (cd "$origin_tpl" && git symbolic-ref HEAD refs/heads/main)
+    _git_with_test_bare_repo_allowed git -c init.defaultBranch=main init -q --bare "$origin_tpl"
+    _git_with_test_bare_repo_allowed git -C "$origin_tpl" symbolic-ref HEAD refs/heads/main
     # Push via absolute URL first to populate refs/remotes/origin/main and
     # branch.main.{remote,merge}, then rewrite the remote URL to a relative
     # path so the pair is portable to per-test $BATS_TEST_TMPDIR locations.
     git -C "$proj_tpl" remote add origin "$origin_tpl"
-    git -C "$proj_tpl" push -q -u origin HEAD:main
+    _git_with_test_bare_repo_allowed git -C "$proj_tpl" push -q -u origin HEAD:main
     git -C "$proj_tpl" remote set-url origin "../origin.git"
 }
 
@@ -208,4 +226,3 @@ _make_change_folder() {
     git -C "$PROJECT_ROOT" add .
     git -C "$PROJECT_ROOT" commit -q -m "add $folder_name"
 }
-

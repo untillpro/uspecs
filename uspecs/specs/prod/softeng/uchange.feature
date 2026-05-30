@@ -19,6 +19,18 @@ Feature: Create change request
     And How section is produced in Change File
     And uimpl action is not invoked automatically
 
+  Rule: Domain frontmatter
+
+    Scenario Outline: Domain frontmatter emission
+      Given project domain specifications <exist>
+      When AI Agent reads uchange action instructions
+      Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+      And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+      Examples:
+        | exist        | instructed     |
+        | exist        | instructed     |
+        | do not exist | not instructed |
+
   Rule: Branch creation options
 
     Scenario: --no-branch option

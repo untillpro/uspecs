@@ -738,7 +738,7 @@ cmd_action_uchange() {
         [type_general]="$type_general"
         [issue_url]="$issue_url"
         [domains_maybe]="${plan_requested:+$specs_maybe}"
-        [domains_defined]="${plan_requested:+$domains_defined}"
+        [domains_defined]="$domains_defined"
         [fd_maybe]="${plan_requested:+$specs_maybe}"
         [prov_maybe]="$plan_requested"
         [td_maybe]="${plan_requested:+$specs_maybe}"
