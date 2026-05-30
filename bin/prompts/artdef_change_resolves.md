@@ -3,7 +3,7 @@
 ## data
 
 ```markdown
-Resolves:
+Refs:
 
 - [{issue-number}: {issue-title}](./issue-{issue-number}.md)
 ...
