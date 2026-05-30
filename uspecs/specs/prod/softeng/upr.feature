@@ -53,7 +53,7 @@ Feature: Create pull request from current branch
         | feat     | (absent)          | (absent) | change does not have issue_url | feat: {change_title}                              | {see_details_line}                     |
         | fix      | [softeng]         | (absent) | change does not have issue_url | fix(softeng): {change_title}                      | {see_details_line}                     |
         | feat     | [softeng, devops] | (absent) | change has issue_url           | feat(softeng,devops): {change_title} [{issue_id}] | {see_details_line}\nCloses #{issue_id} |
-        | refactor | softeng           | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
+        | refactor | [softeng]         | true     | change has issue_url           | refactor(softeng)!: {change_title} [{issue_id}]   | {see_details_line}\nCloses #{issue_id} |
         | chore    | (absent)          | true     | change does not have issue_url | chore!: {change_title}                            | {see_details_line}                     |
 
     Scenario Outline: Construct PR body
