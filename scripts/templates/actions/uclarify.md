@@ -46,7 +46,7 @@ The heading uses the specific issue type (`Uncertainty`, `Inconsistency`, `Ambig
 The `Alternatives` list MUST contain only the solutions that were NOT chosen. Do not repeat the chosen Decision as an entry in `Alternatives`. If no other solutions were considered, omit the `Alternatives:` heading and its list entirely.
 
 ```text
-# Decisions: {change-request-name}
+# Decisions: {change request name from change.md}
 
 ## {Issue-type}: {short issue statement}
 
