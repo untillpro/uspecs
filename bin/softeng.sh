@@ -172,6 +172,14 @@ extract_issue_id() {
     fi
 }
 
+normalize_change_scope() {
+    local scope="$1"
+    scope="${scope//\[/}"
+    scope="${scope//\]/}"
+    scope="${scope//[[:space:]]/}"
+    printf '%s\n' "$scope"
+}
+
 # _uchange_compute <change_name> <type> <issue_url> <create_branch_flag>
 #     <out_change_folder_rel> <out_frontmatter> <out_branch_name>
 # Side-effect-free except for ensuring the parent uspecs/changes/ directory exists.
@@ -1563,6 +1571,7 @@ cmd_action_upr() {
         error "change.md frontmatter is missing required 'type:' field. AI Agent: read the allowed Conventional Commits types from your 'uchange' dispatch instructions, present them to the user, then add 'type: <value>' to ${change_file} and re-run."
     fi
     change_scope=$(md_read_frontmatter_field "$change_file" "scope" 2>/dev/null) || true
+    change_scope=$(normalize_change_scope "$change_scope")
     change_breaking=$(md_read_frontmatter_field "$change_file" "breaking" 2>/dev/null) || true
 
     local issue_url pr_title commit_message see_details_line

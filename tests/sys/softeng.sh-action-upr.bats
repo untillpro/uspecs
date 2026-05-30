@@ -418,7 +418,7 @@ _assert_pr_body_format() {
 # type + multi-scope + issue, no breaking
 @test "action upr: subject: type + multi-scope + issue" {
     _setup_upr_branch "2601010000-multi-scope" "Add new flag" \
-        "https://github.com/org/repo/issues/42" "feat" "api,cli" ""
+        "https://github.com/org/repo/issues/42" "feat" "[api, cli]" ""
 
     uspecs action upr
     _assert_no_pr_base_outcome
@@ -426,10 +426,21 @@ _assert_pr_body_format() {
     _assert_subject_and_trailers "feat(api,cli): Add new flag [42]" "42"
 }
 
+# legacy comma-separated scope remains supported
+@test "action upr: subject: legacy comma-separated multi-scope" {
+    _setup_upr_branch "2601010000-legacy-multi-scope" "Add old flag" \
+        "" "feat" "api,cli" ""
+
+    uspecs action upr
+    _assert_no_pr_base_outcome
+
+    _assert_subject_and_trailers "feat(api,cli): Add old flag"
+}
+
 # type + scope + breaking + issue
 @test "action upr: subject: type + scope + breaking + issue" {
     _setup_upr_branch "2601010000-breaking-scope" "Rewrite endpoint" \
-        "https://github.com/org/repo/issues/42" "feat" "api" "true"
+        "https://github.com/org/repo/issues/42" "feat" "[api]" "true"
 
     uspecs action upr
     _assert_no_pr_base_outcome
