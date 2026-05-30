@@ -129,11 +129,12 @@ _assert_split_change_artdefs_present() {
     [[ "$output" != *"git checkout -b"* ]]
 }
 
-@test "uchange: scn: Domain frontmatter emission" {
-    # | exist | instructed |
-    # | exist | instructed |
+@test "uchange: scn: Domain frontmatter emission: exist" {
+    # | exist        | instructed     |
+    # | exist        | instructed     |
 
     # Given project domain specifications <exist>
+    # exist = exist
     _setup_git_repo
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
     touch "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
@@ -143,34 +144,108 @@ _assert_split_change_artdefs_present() {
 
     _assert_uchange_base_output
 
-    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to a YAML flow list of affected domains
+    # instructed = instructed
     [[ "$output" == *'<artdef id="artdef_change_domains"'* ]]
     [[ "$output" == *'YAML flow list'* ]]
 
     # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+    # instructed = instructed
     [[ "$output" == *'best-effort'* ]]
 
-    # And AI Agent is instructed to use relevant domain concepts and terminology while authoring the change request
-    [[ "$output" == *use*concepts*terminology*affected*domain* ]]
+    # And AI Agent is <instructed> to infer affected domains before inferring "scope" frontmatter
+    # instructed = instructed
+    [[ "$output" == *'before inferring "scope" frontmatter'* ]]
+}
 
+@test "uchange: scn: Domain frontmatter emission: do not exist" {
     # | exist        | instructed     |
     # | do not exist | not instructed |
 
     # Given project domain specifications <exist>
-    rm -rf "$PROJECT_ROOT/uspecs/specs/prod"
+    # exist = do not exist
+    _setup_git_repo
+    rm -rf "$PROJECT_ROOT/uspecs/specs"
 
     # When AI Agent reads uchange action instructions
     uspecs action uchange --kebab-name my-change --type feat
 
     _assert_uchange_base_output
 
-    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
+    # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to a YAML flow list of affected domains
+    # instructed = not instructed
     [[ "$output" != *'<artdef id="artdef_change_domains"'* ]]
     [[ "$output" != *'@artdef_change_domains'* ]]
     [[ "$output" != *'domains: [prod]'* ]]
 
     # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+    # instructed = not instructed
     [[ "$output" != *'best-effort'* ]]
+
+    # And AI Agent is <instructed> to infer affected domains before inferring "scope" frontmatter
+    # instructed = not instructed
+    [[ "$output" != *'infer `scope`'* ]]
+}
+
+@test "uchange: scn: Scope frontmatter emission" {
+    # Given project domain specifications exist
+    _setup_git_repo
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+    touch "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
+
+    # When AI Agent reads uchange action instructions
+    uspecs action uchange --kebab-name my-change --type feat
+
+    _assert_uchange_base_output
+
+    # Then AI Agent is instructed to infer "scope" frontmatter after affected domains are inferred
+    [[ "$output" == *'infer `scope`'* ]]
+    [[ "$output" == *'Add `domains` field and add or omit `scope`'* ]]
+
+    # | context_condition                                                   | scope_outcome                                                            |
+    # | affected contexts with unique names                                 | setting "scope" to a YAML flow list of context names                     |
+    # And AI Agent is instructed to handle <context_condition> by <scope_outcome>
+    # context_condition = affected contexts with unique names
+    # scope_outcome = setting "scope" to a YAML flow list of context names
+    [[ "$output" == *'unqualified context names'* ]]
+
+    # | context_condition                                                   | scope_outcome                                                            |
+    # | affected contexts with duplicate names across affected domains       | using domain-qualified "domain/context" entries for duplicate names      |
+    # And AI Agent is instructed to handle <context_condition> by <scope_outcome>
+    # context_condition = affected contexts with duplicate names across affected domains
+    # scope_outcome = using domain-qualified "domain/context" entries for duplicate names
+    [[ "$output" == *'domain/context'* ]]
+
+    # | context_condition                                                   | scope_outcome                                                            |
+    # | no affected context can be inferred confidently from affected domains | omitting "scope" frontmatter                                             |
+    # And AI Agent is instructed to handle <context_condition> by <scope_outcome>
+    # context_condition = no affected context can be inferred confidently from affected domains
+    # scope_outcome = omitting "scope" frontmatter
+    [[ "$output" == *'omit the `scope` frontmatter field'* ]]
+}
+
+@test "uchange: scn: Domain terminology guidance" {
+    # Given project domain specifications exist
+    _setup_git_repo
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+    touch "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
+
+    # When AI Agent reads uchange action instructions
+    uspecs action uchange --kebab-name my-change --type feat
+
+    _assert_uchange_base_output
+
+    # Then AI Agent is instructed to use relevant domain concepts and terminology while authoring the change request
+    [[ "$output" == *use*concepts*terminology*affected*domain* ]]
+}
+
+@test "uchange: domain frontmatter instructions are gated out when no domain specs exist" {
+    _setup_git_repo
+    rm -rf "$PROJECT_ROOT/uspecs/specs"
+
+    uspecs action uchange --kebab-name my-change --type feat
+
+    _assert_uchange_base_output
     [[ "$output" != *'use relevant concepts and terminology from the affected domain specifications'* ]]
 }
 

@@ -66,9 +66,21 @@ Feature: Implementation plan management
         | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files                                                                                                    |
         | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                           |
         | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                   |
-        | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, and set `scope:` as a YAML flow list (when at least one scope applies) and `breaking: true` (when the change is breaking) in change.md frontmatter |
+        | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, preserve existing `scope:` frontmatter, and set `breaking: true` (when the change is breaking) in change.md frontmatter |
         | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                              |
       And AI Agent stops execution after performing the action
+
+    Scenario Outline: Construction planning preserves scope frontmatter
+      Given change.md frontmatter <scope_state>
+      And `Construction` section does not exist and it is needed
+      When Engineer invokes uimpl action
+      Then AI Agent does not infer or set `scope:` in change.md frontmatter
+      And AI Agent preserves existing `scope:` frontmatter when it exists
+      And AI Agent still sets `breaking: true` when the change removes or incompatibly changes an existing code API, CLI, or UI contract
+      Examples:
+        | scope_state            |
+        | has `scope: [softeng]` |
+        | does not have `scope:` |
 
     Scenario: Some unchecked to-do items
       Given some to-do items in Implementation Plan File are unchecked

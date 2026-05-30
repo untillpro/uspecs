@@ -384,7 +384,7 @@ _uimpl_with_sections() {
     [[ "$output" == *"completed"* ]]
 }
 
-@test "uimpl: scn: Construction frontmatter sub-bullets (scope/breaking) appear when constr_maybe is set, with scope branch driven by domains_defined" {
+@test "uimpl: scn: Construction frontmatter sub-bullets preserve scope ownership and keep breaking" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
@@ -392,38 +392,39 @@ _uimpl_with_sections() {
     # (without it, the new uimpl How-creation branch would fire first).
     _add_how_to_change_md "2601010000-my-change"
 
-    # Case 1: specs folder + at least one domain.md -> specs-derived scope branch
+    # Case 1: specs folder + at least one domain.md -> no uimpl scope inference
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod/softeng"
     echo '# domain' > "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
 
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"frontmatter \`scope:\` from the contexts listed under \`## Contexts\` in \`uspecs/specs/{domain}/domain.md\`"* ]]
-    [[ "$output" == *"YAML flow list"*"scope: [softeng]"* ]]
+    [[ "$output" != *"frontmatter \`scope:\`"* ]]
+    [[ "$output" != *"scope: [softeng]"* ]]
     [[ "$output" != *"short free-form name from the code area"* ]]
+    [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 
-    # Case 2: specs folder exists but no domain.md anywhere -> free-form scope branch
+    # Case 2: specs folder exists but no domain.md anywhere -> still no uimpl scope inference
     rm -f "$PROJECT_ROOT/uspecs/specs/prod/domain.md"
 
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
-    [[ "$output" == *"YAML flow list"*"scope: [auth]"* ]]
+    [[ "$output" != *"frontmatter \`scope:\`"* ]]
+    [[ "$output" != *"scope: [auth]"* ]]
     [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 
-    # Case 3: no specs folder at all -> free-form scope branch
+    # Case 3: no specs folder at all -> still no uimpl scope inference
     rm -rf "$PROJECT_ROOT/uspecs/specs"
 
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"frontmatter \`scope:\` as a short free-form name from the code area"* ]]
-    [[ "$output" == *"YAML flow list"*"scope: [auth]"* ]]
+    [[ "$output" != *"frontmatter \`scope:\`"* ]]
+    [[ "$output" != *"scope: [auth]"* ]]
     [[ "$output" != *"contexts listed under \`## Contexts\`"* ]]
     [[ "$output" == *"frontmatter \`breaking: true\`"* ]]
 
-    # Case 4: Construction section already exists (constr_maybe="") -> sub-bullets absent
+    # Case 4: Construction section already exists (constr_maybe="") -> breaking sub-bullet absent
     _uimpl_with_sections prov constr
     [ "$status" -eq 0 ]
     [[ "$output" != *"frontmatter \`scope:\`"* ]]

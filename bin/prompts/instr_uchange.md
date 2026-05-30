@@ -8,7 +8,7 @@ Fetch the issue at ${issue_url} and save it to ${change_folder}/issue-{issue-num
 
 Prepare change frontmatter by starting with the verbatim contents of `@artifact_change_frontmatter`.
 
-- Add `domains` field according to `@artdef_change_domains`. (?domains_defined)
+- Add `domains` field and add or omit `scope` according to `@artdef_change_domains`. (?domains_defined)
 
 Create file `${change_file}` containing the prepared frontmatter, then append the following parts:
 

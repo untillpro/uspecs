@@ -19,17 +19,29 @@ Feature: Create change request
     And How section is produced in Change File
     And uimpl action is not invoked automatically
 
-  Rule: Domain frontmatter
+  Rule: Domain and scope frontmatter
 
     Scenario Outline: Domain frontmatter emission
       Given project domain specifications <exist>
       When AI Agent reads uchange action instructions
       Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to a YAML flow list of affected domains
       And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
+      And AI Agent is <instructed> to infer affected domains before inferring "scope" frontmatter
       Examples:
         | exist        | instructed     |
         | exist        | instructed     |
         | do not exist | not instructed |
+
+    Scenario Outline: Scope frontmatter emission
+      Given project domain specifications exist
+      When AI Agent reads uchange action instructions
+      Then AI Agent is instructed to infer "scope" frontmatter after affected domains are inferred
+      And AI Agent is instructed to handle <context_condition> by <scope_outcome>
+      Examples:
+        | context_condition                                                   | scope_outcome                                                            |
+        | affected contexts with unique names                                 | setting "scope" to a YAML flow list of context names                     |
+        | affected contexts with duplicate names across affected domains       | using domain-qualified "domain/context" entries for duplicate names      |
+        | no affected context can be inferred confidently from affected domains | omitting "scope" frontmatter                                             |
 
     Scenario: Domain terminology guidance
       Given project domain specifications exist
