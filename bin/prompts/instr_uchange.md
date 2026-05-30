@@ -6,9 +6,9 @@ Create folder `${change_folder}` (its parent `uspecs/changes/` already exists).
 
 Fetch the issue at ${issue_url} and save it to ${change_folder}/issue-{issue-number}.md following `@artdef_issue_file`. (?fetchable_issue)
 
-Prepare change frontmatter from the content of `@artifact_change_frontmatter`.
+Prepare change frontmatter by starting with the verbatim contents of `@artifact_change_frontmatter`.
 
-- Add `domains` frontmatter field, see `@artdef_change_domains` (?domains_defined)
+- Add `domains` field according to `@artdef_change_domains`. (?domains_defined)
 
 Create file `${change_file}` containing the prepared frontmatter, then append the following parts:
 
