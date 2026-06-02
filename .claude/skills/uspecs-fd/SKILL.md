@@ -17,11 +17,26 @@ Artifacts:
 - Focus on user-facing behavior (what the user observes), not internal implementation steps
 - Prefer Scenario Outlines with Examples tables over multiple similar Scenarios
 - Use data tables in steps for inline structured data
+- Write Scenarios as concrete examples of rules, not generic descriptions
+  - Use named domain objects and representative literal values, e.g. `User Login "jsmith"` and Login Alias `"j.smith"`
+  - Use generic wording only when the exact value is irrelevant to the behavior
+  - Avoid vague outcomes such as "is accepted"; assert externally observable state instead
+  - Use placeholders only in Scenario Outlines with an Examples table
 - If appropriate group scenarios under `Rule: {aspect}`
   - Default to generic names: `Basic flow` (happy path), `Alternative flows`, `Exception flows`
   - Use an aspect-specific name (e.g. `Variable expansion`, `Escape sequences`, `Option parsing`) if all scenarios in the rule share one clearly named behavior and the specific name is more informative than the generic one
 
 See [echo.feature](./echo.feature) as an example.
+
+Example style for entity-state behavior:
+
+```gherkin
+Scenario: Admin replaces an existing Login Alias
+  Given User Login "jsmith" has active Login Alias "j.smith"
+  When Admin sets Login Alias "john.smith" for User Login "jsmith"
+  Then User Login "jsmith" has active Login Alias "john.smith"
+  And Login Alias "j.smith" is no longer active
+```
 
 ## Requirements File rules
 
