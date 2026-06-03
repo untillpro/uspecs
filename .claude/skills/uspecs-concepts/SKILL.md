@@ -56,8 +56,7 @@ uspecs is a framework for AI-assisted software engineering. It provides tools an
 Change Folder artifacts:
 
 - change.md - describes the change request (Why/What, plus How when created with --no-impl)
-- impl.md - implementation plan with todolist sections
-- issue.md - describes the issue that prompted the change
+- issue*.md - describes the issue that prompted the change
 
 ## Specification management concepts
 
