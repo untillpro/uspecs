@@ -8,15 +8,7 @@ user-invocable: false
 
 Section contains to-do items for modifying technical specification files under `uspecs/specs/`:
 
-<!-- // TODO Same text as in uspecs-sec -->
-
-- Domain Technology: `uspecs/specs/{domain}/tech.md`
-- Domain Architecture: `uspecs/specs/{domain}/arch.md`
-- Domain Subsystem Architecture: `uspecs/specs/{domain}/arch-{subsystem}.md`
-- Context Technology: `uspecs/specs/{domain}/{context}/tech.md`
-- Context Architecture: `uspecs/specs/{domain}/{context}/arch.md`
-- Context Subsystem Architecture: `uspecs/specs/{domain}/{context}/arch-{subsystem}.md`
-- Feature Technical Design: `uspecs/specs/{domain}/{context}/{feature}--td.md`
+[technical-spec artifact paths](../uspecs-concepts/shared/td-artifact-paths.md)
 
 Use when:
 
@@ -27,8 +19,7 @@ Do not use when: the change affects only functional specifications, provisioning
 
 ## Rules
 
-- Follow the to-do list format: relative paths from the change file to the target, specific action verbs (create, update, add, fix, remove, rename, move, etc.)
-- For `update` action use subitems describing each change
+[to-do format](../uspecs-concepts/shared/todo-format.md)
 - For `create` action use a single subitem with specification type and brief purpose
 
 ## Example

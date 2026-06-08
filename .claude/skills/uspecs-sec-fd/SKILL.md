@@ -20,8 +20,7 @@ Do not use when: the change affects only internal system behavior with no impact
 
 ## Rules
 
-- Follow the to-do list format: relative paths from the change file to the target, specific action verbs (create, update, add, fix, remove, rename, move, etc.)
-- For `update` action use subitems describing each change
+[to-do format](../uspecs-concepts/shared/todo-format.md)
 - For `create` action use a single subitem with specification type and brief purpose
 
 ## Example

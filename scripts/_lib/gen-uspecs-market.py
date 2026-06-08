@@ -559,6 +559,52 @@ def substitute_meta_constant(text: str, name: str, value: str, meta_path: Path) 
     return text
 
 
+# Shared skill content (see devops Domain architecture: Shared skill content).
+# Snippets live in this skill subdirectory and are referenced from sibling
+# skills via the sibling-relative link form `../uspecs-concepts/shared/<name>.md`.
+# At generation time those links are inlined with the snippet content and the
+# shared/ source directory is excluded from the published output.
+_SHARED_SKILL: str = "uspecs-concepts"
+_SHARED_SUBDIR: str = "shared"
+
+# A Markdown link whose target is `../uspecs-concepts/shared/<name>.md`,
+# optionally on its own line (the only supported reference form).
+_SHARED_LINK_RE: re.Pattern[str] = re.compile(
+    r"\[[^\]]*\]\(\.\./"
+    + re.escape(_SHARED_SKILL)
+    + r"/"
+    + re.escape(_SHARED_SUBDIR)
+    + r"/([^)]+)\)"
+)
+
+
+def inline_shared_content(skills_root: Path, shared_dir: Path) -> None:
+    """Inline shared snippet links in every copied skill `*.md` file.
+
+    For each `*.md` under `skills_root`, replace links of the form
+    `[...](../uspecs-concepts/shared/<name>.md)` with the content of the
+    referenced snippet (read from `shared_dir`). Exit with an error if a
+    referenced snippet file does not exist.
+    """
+    for md_path in sorted(skills_root.rglob("*.md")):
+        text: str = md_path.read_text(encoding="utf-8")
+
+        def _replace(match: re.Match[str]) -> str:
+            name: str = match.group(1)
+            snippet: Path = shared_dir / name
+            if not snippet.is_file():
+                print(
+                    f"error: {md_path}: shared snippet not found: {snippet}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            return snippet.read_text(encoding="utf-8").rstrip("\n")
+
+        new_text: str = _SHARED_LINK_RE.sub(_replace, text)
+        if new_text != text:
+            md_path.write_text(new_text, encoding="utf-8")
+
+
 def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Generate a uspecs marketplace.",
@@ -657,6 +703,13 @@ def main() -> None:
     for skill_dir in sorted(src_skills.iterdir()):
         if skill_dir.is_dir() and skill_dir.name.startswith("uspecs-"):
             shutil.copytree(skill_dir, dst_skills / skill_dir.name)
+
+    # Inline shared skill content, then drop the shared/ source from output.
+    shared_src: Path = src_skills / _SHARED_SKILL / _SHARED_SUBDIR
+    inline_shared_content(dst_skills, shared_src)
+    shared_dst: Path = dst_skills / _SHARED_SKILL / _SHARED_SUBDIR
+    if shared_dst.is_dir():
+        shutil.rmtree(shared_dst)
 
     # Load template and actions
     tpl_path: Path = TEMPLATES_DIR / config.action_template

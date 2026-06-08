@@ -368,3 +368,44 @@ _softeng_constant() {
     [[ "$output" == *"Generated augment (--local: no commit, no push)"* ]]
     [ -f "$MKT_REPO/uspecs-dev/.claude-plugin/plugin.json" ]
 }
+
+# ---------------------------------------------------------------------------
+# Shared skill content transclusion
+# (devops Domain architecture: Shared skill content)
+# ---------------------------------------------------------------------------
+
+@test "shared content is inlined and the shared source is excluded from output" {
+    deliver --agent claude --uspecs-repo "$REPO_ROOT" --marketplace-repo "$MKT_REPO" --local
+    [ "$status" -eq 0 ]
+    local skills="$MKT_REPO/uspecs-dev/skills"
+
+    # Shared to-do format content is inlined into a consuming skill...
+    local skill="$skills/uspecs-sec-fd/SKILL.md"
+    [ -f "$skill" ]
+    [[ "$(cat "$skill")" == *"Follow the to-do list format"* ]]
+
+    # ...the uspecs-concepts/shared source is absent from the output...
+    [ ! -d "$skills/uspecs-concepts/shared" ]
+
+    # ...and no shared-content link remains in any published skill file.
+    run grep -r "uspecs-concepts/shared/" "$skills"
+    [ -z "$output" ]
+}
+
+@test "deliver fails when a skill references a missing shared snippet" {
+    # Create a temp copy of the uspecs repo so we can mutate a skill file
+    local tmp_repo="$BATS_TEST_TMPDIR/uspecs-missing-shared"
+    cp -r "$REPO_ROOT" "$tmp_repo"
+    case "$OSTYPE" in
+        msys*|cygwin*) tmp_repo=$(cygpath -m "$tmp_repo") ;;
+    esac
+
+    # Point a knowledge skill at a shared snippet that does not exist.
+    local skill="$tmp_repo/.claude/skills/uspecs-sec-fd/SKILL.md"
+    printf '\n[broken](../uspecs-concepts/shared/does-not-exist.md)\n' >> "$skill"
+
+    deliver --agent claude --uspecs-repo "$tmp_repo" --marketplace-repo "$MKT_REPO" --local
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"does-not-exist.md"* ]]
+    [[ "${stderr:-}" == *"not found"* ]]
+}

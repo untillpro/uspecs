@@ -14,6 +14,7 @@
 - [gen-uspecs-market.py: python script](../../../../scripts/_lib/gen-uspecs-market.py)
   - Core marketplace generator
   - Processes templates and produces per-agent plugin structures
+  - Inlines shared skill content (see [Domain architecture: Shared skill content](../arch.md))
 
 ## Key flows
 
