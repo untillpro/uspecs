@@ -415,19 +415,21 @@ md_read_title() {
 
 # md_defang_relative_link
 # Reads markdown from stdin and writes the transformed markdown to stdout.
-# Outside fenced code blocks, every Markdown link `[text](path)` whose path
-# starts with `../` is rewritten: the leading `(../)+` segments are stripped,
-# a single `/` is prepended to the path, and the whole `[text](path)` literal
-# is wrapped in backticks so it renders as inert monospace text rather than
-# a clickable link that would 404 when rendered outside the repository tree
-# (e.g. on a GitHub PR page).
-# Targets starting with `http://`, `https://`, `mailto:`, `#`, `/`, `./`,
-# or bare filenames (no path separator) are left unchanged. Lines inside
-# fenced code blocks (``` or ~~~) are emitted verbatim.
+# Outside fenced code blocks, relative Markdown file links are rendered inert:
+# paths starting with `../` have the leading `(../)+` segments stripped and a
+# single `/` prepended, while same-folder file links keep their path. The whole
+# `[text](path)` literal is wrapped in backticks so it renders as monospace
+# text rather than a clickable link that would be ambiguous or broken outside
+# the repository tree (e.g. on a GitHub PR page).
+# Targets starting with `http://`, `https://`, `mailto:`, `#`, or `/` are left
+# unchanged. Lines inside fenced code blocks (``` or ~~~) are emitted verbatim.
 md_defang_relative_link() {
     awk '
         function is_fence(line) {
             return line ~ /^[[:space:]]*(```|~~~)/
+        }
+        function is_same_folder_file(path) {
+            return path !~ /^#/ && (path ~ /^\.\/[^/]+$/ || path ~ /^[^/:]+$/)
         }
         BEGIN { in_fence = 0 }
         {
@@ -443,6 +445,8 @@ md_defang_relative_link() {
                     label = substr(link, 1, bracket)
                     sub(/^(\.\.\/)+/, "", path)
                     out = out substr(line, 1, RSTART - 1) "`" label "(/" path ")`"
+                } else if (is_same_folder_file(path)) {
+                    out = out substr(line, 1, RSTART - 1) "`" link "`"
                 } else {
                     out = out substr(line, 1, RSTART + RLENGTH - 1)
                 }

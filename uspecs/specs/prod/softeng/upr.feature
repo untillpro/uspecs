@@ -63,7 +63,7 @@ Feature: Create pull request from current branch
       And pr_body includes all body content from the first top-level ## section after the main heading
       And pr_body is truncated at 40 lines or 4000 characters, whichever is reached first
       And pr_body appends a details note when content is truncated
-      And every relative file link `[text](path)` in pr_body outside fenced code blocks is defanged: leading `(../)+` segments are stripped, a single `/` is prepended to the path, and the whole `[text](path)` literal is wrapped in backticks
+      And every relative file link `[text](path)` in pr_body outside fenced code blocks is defanged: parent-directory links have leading `(../)+` segments stripped and a single `/` prepended to the path, and same-folder file links keep their path; in both cases the whole `[text](path)` literal is wrapped in backticks
       Examples:
         | change_md_shape                                 | body_content                    |
         | a single top-level ## Context section           | the ## Context section          |
@@ -84,8 +84,8 @@ Feature: Create pull request from current branch
         | mailto:user@example.com       | regular paragraph      | the link unchanged                                                                         |
         | #section-anchor               | regular paragraph      | the link unchanged                                                                         |
         | /already/root-absolute.md     | regular paragraph      | the link unchanged                                                                         |
-        | ./sibling.md                  | regular paragraph      | the link unchanged                                                                         |
-        | sibling.md                    | regular paragraph      | the link unchanged                                                                         |
+        | ./sibling.md                  | regular paragraph      | `[text](./sibling.md)` (same-folder file link is wrapped in backticks)                     |
+        | decisions.md                  | regular paragraph      | `[text](decisions.md)` (same-folder file link is wrapped in backticks)                     |
         | ../../../bin/softeng.sh       | inside ``` fenced code | the link unchanged                                                                         |
         | ../../../../../etc/passwd     | regular paragraph      | `[text](/etc/passwd)` (escape-the-repo inputs are treated uniformly; the link is inert)    |
 

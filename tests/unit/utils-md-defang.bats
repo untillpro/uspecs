@@ -72,18 +72,18 @@ setup() {
     [ "$output" = '[root](/already/root-absolute.md)' ]
 
     # | link_target                   | link_context           | rendered_link                                                                              |
-    # | ./sibling.md                  | regular paragraph      | the link unchanged                                                                         |
+    # | ./sibling.md                  | regular paragraph      | `[text](./sibling.md)` (same-folder file link is wrapped in backticks)                     |
     # Then pr_body renders the link as <rendered_link>
-    # rendered_link = the link unchanged
+    # rendered_link = `[text](./sibling.md)` (same-folder file link is wrapped in backticks)
     run -0 md_defang_relative_link <<< '[sib](./sibling.md)'
-    [ "$output" = '[sib](./sibling.md)' ]
+    [ "$output" = '`[sib](./sibling.md)`' ]
 
     # | link_target                   | link_context           | rendered_link                                                                              |
-    # | sibling.md                    | regular paragraph      | the link unchanged                                                                         |
+    # | decisions.md                  | regular paragraph      | `[text](decisions.md)` (same-folder file link is wrapped in backticks)                     |
     # Then pr_body renders the link as <rendered_link>
-    # rendered_link = the link unchanged
-    run -0 md_defang_relative_link <<< '[sib](sibling.md)'
-    [ "$output" = '[sib](sibling.md)' ]
+    # rendered_link = `[text](decisions.md)` (same-folder file link is wrapped in backticks)
+    run -0 md_defang_relative_link <<< '[current clarification decisions](decisions.md)'
+    [ "$output" = '`[current clarification decisions](decisions.md)`' ]
 
     # | link_target                   | link_context           | rendered_link                                                                              |
     # | ../../../bin/softeng.sh       | inside ``` fenced code | the link unchanged                                                                         |
@@ -110,6 +110,13 @@ EOF
 @test "defang: rewrites multiple links on the same line" {
     run -0 md_defang_relative_link <<< 'see [a](../../a.md) and [b](../b.md) also [c](https://x.example)'
     [ "$output" = 'see `[a](/a.md)` and `[b](/b.md)` also [c](https://x.example)' ]
+}
+
+# Supporting test (no matching .feature scenario): same-folder and parent links
+# are rewritten independently when mixed on the same line.
+@test "defang: rewrites mixed same-folder and parent links on the same line" {
+    run -0 md_defang_relative_link <<< 'see [a](../../a.md), [b](decisions.md), and [c](./c.md)'
+    [ "$output" = 'see `[a](/a.md)`, `[b](decisions.md)`, and `[c](./c.md)`' ]
 }
 
 # Supporting test (no matching .feature scenario): non-link content

@@ -186,13 +186,11 @@ _assert_pr_body_format() {
     [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
     [[ "$gh_body" != *"---"* ]]
     [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
-    # Defang invariant from upr.feature "Construct PR body": every relative
-    # file link `[text](../...)` in pr_body outside fenced code blocks must
-    # be defanged (leading `(../)+` stripped, `/` prepended, wrapped in
-    # backticks). After defanging the rewritten link contains no `../`, so
-    # any surviving `](../` in pr_body indicates a regression. The standard
-    # body shapes built by _make_upr_change contain no fenced relative
-    # links, so the check applies uniformly.
+    # Defang invariant from upr.feature "Construct PR body": relative file
+    # links in pr_body outside fenced code blocks must be wrapped in
+    # backticks. Parent-directory links are additionally normalized to
+    # repo-root paths, so any surviving `](../` in these standard body shapes
+    # indicates a regression.
     [[ "$gh_body" != *"](../"* ]]
 
     case "$body_shape" in
@@ -551,7 +549,7 @@ _assert_pr_body_format() {
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     # ## Context section is rendered in the PR body
     [[ "$gh_body" == *"## Context"*"Context narrative."* ]]
-    [[ "$gh_body" == *"See [issue.md](issue.md)"* ]]
+    [[ "$gh_body" == *'See `[issue.md](issue.md)`'* ]]
     [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
 
     _assert_pr_body_format "context"
@@ -821,6 +819,7 @@ _assert_pr_body_format() {
         echo '## Why'
         echo ''
         echo 'See [softeng entrypoint](../../../bin/softeng.sh) for the wiring.'
+        echo 'See [current clarification decisions](decisions.md) for local context.'
         echo ''
         echo 'Example:'
         echo ''
@@ -849,6 +848,15 @@ _assert_pr_body_format() {
     # rendered_link = `[text](/bin/softeng.sh)` (defanged: prefix stripped, `/` prepended, wrapped in backticks)
     [[ "$gh_body" == *'`[softeng entrypoint](/bin/softeng.sh)`'* ]]
     [[ "$gh_body" != *'[softeng entrypoint](../../../bin/softeng.sh)'* ]]
+
+    # | link_target                   | link_context           | rendered_link                                                                              |
+    # | decisions.md                  | regular paragraph      | `[text](decisions.md)` (same-folder file link is wrapped in backticks)                     |
+    # Then pr_body renders the link as <rendered_link>
+    # link_target = decisions.md
+    # link_context = regular paragraph
+    # rendered_link = `[text](decisions.md)` (same-folder file link is wrapped in backticks)
+    [[ "$gh_body" == *'`[current clarification decisions](decisions.md)`'* ]]
+    [[ "$gh_body" != *' [current clarification decisions](decisions.md)'* ]]
 
     # | link_target                   | link_context           | rendered_link                                                                              |
     # | ../../../bin/softeng.sh       | inside ``` fenced code | the link unchanged                                                                         |
