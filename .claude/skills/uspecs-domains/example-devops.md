@@ -1,8 +1,19 @@
-# Domain: Development and operations
+# Domain: devops
 
-## System
+Development, testing, delivery, deployment, and operations (monitoring, observability, etc.) aspects of the product
 
-Tools, scripts, and configuration files to assist with development, testing, deployment, and operations.
+## Overview
+
+Scope:
+
+- Tools, scripts, and configuration files supporting product devops.
+
+Key features:
+
+- Development and test tooling and workflows
+- Release management automation
+- CI/CD integration with GitHub
+- Production operations, monitoring, and incident response
 
 ## External actors
 
@@ -44,6 +55,16 @@ graph
 ### ops
 
 Production operations, monitoring, and incident response.
+
+Relationships:
+
+```mermaid
+graph
+  ops["📦ops"]
+  Maintainer["👤Maintainer"]
+  ops -->|monitoring and observability| Maintainer
+  ops -->|incident response| Maintainer
+```
 
 ---
 

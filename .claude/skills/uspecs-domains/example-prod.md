@@ -1,6 +1,8 @@
-# Domain: AI-assisted software engineering
+# Domain: prod
 
-## System
+AI-assisted software engineering
+
+## Overview
 
 Scope:
 
@@ -31,19 +33,19 @@ Systems:
 
 ## Concepts
 
-- `Change Request`
+- **Change Request**:
   - A formal proposal to modify System
 
-- `Active Change Request`
+- **Active Change Request**:
   - A Change Request that is being actively worked on
 
-- `Functional Design`
+- **Functional Design**:
   - A functional specification focuses on what various outside agents (people using the program, computer peripherals, or other computers, for example) might "observe" when interacting with the system
 
-- `Technical Design`
+- **Technical Design**:
   - The functional design specifies how a program will behave to outside agents and the technical design describes how that functionality is to be implemented
 
-- `Construction`
+- **Construction**:
   - Software construction refers to the detailed creation and maintenance of software through coding, verification, unit testing, integration testing and debugging
 
 ---
