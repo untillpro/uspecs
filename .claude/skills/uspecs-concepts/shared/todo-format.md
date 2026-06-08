@@ -1,0 +1,2 @@
+- Follow the to-do list format: relative paths from the change file to the target, specific action verbs (create, update, add, fix, remove, rename, move, etc.)
+- For `update` action use subitems describing each change
