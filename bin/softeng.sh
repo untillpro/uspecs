@@ -725,7 +725,7 @@ cmd_action_uchange() {
     # Chain self-review is triggered only when `--plan` authored an impl plan
     # (i.e. `plan_requested="1"`) and `--no-self-review` was not passed. On
     # non-plan branches `--no-self-review` is a parsed no-op.
-    local chain_self_review="" chain_self_review_construction=""
+    local chain_self_review=""
     local self_review_type="" self_review_budget=""
     if [[ -n "$plan_requested" && -z "$opt_no_self_review" ]]; then
         chain_self_review="1"
@@ -753,7 +753,6 @@ cmd_action_uchange() {
         [constr_maybe]="$plan_requested"
         [change_file_rel_path]="$change_file"
         [chain_self_review]="$chain_self_review"
-        [chain_self_review_construction]="$chain_self_review_construction"
         [self_review_type]="$self_review_type"
         [self_review_budget]="$self_review_budget"
         [softeng_sh]="$softeng_sh"
@@ -1048,13 +1047,12 @@ cmd_action_uimpl() {
         # flags from the section of the first non-review item, unless suppressed.
         # `self_review_budget` is set for specs chains only; the construction
         # sub-branch leaves it empty so the include omits the `-b` segment.
-        local chain_self_review="" chain_self_review_construction=""
+        local chain_self_review=""
         local self_review_type="" self_review_budget=""
         if [[ -z "$opt_no_self_review" ]]; then
             chain_self_review="1"
             if [[ "$_items_section" == "constr" ]]; then
                 self_review_type="construction"
-                chain_self_review_construction="1"
             else
                 self_review_type="specs"
                 self_review_budget="4"
@@ -1069,7 +1067,6 @@ cmd_action_uimpl() {
             [review_item]="${review_item:-}"
             [unchecked_items]="$unchecked_items"
             [chain_self_review]="$chain_self_review"
-            [chain_self_review_construction]="$chain_self_review_construction"
             [self_review_type]="$self_review_type"
             [self_review_budget]="$self_review_budget"
             [softeng_sh]="$softeng_sh"
@@ -1095,7 +1092,7 @@ cmd_action_uimpl() {
         # be appended; when all sections already exist (`constr_maybe` empty),
         # the prompt informs the user the plan is completed and no chain
         # should occur.
-        local chain_self_review="" chain_self_review_construction=""
+        local chain_self_review=""
         local self_review_type="" self_review_budget=""
         if [[ -z "$opt_no_self_review" && -n "$constr_maybe" ]]; then
             chain_self_review="1"
@@ -1116,7 +1113,6 @@ cmd_action_uimpl() {
             [constr_maybe]="$constr_maybe"
             [change_file_rel_path]="$change_folder_rel/$impl_file"
             [chain_self_review]="$chain_self_review"
-            [chain_self_review_construction]="$chain_self_review_construction"
             [self_review_type]="$self_review_type"
             [self_review_budget]="$self_review_budget"
             [softeng_sh]="$softeng_sh"
@@ -1986,18 +1982,16 @@ cmd_meta_options() {
     printf 'Options: %s\n' "${ACTION_OPTIONS[$action]}"
 }
 
-# cmd_self_review --type {specs|construction} --stage {A|B|C} [--concurrency] [-b N]
+# cmd_self_review --type {specs|construction} --stage {A|B} [-b N]
 # Top-level command (not under `action`). Auto-invoked by the AI Agent at the
 # end of a uimpl cycle; can also be called manually. Emits the stage prompt
-# matching (type, stage); --concurrency is an input flag that propagates
-# through the construction stage chain and gates Stage C. `-b N` is a retry
-# budget applicable to `--type specs` only: when N>0 the prompt renders a
-# self-reinvocation with `-b $((N-1))`; when N==0 or omitted the retry block
-# is suppressed (terminal state).
+# matching (type, stage). `-b N` is a retry budget applicable to `--type
+# specs` only: when N>0 the prompt renders a self-reinvocation with
+# `-b $((N-1))`; when N==0 or omitted the retry block is suppressed
+# (terminal state).
 cmd_self_review() {
     local opt_type=""
     local opt_stage=""
-    local opt_concurrency=""
     local opt_budget=""
     local opt_budget_set=""
 
@@ -2012,14 +2006,10 @@ cmd_self_review() {
                 ;;
             --stage)
                 if [[ $# -lt 2 || -z "$2" ]]; then
-                    error "--stage requires an argument (A|B|C)"
+                    error "--stage requires an argument (A|B)"
                 fi
                 opt_stage="$2"
                 shift 2
-                ;;
-            --concurrency)
-                opt_concurrency="1"
-                shift
                 ;;
             -b)
                 if [[ $# -lt 2 || -z "$2" ]]; then
@@ -2042,21 +2032,18 @@ cmd_self_review() {
         error "--type is required (specs|construction)"
     fi
     if [[ -z "$opt_stage" ]]; then
-        error "--stage is required (A|B|C)"
+        error "--stage is required (A|B)"
     fi
     case "$opt_type" in
         specs|construction) ;;
         *) error "--type must be one of: specs, construction (got '$opt_type')" ;;
     esac
     case "$opt_stage" in
-        A|B|C) ;;
-        *) error "--stage must be one of: A, B, C (got '$opt_stage')" ;;
+        A|B) ;;
+        *) error "--stage must be one of: A, B (got '$opt_stage')" ;;
     esac
     if [[ "$opt_type" == "specs" && "$opt_stage" != "A" ]]; then
         error "--type specs only supports --stage A (got '$opt_stage')"
-    fi
-    if [[ -n "$opt_concurrency" && "$opt_type" != "construction" ]]; then
-        error "--concurrency requires --type construction"
     fi
     if [[ -n "$opt_budget_set" && "$opt_type" != "specs" ]]; then
         error "-b requires --type specs"
@@ -2087,7 +2074,6 @@ cmd_self_review() {
 
     # shellcheck disable=SC2034  # vars used via nameref in emit_prompt
     declare -A review_vars=(
-        [concurrency]="$opt_concurrency"
         [budget]="$budget"
         [next_budget]="$next_budget"
         [softeng_sh]="$softeng_sh"

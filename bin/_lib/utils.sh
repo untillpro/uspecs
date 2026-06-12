@@ -429,7 +429,7 @@ md_defang_relative_link() {
             return line ~ /^[[:space:]]*(```|~~~)/
         }
         function is_same_folder_file(path) {
-            return path !~ /^#/ && (path ~ /^\.\/[^/]+$/ || path ~ /^[^/:]+$/)
+            return path !~ /^#/ && (path ~ /^\.\/[^\/]+$/ || path ~ /^[^\/:]+$/)
         }
         BEGIN { in_fence = 0 }
         {

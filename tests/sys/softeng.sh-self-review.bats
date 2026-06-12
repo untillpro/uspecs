@@ -36,24 +36,16 @@ setup() {
     [[ "$output" == *[Rr]eport* ]]
 }
 
-@test "self-review: construction Stage A chains to Stage B (propagating --concurrency when set)" {
+@test "self-review: construction Stage A chains to Stage B" {
     cd "$PROJECT_ROOT"
 
-    # Without --concurrency
     uspecs self-review --type construction --stage A
     [ "$status" -eq 0 ]
     [[ "$output" == *'<instruction id="instr_self_review_construction_a"'* ]]
     [[ "$output" == *"--stage B"* ]]
-
-    # With --concurrency: same prompt, --concurrency must be propagated
-    uspecs self-review --type construction --stage A --concurrency
-    [ "$status" -eq 0 ]
-    [[ "$output" == *'<instruction id="instr_self_review_construction_a"'* ]]
-    [[ "$output" == *"--stage B"* ]]
-    [[ "$output" == *"--concurrency"* ]]
 }
 
-@test "self-review: construction Stage B without --concurrency chains to report" {
+@test "self-review: construction Stage B chains to report" {
     cd "$PROJECT_ROOT"
 
     uspecs self-review --type construction --stage B
@@ -62,25 +54,6 @@ setup() {
     [[ "$output" == *[Rr]eport* ]]
     # Must NOT chain to Stage C
     [[ "$output" != *"--stage C"* ]]
-}
-
-@test "self-review: construction Stage B with --concurrency chains to Stage C --concurrency" {
-    cd "$PROJECT_ROOT"
-
-    uspecs self-review --type construction --stage B --concurrency
-    [ "$status" -eq 0 ]
-    [[ "$output" == *'<instruction id="instr_self_review_construction_b"'* ]]
-    [[ "$output" == *"--stage C"* ]]
-    [[ "$output" == *"--concurrency"* ]]
-}
-
-@test "self-review: construction Stage C emits Stage C prompt and reports results" {
-    cd "$PROJECT_ROOT"
-
-    uspecs self-review --type construction --stage C --concurrency
-    [ "$status" -eq 0 ]
-    [[ "$output" == *'<instruction id="instr_self_review_construction_c"'* ]]
-    [[ "$output" == *[Rr]eport* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -119,21 +92,29 @@ setup() {
     [[ "${stderr:-}" == *"--stage"* ]]
 }
 
-@test "self-review: --concurrency rejected with --type specs" {
+@test "self-review: --concurrency rejected as unknown argument" {
     cd "$PROJECT_ROOT"
 
-    uspecs self-review --type specs --stage A --concurrency
+    uspecs self-review --type construction --stage A --concurrency
     [ "$status" -ne 0 ]
-    [[ "${stderr:-}" == *"--concurrency"* ]]
+    [[ "${stderr:-}" == *"Unknown"* ]]
 }
 
-@test "self-review: specs has only Stage A (Stage B/C rejected)" {
+@test "self-review: --stage C rejected" {
     cd "$PROJECT_ROOT"
 
-    uspecs self-review --type specs --stage B
+    # Stage C is no longer a valid stage for any --type
+    uspecs self-review --type construction --stage C
     [ "$status" -ne 0 ]
 
     uspecs self-review --type specs --stage C
+    [ "$status" -ne 0 ]
+}
+
+@test "self-review: specs has only Stage A (Stage B rejected)" {
+    cd "$PROJECT_ROOT"
+
+    uspecs self-review --type specs --stage B
     [ "$status" -ne 0 ]
 }
 
@@ -225,9 +206,4 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage B"* ]]
     [[ "$output" != *"bash bin/softeng.sh self-review --type construction --stage B"* ]]
-
-    # Construction Stage B with --concurrency: advance to Stage C must use abs path
-    uspecs self-review --type construction --stage B --concurrency
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type construction --stage C"* ]]
 }
