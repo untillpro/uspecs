@@ -13,11 +13,18 @@ Feature: Create change request
       | the default branch   | feat | is created with name following branch naming rules |
       | a non-default branch | fix  | is not created                                     |
 
-  Scenario: --how option forces How section creation
-    When Engineer invokes uchange action with --how option
+  Scenario Outline: uchange does not chain self-review
+    When Engineer invokes uchange action <invocation>
+    Then AI Agent does not invoke self-review
+    Examples:
+      | invocation                        |
+      | with default options              |
+      | with --fetchable and an issue URL |
+
+  Scenario: --specs option
+    When Engineer invokes uchange action with --specs option
     Then base change request is created
-    And How section is produced in Change File
-    And uimpl action is not invoked automatically
+    And specs folder is created if it does not exist
 
   Rule: Domain frontmatter
 
@@ -90,31 +97,6 @@ Feature: Create change request
         | https://gitlab.com/group/project/-/issues/7 | add-validation | 7-add-validation |
         | https://example.com/projects/#!766766       | fix-crash      | 766766-fix-crash |
 
-  Rule: Chaining to implementation
-
-    Scenario: --no-impl option is a backwards-compatible no-op
-      When Engineer invokes uchange action with --no-impl option
-      Then the outcome is identical to invocation without the flag
-
-    Scenario: --plan option
-      When Engineer invokes uchange action with --plan option
-      Then base change request is created
-      And uimpl action is invoked automatically
-
-    Scenario Outline: uchange without --plan does not chain self-review
-      When Engineer invokes uchange action <invocation>
-      Then AI Agent does not invoke self-review
-      Examples:
-        | invocation                        |
-        | with default options              |
-        | with --how option                 |
-        | with --fetchable and an issue URL |
-
-    Scenario: --specs option
-      When Engineer invokes uchange action with --specs option
-      Then base change request is created
-      And specs folder is created if it does not exist
-
   Rule: Edge cases
 
     Scenario: --branch and --no-branch are mutually exclusive
@@ -127,11 +109,32 @@ Feature: Create change request
       Then error is displayed indicating --type is required and AI Agent is instructed to read the allowed Conventional Commits types from the uchange dispatch instructions and present them to the Engineer
       And change request is not created
 
-    Scenario Outline: --no-impl combined with --how or --plan
-      When Engineer invokes uchange action with --no-impl and <other> options
-      Then error is displayed: "--no-impl cannot be combined with --how or --plan"
+    Scenario Outline: Removed planning options are rejected
+      When Engineer invokes uchange action with <option> option
+      Then error is displayed indicating <option> is an unknown argument
       And change request is not created
       Examples:
-        | other  |
-        | --how  |
-        | --plan |
+        | option           |
+        | --how            |
+        | --plan           |
+        | --no-impl        |
+        | --no-self-review |
+
+  Rule: Fault localization signal in fix-type What flowchart
+
+    Scenario: Fault is not localized within the bounded investigation
+      Given Engineer invokes uchange action with --type fix
+      When AI Agent cannot localize the fault within the bounded static investigation
+      Then the What section flowchart contains a `?` step annotated `<-- fault: not yet localized`
+
+    Scenario: Fault is localized
+      Given Engineer invokes uchange action with --type fix
+      When AI Agent localizes the fault within the bounded static investigation
+      Then the What section flowchart names the fault on a concrete step
+      And the flowchart contains no unlocalized fault marker
+
+    Scenario: Investigation bounds
+      When AI Agent reads uchange action instructions for --type fix
+      Then AI Agent is instructed to bound fault localization to a static investigation: reading and searching the codebase only
+      And AI Agent is instructed not to run code or tests and not to reproduce the symptom
+      And AI Agent is instructed to cap the investigation at roughly 5 searches and 10 file reads, stopping earlier when pinning the fault would require verification rather than reading

@@ -314,100 +314,19 @@ _assert_split_change_artdefs_present() {
     [ "$current_branch" = "feature-branch" ]
 }
 
-@test "uchange: scn: --no-impl option is a backwards-compatible no-op" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat
-    local out_no_flag="$output"
-
-    uspecs action uchange --kebab-name my-change --type feat --no-impl
-    local out_no_impl="$output"
-
-    # Normalize the timestamped folder name (YYMMDDHHMM-) so byte-equality
-    # holds across second boundaries.
-    local norm_no_flag norm_no_impl
-    norm_no_flag=$(printf '%s' "$out_no_flag" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g')
-    norm_no_impl=$(printf '%s' "$out_no_impl" | sed -E 's/[0-9]{10}-my-change/TIMESTAMP-my-change/g')
-
-    # Then the outcome is identical to invocation without the flag
-    [ "$norm_no_flag" = "$norm_no_impl" ]
-}
-
-@test "uchange: scn: --how option forces How section creation" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat --how
-
-    # Then base change request is created
-    _assert_uchange_base_output
-
-    # And How section is produced in Change File
-    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
-    [[ "$output" == *"## How"* ]]
-
-    # And uimpl action is not invoked automatically
-    # impl-menu bullets are not emitted
-    [[ "$output" != *"- Functional design section"* ]]
-    [[ "$output" != *"- Construction and Quick start sections"* ]]
-}
-
-@test "uchange: scn: --plan option" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat --plan
-
-    # Then base change request is created
-    _assert_uchange_base_output
-
-    # And uimpl action is invoked automatically
-    # impl-menu bullets are emitted (Construction is always emitted when
-    # plan_requested is set, since constr_maybe mirrors plan_requested)
-    [[ "$output" == *"- Construction and Quick start sections"* ]]
-    # How artdef is not emitted
-    [[ "$output" != *'<artdef id="artdef_change_how"'* ]]
-}
-
 # ---------------------------------------------------------------------------
-# Auto-invoke self-review after uchange --plan
-# `uchange --plan` chains a specs self-review (Stage A) with the default
-# retry budget of 4. `--no-self-review` suppresses the chain. Variants that
-# do not author plan bullets (default, --how, --fetchable) do not chain.
+# uchange never chains self-review: it authors no plan bullets to review.
+# How authoring and implementation planning happen exclusively in uimpl.
 # ---------------------------------------------------------------------------
 
-@test "uchange: --plan chains self-review --type specs --stage A -b 4" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat --plan
-    _assert_uchange_base_output
-    # The chained self-review invocation must use the absolute softeng_sh
-    # path (rendered from $_CTX_SCRIPT_DIR) and include the default budget.
-    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" self-review --type specs --stage A -b 4"* ]]
-}
-
-@test "uchange: --plan --no-self-review suppresses the chain" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat --plan --no-self-review
-    _assert_uchange_base_output
-    # No chained self-review invocation rendered
-    [[ "$output" != *"self-review --type specs --stage A"* ]]
-}
-
-@test "uchange: scn: uchange without --plan does not chain self-review: default, --how, fetchable" {
+@test "uchange: scn: uchange does not chain self-review: default, fetchable" {
     _setup_git_repo
 
     # | invocation                        |
     # | with default options              |
     # When Engineer invokes uchange action <invocation>
+    # invocation = with default options
     uspecs action uchange --kebab-name my-change --type feat
-    _assert_uchange_base_output
-    # Then AI Agent does not invoke self-review
-    [[ "$output" != *"self-review"* ]]
-
-    # | invocation                        |
-    # | with --how option                 |
-    # When Engineer invokes uchange action <invocation>
-    uspecs action uchange --kebab-name my-change --type feat --how
     _assert_uchange_base_output
     # Then AI Agent does not invoke self-review
     [[ "$output" != *"self-review"* ]]
@@ -415,46 +334,12 @@ _assert_split_change_artdefs_present() {
     # | invocation                        |
     # | with --fetchable and an issue URL |
     # When Engineer invokes uchange action <invocation>
+    # invocation = with --fetchable and an issue URL
     uspecs action uchange --kebab-name my-change --type feat \
         --issue-url "https://github.com/owner/repo/issues/42" --fetchable
     _assert_uchange_base_output
     # Then AI Agent does not invoke self-review
     [[ "$output" != *"self-review"* ]]
-}
-
-@test "uchange: --no-self-review without --plan is accepted as a no-op" {
-    _setup_git_repo
-
-    uspecs action uchange --kebab-name my-change --type feat --no-self-review
-    _assert_uchange_base_output
-    # Flag parses, no error, nothing to suppress
-    [[ "$output" != *"self-review --type specs --stage A"* ]]
-}
-
-@test "uchange: scn: --no-impl combined with --how or --plan: --how" {
-    # other: --how
-    cd "$PROJECT_ROOT"
-
-    uspecs action uchange --kebab-name my-change --type feat --no-impl --how
-
-    # And change request is not created
-    [ "$status" -ne 0 ]
-
-    # Then error is displayed: "--no-impl cannot be combined with --how or --plan"
-    [[ "${stderr:-}" == *"--no-impl cannot be combined with --how or --plan"* ]]
-}
-
-@test "uchange: scn: --no-impl combined with --how or --plan: --plan" {
-    # other: --plan
-    cd "$PROJECT_ROOT"
-
-    uspecs action uchange --kebab-name my-change --type feat --no-impl --plan
-
-    # And change request is not created
-    [ "$status" -ne 0 ]
-
-    # Then error is displayed: "--no-impl cannot be combined with --how or --plan"
-    [[ "${stderr:-}" == *"--no-impl cannot be combined with --how or --plan"* ]]
 }
 
 @test "uchange: scn: --specs option" {
@@ -587,6 +472,50 @@ _assert_split_change_artdefs_present() {
 
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Unknown"* ]]
+}
+
+# Helper: assert the rejected option produced "Unknown argument: <option>"
+# with a non-zero exit and no Change Folder. Caller runs the uchange
+# invocation first so the row-specific table comments stay next to it.
+_assert_option_rejected() {
+    local option="$1"
+    # Then error is displayed indicating <option> is an unknown argument
+    [ "$status" -ne 0 ]
+    [[ "${stderr:-}" == *"Unknown argument: $option"* ]]
+    # And change request is not created
+    [ -z "$(find "$PROJECT_ROOT/uspecs/changes" -maxdepth 1 -type d -name '*-my-change' -print -quit)" ]
+}
+
+@test "uchange: scn: Removed planning options are rejected" {
+    cd "$PROJECT_ROOT"
+
+    # | option           |
+    # | --how            |
+    # When Engineer invokes uchange action with <option> option
+    # option = --how
+    uspecs action uchange --kebab-name my-change --type feat --how
+    _assert_option_rejected --how
+
+    # | option           |
+    # | --plan           |
+    # When Engineer invokes uchange action with <option> option
+    # option = --plan
+    uspecs action uchange --kebab-name my-change --type feat --plan
+    _assert_option_rejected --plan
+
+    # | option           |
+    # | --no-impl        |
+    # When Engineer invokes uchange action with <option> option
+    # option = --no-impl
+    uspecs action uchange --kebab-name my-change --type feat --no-impl
+    _assert_option_rejected --no-impl
+
+    # | option           |
+    # | --no-self-review |
+    # When Engineer invokes uchange action with <option> option
+    # option = --no-self-review
+    uspecs action uchange --kebab-name my-change --type feat --no-self-review
+    _assert_option_rejected --no-self-review
 }
 
 @test "uchange: invalid --kebab-name format rejected" {

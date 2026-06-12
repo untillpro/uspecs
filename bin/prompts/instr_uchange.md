@@ -17,13 +17,9 @@ Create file `${change_file}` containing the prepared frontmatter, then append th
 - Why, see `@artdef_change_why`
 - What, see `@artdef_change_what_default` (?type_general)
 - What, see `@artdef_change_what_fix` (?type_fix)
-- How, see `@artdef_change_how` (?how_requested)
-`@include_impl_sections`
 
 Run `git checkout -b ${branch_name}` (?create_branch)
 
 Rules:
 
 - Do not start implementation, only add sections as described above
-
-`@include_chain_self_review`

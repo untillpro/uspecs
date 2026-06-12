@@ -990,3 +990,252 @@ _uimpl_with_section_todo() {
     [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
     [[ "$output" == *'@artdef_change_how'* ]]
 }
+
+# ---------------------------------------------------------------------------
+# scn: Fault localization gate
+# The gate is the first branch of the uimpl decision cascade: when change.md
+# has frontmatter `type: fix` and the unlocalized fault marker
+# `? <-- fault: not yet localized` appears as a step inside the `## What`
+# section's fenced flowchart, uimpl emits the instr_uimpl_fault prompt and
+# authors no How and no planning sections. No option bypasses the gate.
+# ---------------------------------------------------------------------------
+
+# The unlocalized fault marker as a flowchart step line (shared by the
+# positive fixture and the "fence outside What" negative).
+FAULT_MARKER_STEP='      ?               <-- fault: not yet localized'
+
+# Helper: overwrite change.md for 2601010000-my-change with the given
+# frontmatter type and body lines (uncommitted; uimpl reads it from disk).
+# Usage: _write_change_md <type> <body-line>...
+_write_change_md() {
+    local type="$1"; shift
+    local change_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/change.md"
+    {
+        printf '%s\n' \
+            '---' \
+            'change_id: 2601010000-my-change' \
+            "type: $type" \
+            '---' \
+            '' \
+            '# Change request: Test' \
+            ''
+        printf '%s\n' "$@"
+    } > "$change_path"
+}
+
+# Helper: emit What-section body lines whose fenced flowchart carries the
+# unlocalized fault marker as a step (mirrors artdef_change_what_fix.md).
+_what_with_marker() {
+    printf '%s\n' \
+        '## What' \
+        '' \
+        'Symptom: downstream API rejects the request' \
+        '' \
+        '```text' \
+        'user submits form' \
+        '      |' \
+        '      v' \
+        "$FAULT_MARKER_STEP" \
+        '      |' \
+        '      v' \
+        'downstream API rejects request   (symptom)' \
+        '```' \
+        '' \
+        'Corrected behavior: the request is accepted'
+}
+
+@test "uimpl: scn: Gate trigger conditions: fix + marker in What flowchart triggers" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # | type | location                                             | outcome          |
+    # | fix  | as a step inside the What section's fenced flowchart | triggers         |
+    # Given change.md frontmatter has type <type>
+    # type = fix
+    # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
+    # location = as a step inside the What section's fenced flowchart
+    _write_change_md fix "$(_what_with_marker)"
+
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+
+    # Then the fault localization gate <outcome>
+    # outcome = triggers
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+
+    # Also covers scn: Gated invocation emits no planning content
+    # | flag          |
+    # | without flags |
+    # Then AI Agent does not create a `## How` section
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+    [[ "$output" != *'@artdef_change_how'* ]]
+    # And AI Agent does not create any planning section
+    [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Construction and Quick start sections"* ]]
+}
+
+@test "uimpl: scn: Gate trigger conditions: negatives do not trigger" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # | type | location                                             | outcome          |
+    # | fix  | in prose outside any fenced flowchart                | does not trigger |
+    # Given change.md frontmatter has type <type>
+    # type = fix
+    # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
+    # location = in prose outside any fenced flowchart
+    _write_change_md fix \
+        '## What' \
+        '' \
+        'The marker ? <-- fault: not yet localized appears in prose only.'
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    # Then the fault localization gate <outcome>
+    # outcome = does not trigger
+    [[ "$output" != *'<instruction id="instr_uimpl_fault"'* ]]
+    # Normal cascade proceeds (`## How` is missing -> How prompt)
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+
+    # | type | location                                             | outcome          |
+    # | fix  | inside a fenced flowchart outside the What section   | does not trigger |
+    # Given change.md frontmatter has type <type>
+    # type = fix
+    # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
+    # location = inside a fenced flowchart outside the What section
+    _write_change_md fix \
+        '## What' \
+        '' \
+        'Symptom: prose only, no flowchart here.' \
+        '' \
+        '## Notes' \
+        '' \
+        '```text' \
+        "$FAULT_MARKER_STEP" \
+        '```'
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    # Then the fault localization gate <outcome>
+    # outcome = does not trigger
+    [[ "$output" != *'<instruction id="instr_uimpl_fault"'* ]]
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+
+    # | type | location                                             | outcome          |
+    # | feat | as a step inside the What section's fenced flowchart | does not trigger |
+    # Given change.md frontmatter has type <type>
+    # type = feat
+    # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
+    # location = as a step inside the What section's fenced flowchart
+    _write_change_md feat "$(_what_with_marker)"
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    # Then the fault localization gate <outcome>
+    # outcome = does not trigger
+    [[ "$output" != *'<instruction id="instr_uimpl_fault"'* ]]
+    [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
+}
+
+@test "uimpl: scn: Gated invocation emits no planning content: with --plan" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Given the fault localization gate triggers
+    _write_change_md fix "$(_what_with_marker)"
+
+    # | flag          |
+    # | with `--plan` |
+    # When Engineer invokes uimpl action <flag>
+    # flag = with `--plan`
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change" --plan
+    [ "$status" -eq 0 ]
+    # --plan does not bypass the gate
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+
+    # Then AI Agent does not create a `## How` section
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
+    # And AI Agent does not create any planning section
+    [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Construction and Quick start sections"* ]]
+}
+
+@test "uimpl: scn: Gated instructions direct fault localization" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Given the fault localization gate triggers
+    _write_change_md fix "$(_what_with_marker)"
+
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+
+    # Then AI Agent is instructed to localize the fault
+    [[ "$output" == *"localize the fault"* ]]
+    # And AI Agent is instructed to track localization efforts in fault.md in the Change Folder
+    [[ "$output" == *"fault.md"* ]]
+    [[ "$output" == *"uspecs/changes/2601010000-my-change"* ]]
+}
+
+@test "uimpl: scn: Existing fault.md is continued, not restarted" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Given the fault localization gate triggers
+    _write_change_md fix "$(_what_with_marker)"
+
+    # And fault.md exists in the Change Folder
+    echo '# Fault localization log' > "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/fault.md"
+
+    # When Engineer invokes uimpl action
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+
+    # Then AI Agent is instructed to read fault.md and build on the recorded efforts rather than restart the investigation
+    [[ "$output" == *"build on the recorded efforts"* ]]
+
+    # Absent fault.md omits the continue line (the unconditional fault.md
+    # tracking instruction remains).
+    rm "$PROJECT_ROOT/uspecs/changes/2601010000-my-change/fault.md"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+    [[ "$output" != *"build on the recorded efforts"* ]]
+    [[ "$output" == *"fault.md"* ]]
+}
+
+@test "uimpl: scn: Successful localization: prompt renders re-invocation with original arguments" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # Given the fault localization gate triggers
+    _write_change_md fix "$(_what_with_marker)"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change" --no-self-review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+
+    # And AI Agent re-invokes uimpl with the original arguments
+    # The re-invocation line uses the absolute softeng_sh path (rendered from
+    # $_CTX_SCRIPT_DIR) and carries the original invocation arguments.
+    [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" action uimpl --change-folder uspecs/changes/2601010000-my-change --no-self-review"* ]]
+}
