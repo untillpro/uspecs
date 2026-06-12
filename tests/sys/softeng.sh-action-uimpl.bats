@@ -995,13 +995,13 @@ _uimpl_with_section_todo() {
 # scn: Fault localization gate
 # The gate is the first branch of the uimpl decision cascade: when change.md
 # has frontmatter `type: fix` and the unlocalized fault marker
-# `? <-- fault: not yet localized` appears as a step inside the `## What`
-# section's fenced flowchart, uimpl emits the instr_uimpl_fault prompt and
+# `? <-- fault: not yet localized` appears as a standalone line inside the
+# `## What` section, uimpl emits the instr_uimpl_fault prompt and
 # authors no How and no planning sections. No option bypasses the gate.
 # ---------------------------------------------------------------------------
 
 # The unlocalized fault marker as a flowchart step line (shared by the
-# positive fixture and the "fence outside What" negative).
+# positive fixture and the "outside the What section" negative).
 FAULT_MARKER_STEP='      ?               <-- fault: not yet localized'
 
 # Helper: overwrite change.md for 2601010000-my-change with the given
@@ -1044,18 +1044,18 @@ _what_with_marker() {
         'Corrected behavior: the request is accepted'
 }
 
-@test "uimpl: scn: Gate trigger conditions: fix + marker in What flowchart triggers" {
+@test "uimpl: scn: Gate trigger conditions: fix + marker in What section triggers" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
 
-    # | type | location                                             | outcome          |
-    # | fix  | as a step inside the What section's fenced flowchart | triggers         |
+    # | type | location                                      | outcome          |
+    # | fix  | as a standalone line in the What section      | triggers         |
     # Given change.md frontmatter has type <type>
     # type = fix
     # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
-    # location = as a step inside the What section's fenced flowchart
+    # location = as a standalone line in the What section
     _write_change_md fix "$(_what_with_marker)"
 
     # When Engineer invokes uimpl action
@@ -1084,12 +1084,12 @@ _what_with_marker() {
     _make_change_folder "2601010000-my-change"
     mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
 
-    # | type | location                                             | outcome          |
-    # | fix  | in prose outside any fenced flowchart                | does not trigger |
+    # | type | location                                      | outcome          |
+    # | fix  | embedded in a prose line in the What section  | does not trigger |
     # Given change.md frontmatter has type <type>
     # type = fix
     # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
-    # location = in prose outside any fenced flowchart
+    # location = embedded in a prose line in the What section
     _write_change_md fix \
         '## What' \
         '' \
@@ -1103,12 +1103,12 @@ _what_with_marker() {
     # Normal cascade proceeds (`## How` is missing -> How prompt)
     [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
 
-    # | type | location                                             | outcome          |
-    # | fix  | inside a fenced flowchart outside the What section   | does not trigger |
+    # | type | location                                      | outcome          |
+    # | fix  | as a standalone line outside the What section | does not trigger |
     # Given change.md frontmatter has type <type>
     # type = fix
     # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
-    # location = inside a fenced flowchart outside the What section
+    # location = as a standalone line outside the What section
     _write_change_md fix \
         '## What' \
         '' \
@@ -1116,9 +1116,7 @@ _what_with_marker() {
         '' \
         '## Notes' \
         '' \
-        '```text' \
-        "$FAULT_MARKER_STEP" \
-        '```'
+        "$FAULT_MARKER_STEP"
     # When Engineer invokes uimpl action
     uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
     [ "$status" -eq 0 ]
@@ -1127,12 +1125,12 @@ _what_with_marker() {
     [[ "$output" != *'<instruction id="instr_uimpl_fault"'* ]]
     [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
 
-    # | type | location                                             | outcome          |
-    # | feat | as a step inside the What section's fenced flowchart | does not trigger |
+    # | type | location                                      | outcome          |
+    # | feat | as a standalone line in the What section      | does not trigger |
     # Given change.md frontmatter has type <type>
     # type = feat
     # And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
-    # location = as a step inside the What section's fenced flowchart
+    # location = as a standalone line in the What section
     _write_change_md feat "$(_what_with_marker)"
     # When Engineer invokes uimpl action
     uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"

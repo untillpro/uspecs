@@ -131,11 +131,11 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       Then the fault localization gate <outcome>
       Examples:
-        | type | location                                             | outcome          |
-        | fix  | as a step inside the What section's fenced flowchart | triggers         |
-        | fix  | in prose outside any fenced flowchart                | does not trigger |
-        | fix  | inside a fenced flowchart outside the What section   | does not trigger |
-        | feat | as a step inside the What section's fenced flowchart | does not trigger |
+        | type | location                                      | outcome          |
+        | fix  | as a standalone line in the What section      | triggers         |
+        | fix  | embedded in a prose line in the What section  | does not trigger |
+        | fix  | as a standalone line outside the What section | does not trigger |
+        | feat | as a standalone line in the What section      | does not trigger |
 
     Scenario Outline: Gated invocation emits no planning content
       Given the fault localization gate triggers

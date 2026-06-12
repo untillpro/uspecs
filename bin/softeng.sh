@@ -922,52 +922,28 @@ cmd_action_uimpl() {
     # file was selected as the Implementation Plan File above. Match level-2
     # only -- `## How` is the canonical heading per `@artdef_change_how`; a
     # nested `### How` must not satisfy this check.
-    # The same pass detects the fault localization gate inputs: frontmatter
-    # `type: fix` and the unlocalized fault marker
-    # `? <-- fault: not yet localized` as a step inside the `## What`
-    # section's fenced flowchart block (marker text in prose, in fences
-    # outside What, or on other change types does not count).
+    # The same pass detects the fault localization gate input: the
+    # unlocalized fault marker `? <-- fault: not yet localized` as a
+    # standalone line anywhere inside the `## What` section. The full-line
+    # match keeps marker mentions in prose from counting; markers outside
+    # What do not count. Frontmatter `type: fix` is read via the shared
+    # frontmatter helper.
     local _change_md_path="$project_dir/$change_folder_rel/change.md"
     local type_fix="" fault_unlocalized=""
     local _fault_marker_re='^[[:space:]]*\?[[:space:]]+<--[[:space:]]+fault: not yet localized[[:space:]]*$'
     if [[ -f "$_change_md_path" ]]; then
-        local _cm_line _cm_num=0
-        local _cm_in_fm=0 _cm_fm_done=0
-        local _cm_in_what=0 _cm_in_fence=0
+        local _cm_type
+        _cm_type=$(md_read_frontmatter_field "$_change_md_path" "type" 2>/dev/null) || true
+        [[ "$_cm_type" == "fix" ]] && type_fix="1"
+        local _cm_line _cm_in_what=0
         while IFS= read -r _cm_line; do
-            ((_cm_num++)) || true
-            # Frontmatter: only a `---` opener on line 1 starts the block.
-            if (( ! _cm_fm_done )); then
-                if (( _cm_num == 1 )); then
-                    if [[ "$_cm_line" == "---" ]]; then
-                        _cm_in_fm=1
-                        continue
-                    fi
-                    _cm_fm_done=1
-                elif (( _cm_in_fm )); then
-                    if [[ "$_cm_line" == "---" ]]; then
-                        _cm_fm_done=1
-                    elif [[ "$_cm_line" =~ ^type:[[:space:]]*fix[[:space:]]*$ ]]; then
-                        type_fix="1"
-                    fi
-                    continue
-                fi
-            fi
-            # Fence state: any line starting with ``` opens/closes a fence.
-            if [[ "$_cm_line" == '```'* ]]; then
-                _cm_in_fence=$(( ! _cm_in_fence ))
-                continue
-            fi
-            if (( _cm_in_fence )); then
-                if (( _cm_in_what )) && [[ "$_cm_line" =~ $_fault_marker_re ]]; then
-                    fault_unlocalized="1"
-                fi
-                continue
-            fi
             case "$_cm_line" in
                 "## How"|"## How "*)   how_exists="1"; _cm_in_what=0 ;;
                 "## What"|"## What "*) _cm_in_what=1 ;;
                 "## "*|"# "*)          _cm_in_what=0 ;;
+                *)  if (( _cm_in_what )) && [[ "$_cm_line" =~ $_fault_marker_re ]]; then
+                        fault_unlocalized="1"
+                    fi ;;
             esac
         done < "$_change_md_path"
     fi
@@ -1029,7 +1005,7 @@ cmd_action_uimpl() {
     local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
 
     # Branching. The fault localization gate is the first branch: a fix whose
-    # What flowchart still carries the unlocalized fault marker must be
+    # What section still carries the unlocalized fault marker must be
     # localized before any How authoring or planning; no option bypasses it.
     if [[ -n "$type_fix" && -n "$fault_unlocalized" ]]; then
         local fault_md_exists=""
