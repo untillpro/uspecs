@@ -1037,6 +1037,20 @@ cmd_action_uimpl() {
         constr_maybe="1"
     fi
 
+    # Fix-type short-circuit: when change.md frontmatter `type: fix`, suppress
+    # the specs-tier cascade gates (Domain, FD, TD) so the cascade proceeds
+    # straight to Provisioning/Construction. See `Fix-type change skips
+    # specs-tier cascade steps` scenario in uimpl.feature.
+    if [[ -f "$_change_md_path" ]]; then
+        local _change_type=""
+        _change_type=$(md_read_frontmatter_field "$_change_md_path" "type" 2>/dev/null) || true
+        if [[ "$_change_type" == "fix" ]]; then
+            domains_maybe=""
+            fd_maybe=""
+            td_maybe=""
+        fi
+    fi
+
     # Branching
     if [[ "$non_review_unchecked_count" -eq 0 && -n "$has_review_unchecked" ]]; then
         # Only review item unchecked
