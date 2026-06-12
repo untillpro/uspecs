@@ -51,29 +51,19 @@ Construction todos completed?
   |                         v
   |                       report -> Engineer
   |
-  +--(yes)--> evaluate concurrency
-                |
-                v
-              self-review --type construction --stage A [--concurrency]
+  +--(yes)--> self-review --type construction --stage A
                 |
                 v
               review + fix inline
                 |
                 v
-              self-review --type construction --stage B [--concurrency]
+              self-review --type construction --stage B
                 |
                 v
               review + fix inline
                 |
-                +--(no --concurrency)--> report -> Engineer
-                |
-                +--(--concurrency)--> self-review --type construction --stage C --concurrency
-                                          |
-                                          v
-                                        review + fix inline
-                                          |
-                                          v
-                                        report -> Engineer
+                v
+              report -> Engineer
 ```
 
 Key artifacts:
@@ -87,9 +77,7 @@ Key artifacts:
 - [bin/prompts/instr_self_review_construction_a.md](../../../../bin/prompts/instr_self_review_construction_a.md)
   - construction Stage A -> B
 - [bin/prompts/instr_self_review_construction_b.md](../../../../bin/prompts/instr_self_review_construction_b.md)
-  - construction Stage B (terminal unless `--concurrency`)
-- [bin/prompts/instr_self_review_construction_c.md](../../../../bin/prompts/instr_self_review_construction_c.md)
-  - construction Stage C, concurrency (terminal)
+  - construction Stage B (terminal)
 - [self-review.feature](self-review.feature)
   - functional design for the `self-review` command
 - [uimpl.feature](uimpl.feature)

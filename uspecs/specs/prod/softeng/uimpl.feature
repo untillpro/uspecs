@@ -61,13 +61,13 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       And AI Agent executes only one (the first available) <action> depending on <condition>
       Examples:
-        | condition                                                                  | action                                                                                                                                                                                          |
-        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files                                                                                                          |
-        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files                                                                                                    |
-        | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                           |
-        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                   |
+        | condition                                                                  | action                                                                                                                                                                                                              |
+        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files                                                                                                                              |
+        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files                                                                                                                        |
+        | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                                               |
+        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                                       |
         | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, and set `scope:` as a YAML flow list (when at least one scope applies) and `breaking: true` (when the change is breaking) in change.md frontmatter |
-        | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                              |
+        | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                                                  |
       And AI Agent stops execution after performing the action
 
     Scenario: Some unchecked to-do items
@@ -121,10 +121,3 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       Then AI Agent emits the "plan completed" notice
       And AI Agent does not invoke self-review
-
-    Scenario: Construction todos: AI Agent evaluates concurrency
-      Given some to-do items in Construction are unchecked in Implementation Plan File
-      When Engineer invokes uimpl action
-      And AI Agent completes the unchecked to-do items
-      Then AI Agent evaluates whether the completed changes touch concurrency-sensitive code paths
-      And AI Agent includes --concurrency on the self-review invocation when applicable

@@ -2,10 +2,8 @@ Feature: Self-review automated review chain
   AI Agent reviews specs or construction after uimpl completes todos or uchange authors a plan section
 
   # self-review is a top-level softeng command (not under `action`).
-  # Usage: bash bin/softeng.sh self-review --type {specs|construction} --stage {A|B|C} [--concurrency] [-b N]
+  # Usage: bash bin/softeng.sh self-review --type {specs|construction} --stage {A|B} [-b N]
   # Auto-invocation by uimpl and uchange is specified in uimpl.feature and uchange.feature.
-  # --concurrency is an input flag set by the caller (uimpl) when Construction
-  # todos were completed; see uimpl.feature for the evaluation scenario.
   # -b N is a retry budget applicable only to --type specs; see retry budget scenarios below.
 
   Rule: Core behavior
@@ -15,11 +13,10 @@ Feature: Self-review automated review chain
       Then the prompt instructs AI Agent to perform <scope>
       And the prompt instructs AI Agent to <next>
       Examples:
-        | type         | stage | scope                                                                   | next                                                                                                 |
-        | specs        | A     | consistency with change request and DRY across specs and/or to-do items | report results                                                                                       |
-        | construction | A     | consistency with change request                                         | invoke self-review --type construction --stage B (propagating --concurrency)                         |
-        | construction | B     | DRY and SOLID across construction artifacts                             | invoke self-review --type construction --stage C when --concurrency is set, otherwise report results |
-        | construction | C     | concurrency issues in construction artifacts                            | report results                                                                                       |
+        | type         | stage | scope                                                                   | next                                             |
+        | specs        | A     | consistency with change request and DRY across specs and/or to-do items | report results                                   |
+        | construction | A     | consistency with change request                                         | invoke self-review --type construction --stage B |
+        | construction | B     | DRY and SOLID across construction artifacts                             | report results                                   |
 
     Scenario: Inline fix and advance
       When AI Agent runs a self-review stage and finds issues

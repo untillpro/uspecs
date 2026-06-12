@@ -35,5 +35,4 @@ Rules:
 
 After fixing all issues:
 
-- Run `bash "${softeng_sh}" self-review --type construction --stage C --concurrency` (?concurrency)
-- Report results to the user: files reviewed, issues found, fixes applied, and any outstanding issues (?!concurrency)
+- Report results to the user: files reviewed, issues found, fixes applied, and any outstanding issues
