@@ -2,10 +2,10 @@
 
 ## Ambiguity: when exactly does the uimpl fault localization gate trigger
 
-Decision: Gate triggers only for `type: fix` Change Files where the marker appears as a step inside the `## What` section's fenced flowchart block
+Decision: Gate triggers only for `type: fix` Change Files where the marker appears as a standalone line inside the `## What` section (full-line match)
 
-- Pros: precise; immune to false positives from change requests that merely quote the marker in prose or examples; consistent with the marker being defined only for fix-style What
-- Cons: needs the frontmatter type check in addition to the section/fence-aware scan
+- Pros: precise; the full-line match is immune to false positives from change requests that merely mention the marker in prose; no fragile fence-state tracking; consistent with the marker being defined only for fix-style What
+- Cons: needs the frontmatter type check in addition to the section-aware scan
 - Confidence: high
 
 Alternatives:

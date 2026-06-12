@@ -36,7 +36,7 @@ Requirements for the `uchange` option surface:
 
 Requirements for the `uimpl` fault localization gate:
 
-- The gate triggers only when the Change File has frontmatter `type: fix` and the unlocalized fault marker appears as a step inside the `## What` section's fenced flowchart block; marker text quoted elsewhere (prose, examples, other sections, other change types) does not trigger the gate.
+- The gate triggers only when the Change File has frontmatter `type: fix` and the unlocalized fault marker appears as a standalone line inside the `## What` section; marker text embedded in a prose line, outside the What section, or on other change types does not trigger the gate.
 - When the gate triggers, `uimpl` does not author `## How` and does not produce planning sections; the gate is unconditional -- no option bypasses it.
 - Instead, `uimpl` instructs the agent to localize the fault and to track localization efforts in `fault.md` in the Change Folder.
 - When `fault.md` already exists, `uimpl` must instruct the agent to read it and build on the recorded efforts rather than restart the investigation.
@@ -48,7 +48,7 @@ Requirements for the `uimpl` fault localization gate:
 
 Decisions:
 
-- Detect the gate condition by extending the existing single-pass pure-bash `change.md` scanner in `cmd_action_uimpl` (`bin/softeng.sh`) with `## What`-section and fence state flags plus a frontmatter `type: fix` check -- no sed/grep subprocesses
+- Detect the gate condition by extending the existing single-pass pure-bash `change.md` scanner in `cmd_action_uimpl` (`bin/softeng.sh`) with a `## What`-section state flag and a full-line marker match, plus a frontmatter `type: fix` check via the shared `md_read_frontmatter_field` helper -- no fence tracking
 - Place the gate as the first branch of the `uimpl` decision cascade, emitting a new prompt `instr_uimpl_fault.md` that renders the original invocation arguments for re-invocation and a conditional line to continue from an existing `fault.md`
 - Encode the marker placement rules and the bounded static investigation (no execution, ~5 searches / 10 file reads, early-stop rule) in `artdef_change_what_fix.md` next to the existing marker notation
 - Remove `--how`, `--plan`, `--no-impl`, and `--no-self-review` from `cmd_action_uchange` and `ACTION_OPTIONS[uchange]` (option lists render from `ACTION_OPTIONS` via `meta options`; `scripts/templates/actions/uchange.yaml` carries no option list and needs no change); drop the `(?how_requested)` How line and the impl-sections menu from `instr_uchange.md`
@@ -85,7 +85,7 @@ References:
 
 - [x] update: [softeng/uimpl.feature](../../../../specs/prod/softeng/uimpl.feature)
   - add: rule for the fault localization gate with scenarios:
-    - gate triggers only when change.md frontmatter is `type: fix` and the marker appears as a step inside the What section's fenced flowchart block; marker text elsewhere (prose, examples, other sections, other change types) does not trigger
+    - gate triggers only when change.md frontmatter is `type: fix` and the marker appears as a standalone line inside the What section; marker text elsewhere (embedded in prose, outside What, other change types) does not trigger
     - when gated, uimpl emits no How section and no planning sections regardless of options (--plan included)
     - gated instructions tell the agent to localize the fault and track efforts in fault.md in the Change Folder
     - when fault.md already exists, instructions tell the agent to read it and build on recorded efforts rather than restart
@@ -104,8 +104,8 @@ References:
 
 - [x] update: [sys/softeng.sh-action-uimpl.bats](../../../../../tests/sys/softeng.sh-action-uimpl.bats)
   - add: fault localization gate tests:
-    - `type: fix` + marker as a step inside the What section's fenced flowchart emits the fault prompt with no How and no planning sections
-    - negatives: marker in prose, marker in a fence outside What, `type: feat` -> gate does not trigger, normal cascade proceeds
+    - `type: fix` + marker as a standalone line inside the What section emits the fault prompt with no How and no planning sections
+    - negatives: marker embedded in prose, marker outside What, `type: feat` -> gate does not trigger, normal cascade proceeds
     - --plan does not bypass the gate
     - existing fault.md in the Change Folder adds the continue-from-fault.md line to the prompt; absent fault.md omits it
     - the prompt renders the re-invocation line with the original invocation arguments
@@ -115,7 +115,7 @@ References:
 - [x] update: [bin/softeng.sh](../../../../../bin/softeng.sh)
   - update: `ACTION_OPTIONS[uchange]` -- drop `--how`, `--plan`, `--no-impl`, `--no-self-review` (the meta-options consistency test enforces table/parser parity)
   - update: `cmd_action_uchange` -- remove the four option case arms and their locals, the `--no-impl` combination validation, the `plan_requested`/`how_requested` derivations, and the chain-self-review block; drop `how_requested`, `domains_maybe`, `fd_maybe`, `prov_maybe`, `td_maybe`, `constr_maybe`, and the chain/self-review vars from `context_vars`
-  - update: `cmd_action_uimpl` -- extend the single-pass `change.md` scan with frontmatter `type: fix` detection plus `## What`-section and fence state flags to detect the marker `? <-- fault: not yet localized` as a step inside the What fenced flowchart; add the gate as the first branch of the decision cascade, emitting `instr_uimpl_fault` with the Change Folder, a fault.md-exists flag, and the original invocation arguments
+  - update: `cmd_action_uimpl` -- extend the single-pass `change.md` scan with a `## What`-section state flag to detect the marker `? <-- fault: not yet localized` as a standalone line inside the What section, reading frontmatter `type: fix` via `md_read_frontmatter_field`; add the gate as the first branch of the decision cascade, emitting `instr_uimpl_fault` with the Change Folder, a fault.md-exists flag, and the original invocation arguments
 
 - [x] update: [prompts/instr_uchange.md](../../../../../bin/prompts/instr_uchange.md)
   - remove: the `How, see @artdef_change_how (?how_requested)` line, the `@include_impl_sections` reference, and the `@include_chain_self_review` reference (the include files stay -- uimpl prompts still use them)
