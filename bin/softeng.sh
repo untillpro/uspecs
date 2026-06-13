@@ -1004,6 +1004,16 @@ cmd_action_uimpl() {
         constr_maybe="1"
     fi
 
+    # Fix-type short-circuit: when change.md frontmatter `type: fix`, suppress
+    # the specs-tier cascade gates (Domain, FD, TD) so the cascade proceeds
+    # straight to Provisioning/Construction. See `Fix-type change skips
+    # specs-tier cascade steps` scenario in uimpl.feature.
+    if [[ -n "$type_fix" ]]; then
+        domains_maybe=""
+        fd_maybe=""
+        td_maybe=""
+    fi
+
     local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
 
     # Branching. The fault localization gate is the first branch: a fix whose

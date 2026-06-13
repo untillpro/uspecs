@@ -71,6 +71,15 @@ Feature: Implementation plan management
         | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                                                  |
       And AI Agent stops execution after performing the action
 
+    Scenario: Fix-type change skips specs-tier cascade steps
+      Given `change.md` frontmatter is `type: fix`
+      And `change.md` contains a `## How` section
+      And there are no unchecked to-do items in Implementation Plan File
+      And the cascade would otherwise propose a `Domain specifications`, `Functional design`, or `Technical design` section
+      When Engineer invokes uimpl action
+      Then AI Agent skips those specs-tier sections
+      And AI Agent proceeds to the next applicable cascade step (`Provisioning and configuration` or `Construction`)
+
     Scenario: Some unchecked to-do items
       Given some to-do items in Implementation Plan File are unchecked
       When Engineer invokes uimpl action

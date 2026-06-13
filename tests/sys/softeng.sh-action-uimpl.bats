@@ -230,6 +230,28 @@ _add_how_to_change_md() {
 }
 
 # ---------------------------------------------------------------------------
+# Helper: inject `type: <value>` into change.md YAML frontmatter, commit.
+# Inserts before the closing `---` of the frontmatter block.
+# Usage: _add_type_to_change_md "2601010000-my-change" "fix"
+# ---------------------------------------------------------------------------
+_add_type_to_change_md() {
+    local folder_name="$1"
+    local change_type="$2"
+    local change_path="$PROJECT_ROOT/uspecs/changes/$folder_name/change.md"
+    awk -v t="$change_type" '
+        /^---$/ {
+            c++
+            if (c == 2) { print "type: " t }
+            print
+            next
+        }
+        { print }
+    ' "$change_path" > "$change_path.tmp" && mv "$change_path.tmp" "$change_path"
+    git -C "$PROJECT_ROOT" add .
+    git -C "$PROJECT_ROOT" commit -q -m "add type: $change_type to $folder_name"
+}
+
+# ---------------------------------------------------------------------------
 # Helper: write impl.md with given sections (all items checked), commit, run uimpl
 # Usage: _uimpl_with_sections "domains" "fd" "prov" ...
 #   Supported section names: domains, fd, prov, td, constr
@@ -382,6 +404,56 @@ _uimpl_with_sections() {
     _uimpl_with_sections prov constr
     [ "$status" -eq 0 ]
     [[ "$output" == *"completed"* ]]
+}
+
+@test "uimpl: scn: Fix-type change skips specs-tier sections (Domain, FD, TD); emits Prov + Construction" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    _add_type_to_change_md "2601010000-my-change" "fix"
+    _add_how_to_change_md "2601010000-my-change"
+    # Create specs folder so specs_maybe=1 (without fix-type clearing,
+    # domains/fd/td would all be emitted).
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # type: fix, no plan sections -> specs-tier suppressed; prov + constr present
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" != *"- Functional design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"- Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" != *"- Technical design section"* ]]
+    [[ "$output" != *"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"- Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
+
+    # type: fix, Provisioning already exists -> only Construction present
+    _uimpl_with_sections prov
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Functional design section"* ]]
+    [[ "$output" != *"- Provisioning and configuration section"* ]]
+    [[ "$output" != *"- Technical design section"* ]]
+    [[ "$output" == *"- Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
+}
+
+@test "uimpl: scn: Non-fix type (feat) retains full cascade including specs-tier sections (regression)" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    _add_type_to_change_md "2601010000-my-change" "feat"
+    _add_how_to_change_md "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    # type: feat, no plan sections -> all five cascade blocks present
+    _uimpl_with_sections
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"- Functional design section"*"Required skill: uspecs-sec-fd"* ]]
+    [[ "$output" == *"- Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
+    [[ "$output" == *"- Technical design section"*"Required skill: uspecs-sec-td"* ]]
+    [[ "$output" == *"- Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 }
 
 @test "uimpl: scn: Construction frontmatter sub-bullets (scope/breaking) appear when constr_maybe is set, with scope branch driven by domains_defined" {
