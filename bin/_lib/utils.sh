@@ -96,6 +96,19 @@ error() {
     exit 1
 }
 
+# shell_quote_args "$@"
+# Joins positional parameters into a space-separated string with each argument
+# shell-quoted for safe re-execution. Preserves arguments containing whitespace,
+# quotes, or metacharacters. Returns empty string for zero arguments.
+# Usage: quoted=$(shell_quote_args "$@")
+shell_quote_args() {
+    if (( $# == 0 )); then
+        return 0
+    fi
+    # shellcheck disable=SC2059
+    printf ' %q' "$@"
+}
+
 # is_tty
 # Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
 is_tty() {
@@ -390,6 +403,57 @@ md_read_frontmatter_field() {
     ' "$file")
 
     [[ -n "$value" ]] || error "frontmatter field not found: $field_name in $file"
+    printf '%s\n' "$value"
+}
+
+# md_read_frontmatter_field_required <file> <field_name>
+# Like md_read_frontmatter_field but treats missing fields as a critical error
+# with a clear "required field" message. Use this when the field is mandatory
+# and its absence indicates broken input that must be fixed before proceeding.
+# Propagates "file not found" errors; only overrides "field not found" errors.
+md_read_frontmatter_field_required() {
+    local file="$1"
+    local field_name="$2"
+    local value rc=0
+
+    # Don't capture stderr - let base errors (file not found, field not found) print
+    value=$(md_read_frontmatter_field "$file" "$field_name") || rc=$?
+    if (( rc != 0 )); then
+        # If file doesn't exist, base already printed "file not found" - just exit
+        [[ -f "$file" ]] || exit "$rc"
+        # File exists but field is missing - augment with "required field" context
+        error "frontmatter is missing required '${field_name}:' field in $file"
+    fi
+
+    printf '%s\n' "$value"
+}
+
+# md_read_frontmatter_field_optional <file> <field_name>
+# Like md_read_frontmatter_field but returns empty string when the field is
+# absent instead of erroring. Use this for truly optional fields like scope,
+# breaking, issue_url. Returns empty when the file or field is missing.
+md_read_frontmatter_field_optional() {
+    local file="$1"
+    local field_name="$2"
+
+    # Return empty silently if file doesn't exist (optional field semantics).
+    [[ -f "$file" ]] || return 0
+
+    local value
+    value=$(awk -v field="$field_name" '
+        /^---$/ { block++; next }
+        block == 1 {
+            # Match "field_name: value"
+            if ($0 ~ "^" field ":") {
+                sub("^" field ":[[:space:]]*", "")
+                print
+                exit
+            }
+        }
+        block >= 2 { exit }
+    ' "$file")
+
+    # Return the value (empty if field not found, which is fine for optional).
     printf '%s\n' "$value"
 }
 

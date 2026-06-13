@@ -55,8 +55,9 @@ uspecs is a framework for AI-assisted software engineering. It provides tools an
 
 Change Folder artifacts:
 
-- change.md - describes the change request (Why/What, plus How when created with --no-impl)
+- change.md - describes the change request (Why/What)
 - issue*.md - describes the issue that prompted the change
+- fault.md - fault localization log for fix-type changes: tracks investigation efforts while the fault remains unlocalized; persists across uimpl invocations; format is up to the agent
 
 ## Specification management concepts
 
@@ -81,7 +82,7 @@ Overview:
 
 List:
 
-- uchange - create a new Change Request with Change Folder, optionally chain into uimpl
+- uchange - create a new Change Request with Change Folder
 - uimpl - add next implementation plan section to impl.md (iterative: domain specs -> functional design -> provisioning -> technical design -> construction)
 - upr - create a pull request (squash, force-push, open PR)
 - umergepr - merge an existing pull request

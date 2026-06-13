@@ -95,6 +95,51 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# md_read_frontmatter_field_required
+# ---------------------------------------------------------------------------
+
+@test "frontmatter_required: extracts existing field" {
+    run md_read_frontmatter_field_required "$TEST_TMPDIR/change.md" "change_id"
+    [ "$status" -eq 0 ]
+    [ "$output" = "2603120700-introduce-umergepr" ]
+}
+
+@test "frontmatter_required: fails with clear message for absent field" {
+    run md_read_frontmatter_field_required "$TEST_TMPDIR/change.md" "nonexistent"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"missing required"* ]]
+    [[ "$output" == *"nonexistent:"* ]]
+}
+
+@test "frontmatter_required: fails for missing file" {
+    run md_read_frontmatter_field_required "$TEST_TMPDIR/nonexistent.md" "field"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"file not found"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# md_read_frontmatter_field_optional
+# ---------------------------------------------------------------------------
+
+@test "frontmatter_optional: extracts existing field" {
+    run md_read_frontmatter_field_optional "$TEST_TMPDIR/change.md" "change_id"
+    [ "$status" -eq 0 ]
+    [ "$output" = "2603120700-introduce-umergepr" ]
+}
+
+@test "frontmatter_optional: returns empty for absent field" {
+    run md_read_frontmatter_field_optional "$TEST_TMPDIR/change.md" "nonexistent"
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+}
+
+@test "frontmatter_optional: returns empty for missing file" {
+    run md_read_frontmatter_field_optional "$TEST_TMPDIR/nonexistent.md" "field"
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+}
+
+# ---------------------------------------------------------------------------
 # md_read_title
 # ---------------------------------------------------------------------------
 

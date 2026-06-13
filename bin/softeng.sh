@@ -36,7 +36,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/meta.sh"
 
 # shellcheck disable=SC2016 # we do not expand by intent
 declare -A ACTION_OPTIONS=(
-    [uchange]='`--kebab-name <name>` (required), `--type <type>` (required), `--how`, `--plan`, `--no-impl`, `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`, `--no-self-review`'
+    [uchange]='`--kebab-name <name>` (required), `--type <type>` (required), `--branch`, `--no-branch`, `--issue-url <url>`, `--fetchable`, `--specs`'
     [uimpl]='`--change-folder <path>`, `--plan`, `--no-self-review`'
     [uarchive]='`--change-folder <path>`, `--all`'
     [upr]='`--no-archive`'
@@ -546,32 +546,16 @@ changes_validate_todos_completed() {
 # scripts/templates/actions/uchange.yaml; softeng.sh does not validate the
 # value itself and does not enumerate the list in error messages.
 cmd_action_uchange() {
-    local opt_no_impl=""
-    local opt_how=""
-    local opt_plan=""
     local opt_specs=""
     local opt_branch=""
     local opt_no_branch=""
     local opt_fetchable=""
-    local opt_no_self_review=""
     local issue_url=""
     local change_name=""
     local change_type=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --no-impl)
-                opt_no_impl="1"
-                shift
-                ;;
-            --how)
-                opt_how="1"
-                shift
-                ;;
-            --plan)
-                opt_plan="1"
-                shift
-                ;;
             --kebab-name)
                 if [[ $# -lt 2 || -z "$2" ]]; then
                     error "--kebab-name requires a name argument"
@@ -609,10 +593,6 @@ cmd_action_uchange() {
                 opt_fetchable="1"
                 shift
                 ;;
-            --no-self-review)
-                opt_no_self_review="1"
-                shift
-                ;;
             *)
                 error "Unknown argument: $1"
                 ;;
@@ -633,10 +613,6 @@ cmd_action_uchange() {
 
     if [[ -n "$opt_fetchable" && -z "$issue_url" ]]; then
         error "--fetchable requires an issue URL (pass --issue-url <url>)"
-    fi
-
-    if [[ -n "$opt_no_impl" && ( -n "$opt_how" || -n "$opt_plan" ) ]]; then
-        error "--no-impl cannot be combined with --how or --plan"
     fi
 
     # Resolve the create-branch decision (default: true; --no-branch clears it;
@@ -694,8 +670,8 @@ cmd_action_uchange() {
 
     # Detect domains_defined: at least one `uspecs/specs/{domain}/domain.md` exists.
     # At uchange time `--specs` only creates the empty specs folder, so this is
-    # typically empty here; included so `@include_impl_sections` can resolve the
-    # `(?domains_defined)` conditional inside this context.
+    # typically empty here; included so `instr_uchange.md` can resolve its
+    # `(?domains_defined)` conditional.
     local domains_defined=""
     if [[ -n "$specs_maybe" ]]; then
         local _dd_path
@@ -707,12 +683,6 @@ cmd_action_uchange() {
         done
     fi
 
-    # Option-driven gates are named by what the user requested; the remaining
-    # `_maybe` flags below are derived section gates.
-    local plan_requested=""
-    [[ -n "$opt_plan" ]] && plan_requested="1"
-    local how_requested=""
-    [[ -n "$opt_how" ]] && how_requested="1"
     local fetchable_issue=""
     [[ -n "$opt_fetchable" ]] && fetchable_issue="1"
     local type_fix="" type_general=""
@@ -722,17 +692,6 @@ cmd_action_uchange() {
         type_general="1"
     fi
 
-    # Chain self-review is triggered only when `--plan` authored an impl plan
-    # (i.e. `plan_requested="1"`) and `--no-self-review` was not passed. On
-    # non-plan branches `--no-self-review` is a parsed no-op.
-    local chain_self_review=""
-    local self_review_type="" self_review_budget=""
-    if [[ -n "$plan_requested" && -z "$opt_no_self_review" ]]; then
-        chain_self_review="1"
-        self_review_type="specs"
-        self_review_budget="4"
-    fi
-    local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
     # shellcheck disable=SC2034  # used via nameref in emit_prompt
     declare -A context_vars=(
         [change_folder]="$change_folder_rel"
@@ -740,22 +699,12 @@ cmd_action_uchange() {
         [branch_name]="$branch_name"
         [create_branch]="$create_branch"
         [specs_folder]="$specs_folder_rel"
-        [how_requested]="$how_requested"
         [fetchable_issue]="$fetchable_issue"
         [type_fix]="$type_fix"
         [type_general]="$type_general"
         [issue_url]="$issue_url"
-        [domains_maybe]="${plan_requested:+$specs_maybe}"
         [domains_defined]="$domains_defined"
-        [fd_maybe]="${plan_requested:+$specs_maybe}"
-        [prov_maybe]="$plan_requested"
-        [td_maybe]="${plan_requested:+$specs_maybe}"
-        [constr_maybe]="$plan_requested"
         [change_file_rel_path]="$change_file"
-        [chain_self_review]="$chain_self_review"
-        [self_review_type]="$self_review_type"
-        [self_review_budget]="$self_review_budget"
-        [softeng_sh]="$softeng_sh"
     )
 
     emit_artifact "change_frontmatter" "$frontmatter" \
@@ -772,6 +721,11 @@ cmd_action_uimpl() {
     local opt_change_folder=""
     local opt_no_self_review=""
     local opt_plan=""
+    # Original invocation arguments, rendered into the fault localization
+    # gate's re-invocation line. Each argument is shell-quoted so values
+    # containing whitespace or metacharacters survive copy/paste re-runs.
+    local original_args
+    original_args=$(shell_quote_args "$@")
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -966,19 +920,32 @@ cmd_action_uimpl() {
     _uimpl_flush_item
 
     # `## How` lives only on `change.md` (it is part of the change request,
-    # not the implementation plan), so detect it against change.md regardless
-    # of which file was selected as the Implementation Plan File above.
-    # Match level-2 only -- `## How` is the canonical heading per
-    # `@artdef_change_how`; a nested `### How` must not satisfy this check.
+    # not the implementation plan), so scan change.md regardless of which
+    # file was selected as the Implementation Plan File above. Match level-2
+    # only -- `## How` is the canonical heading per `@artdef_change_how`; a
+    # nested `### How` must not satisfy this check.
+    # The same pass detects the fault localization gate input: the
+    # unlocalized fault marker `? <-- fault: not yet localized` as a
+    # standalone line anywhere inside the `## What` section. The full-line
+    # match keeps marker mentions in prose from counting; markers outside
+    # What do not count. Frontmatter `type: fix` is read via the shared
+    # frontmatter helper.
     local _change_md_path="$project_dir/$change_folder_rel/change.md"
+    local type_fix="" fault_unlocalized=""
+    local _fault_marker_re='^[[:space:]]*\?[[:space:]]+<--[[:space:]]+fault: not yet localized[[:space:]]*$'
     if [[ -f "$_change_md_path" ]]; then
-        local _how_line
-        while IFS= read -r _how_line; do
-            case "$_how_line" in
-                "## How"|"## How "*)
-                    how_exists="1"
-                    break
-                    ;;
+        local _cm_type
+        _cm_type=$(md_read_frontmatter_field_optional "$_change_md_path" "type")
+        [[ "$_cm_type" == "fix" ]] && type_fix="1"
+        local _cm_line _cm_in_what=0
+        while IFS= read -r _cm_line; do
+            case "$_cm_line" in
+                "## How"|"## How "*)   how_exists="1"; _cm_in_what=0 ;;
+                "## What"|"## What "*) _cm_in_what=1 ;;
+                "## "*|"# "*)          _cm_in_what=0 ;;
+                *)  if (( _cm_in_what )) && [[ "$_cm_line" =~ $_fault_marker_re ]]; then
+                        fault_unlocalized="1"
+                    fi ;;
             esac
         done < "$_change_md_path"
     fi
@@ -1037,8 +1004,23 @@ cmd_action_uimpl() {
         constr_maybe="1"
     fi
 
-    # Branching
-    if [[ "$non_review_unchecked_count" -eq 0 && -n "$has_review_unchecked" ]]; then
+    local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
+
+    # Branching. The fault localization gate is the first branch: a fix whose
+    # What section still carries the unlocalized fault marker must be
+    # localized before any How authoring or planning; no option bypasses it.
+    if [[ -n "$type_fix" && -n "$fault_unlocalized" ]]; then
+        local fault_md_exists=""
+        [[ -f "$project_dir/$change_folder_rel/fault.md" ]] && fault_md_exists="1"
+        # shellcheck disable=SC2034
+        declare -A fault_vars=(
+            [change_folder]="$change_folder_rel"
+            [fault_md_exists]="$fault_md_exists"
+            [uimpl_reinvoke]="bash \"$softeng_sh\" action uimpl${original_args}"
+        )
+        prompt_start_instructions "action"
+        emit_prompt "$prompts_dir" "instr_uimpl_fault" fault_vars
+    elif [[ "$non_review_unchecked_count" -eq 0 && -n "$has_review_unchecked" ]]; then
         # Only review item unchecked
         prompt_start_instructions "results"
         emit_prompt "$prompts_dir" "instr_uimpl_review_pending"
@@ -1058,7 +1040,6 @@ cmd_action_uimpl() {
                 self_review_budget="4"
             fi
         fi
-        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
         # shellcheck disable=SC2034
         declare -A todos_vars=(
             [change_folder]="$change_folder_rel"
@@ -1099,7 +1080,6 @@ cmd_action_uimpl() {
             self_review_type="specs"
             self_review_budget="4"
         fi
-        local softeng_sh="$_CTX_SCRIPT_DIR/softeng.sh"
         # shellcheck disable=SC2034
         declare -A impl_vars=(
             [change_folder]="$change_folder_rel"
@@ -1562,16 +1542,13 @@ cmd_action_upr() {
     # in scripts/templates/actions/uchange.yaml and is surfaced to the user
     # by the AI Agent via the uchange dispatch instructions.
     local change_type change_scope change_breaking
-    change_type=$(md_read_frontmatter_field "$change_file" "type" 2>/dev/null) || true
-    if [[ -z "$change_type" ]]; then
-        error "change.md frontmatter is missing required 'type:' field. AI Agent: read the allowed Conventional Commits types from your 'uchange' dispatch instructions, present them to the user, then add 'type: <value>' to ${change_file} and re-run."
-    fi
-    change_scope=$(md_read_frontmatter_field "$change_file" "scope" 2>/dev/null) || true
+    change_type=$(md_read_frontmatter_field_required "$change_file" "type")
+    change_scope=$(md_read_frontmatter_field_optional "$change_file" "scope")
     change_scope=$(normalize_change_scope "$change_scope")
-    change_breaking=$(md_read_frontmatter_field "$change_file" "breaking" 2>/dev/null) || true
+    change_breaking=$(md_read_frontmatter_field_optional "$change_file" "breaking")
 
     local issue_url pr_title commit_message see_details_line
-    issue_url=$(md_read_frontmatter_field "$change_file" "issue_url" 2>/dev/null) || true
+    issue_url=$(md_read_frontmatter_field_optional "$change_file" "issue_url")
 
     see_details_line="See change.md for details"
 
