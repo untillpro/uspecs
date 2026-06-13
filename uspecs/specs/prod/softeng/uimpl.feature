@@ -49,6 +49,7 @@ Feature: Implementation plan management
       Given there are no unchecked to-do items in Implementation Plan File
       And `change.md` does not contain a `## How` section
       And no planning section (`Domain specifications`, `Functional design`, `Provisioning and configuration`, `Technical design`, `Construction`) exists in Implementation Plan File
+      And the fault localization gate does not trigger (see Rule: Fault localization gate, which precedes How authoring)
       When Engineer invokes uimpl action <flag>
       Then AI Agent <outcome>
       Examples:
@@ -130,3 +131,52 @@ Feature: Implementation plan management
       When Engineer invokes uimpl action
       Then AI Agent emits the "plan completed" notice
       And AI Agent does not invoke self-review
+
+  Rule: Fault localization gate
+
+    Scenario Outline: Gate trigger conditions
+      Given change.md frontmatter has type <type>
+      And the unlocalized fault marker `? <-- fault: not yet localized` appears <location>
+      When Engineer invokes uimpl action
+      Then the fault localization gate <outcome>
+      Examples:
+        | type | location                                      | outcome          |
+        | fix  | as a standalone line in the What section      | triggers         |
+        | fix  | embedded in a prose line in the What section  | does not trigger |
+        | fix  | as a standalone line outside the What section | does not trigger |
+        | feat | as a standalone line in the What section      | does not trigger |
+
+    Scenario Outline: Gated invocation emits no planning content
+      Given the fault localization gate triggers
+      When Engineer invokes uimpl action <flag>
+      Then AI Agent does not create a `## How` section
+      And AI Agent does not create any planning section
+      Examples:
+        | flag          |
+        | without flags |
+        | with `--plan` |
+
+    Scenario: Gated instructions direct fault localization
+      Given the fault localization gate triggers
+      When Engineer invokes uimpl action
+      Then AI Agent is instructed to localize the fault
+      And AI Agent is instructed to track localization efforts in fault.md in the Change Folder
+
+    Scenario: Existing fault.md is continued, not restarted
+      Given the fault localization gate triggers
+      And fault.md exists in the Change Folder
+      When Engineer invokes uimpl action
+      Then AI Agent is instructed to read fault.md and build on the recorded efforts rather than restart the investigation
+
+    Scenario: Successful localization
+      Given the fault localization gate triggers
+      When AI Agent localizes the fault
+      Then AI Agent replaces the `?` step in the What section flowchart with the concrete faulty step
+      And AI Agent re-invokes uimpl with the original arguments
+
+    Scenario: Failed localization
+      Given the fault localization gate triggers
+      When AI Agent cannot localize the fault
+      Then AI Agent updates fault.md with the efforts taken
+      And AI Agent informs the Engineer of the efforts taken
+      And AI Agent stops processing
