@@ -2,7 +2,7 @@
 
 ## data
 
-The change request `${change_folder}/change.md` is a fix whose fault is not yet localized: the `## What` flowchart carries the `? <-- fault: not yet localized` marker. How authoring and implementation planning are gated until the fault is localized.
+The change request `${change_folder}/change.md` is a fix whose fault is not yet localized: the `## What` section carries the `? <-- fault: not yet localized` marker on a standalone line.
 
 Read `${change_folder}/fault.md` and build on the recorded efforts rather than restart the investigation. (?fault_md_exists)
 
@@ -11,7 +11,6 @@ Your task is to localize the fault: identify the faulty mechanism, file, symbol,
 Rules:
 
 - Track localization efforts in `${change_folder}/fault.md`; the file persists across invocations and its format is up to you
-- Do not author `## How` and do not add planning sections
 
 On success:
 
