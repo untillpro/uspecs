@@ -410,14 +410,20 @@ md_read_frontmatter_field() {
 # Like md_read_frontmatter_field but treats missing fields as a critical error
 # with a clear "required field" message. Use this when the field is mandatory
 # and its absence indicates broken input that must be fixed before proceeding.
+# Propagates "file not found" errors; only overrides "field not found" errors.
 md_read_frontmatter_field_required() {
     local file="$1"
     local field_name="$2"
-    local value
+    local value rc=0
 
-    value=$(md_read_frontmatter_field "$file" "$field_name" 2>&1) || {
-        error "change.md frontmatter is missing required '${field_name}:' field"
-    }
+    # Don't capture stderr - let base errors (file not found, field not found) print
+    value=$(md_read_frontmatter_field "$file" "$field_name") || rc=$?
+    if (( rc != 0 )); then
+        # If file doesn't exist, base already printed "file not found" - just exit
+        [[ -f "$file" ]] || exit "$rc"
+        # File exists but field is missing - augment with "required field" context
+        error "frontmatter is missing required '${field_name}:' field in $file"
+    fi
 
     printf '%s\n' "$value"
 }
