@@ -96,6 +96,19 @@ error() {
     exit 1
 }
 
+# shell_quote_args "$@"
+# Joins positional parameters into a space-separated string with each argument
+# shell-quoted for safe re-execution. Preserves arguments containing whitespace,
+# quotes, or metacharacters. Returns empty string for zero arguments.
+# Usage: quoted=$(shell_quote_args "$@")
+shell_quote_args() {
+    if (( $# == 0 )); then
+        return 0
+    fi
+    # shellcheck disable=SC2059
+    printf ' %q' "$@"
+}
+
 # is_tty
 # Returns 0 if stdin is connected to a terminal, 1 if piped or redirected.
 is_tty() {

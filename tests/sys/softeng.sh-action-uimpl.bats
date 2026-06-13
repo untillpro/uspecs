@@ -1232,8 +1232,34 @@ _what_with_marker() {
     [ "$status" -eq 0 ]
     [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
 
-    # And AI Agent re-invokes uimpl with the original arguments
     # The re-invocation line uses the absolute softeng_sh path (rendered from
     # $_CTX_SCRIPT_DIR) and carries the original invocation arguments.
     [[ "$output" == *"\"$PROJECT_ROOT/bin/softeng.sh\" action uimpl --change-folder uspecs/changes/2601010000-my-change --no-self-review"* ]]
+
+    # Now test with change folder containing whitespace to verify shell_quote_args
+    # properly escapes arguments for copy/paste re-execution
+    local folder_with_space="uspecs/changes/2601 my change"
+    mkdir -p "$PROJECT_ROOT/$folder_with_space"
+    cat > "$PROJECT_ROOT/$folder_with_space/change.md" <<'EOF'
+---
+change_id: 2601010000-my-change
+type: fix
+---
+# Change request
+
+## What
+
+? <-- fault: not yet localized
+EOF
+    cat > "$PROJECT_ROOT/$folder_with_space/impl.md" <<'EOF'
+# Implementation plan
+EOF
+    git add "$folder_with_space"
+    git commit -q -m "test change with space"
+
+    uspecs action uimpl --change-folder "$folder_with_space"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'<instruction id="instr_uimpl_fault"'* ]]
+    # The re-invocation line must quote the folder path to preserve the space
+    [[ "$output" == *"uspecs/changes/2601\\ my\\ change"* ]]
 }

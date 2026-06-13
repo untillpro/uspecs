@@ -722,8 +722,10 @@ cmd_action_uimpl() {
     local opt_no_self_review=""
     local opt_plan=""
     # Original invocation arguments, rendered into the fault localization
-    # gate's re-invocation line.
-    local original_args="$*"
+    # gate's re-invocation line. Each argument is shell-quoted so values
+    # containing whitespace or metacharacters survive copy/paste re-runs.
+    local original_args
+    original_args=$(shell_quote_args "$@")
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -1014,7 +1016,7 @@ cmd_action_uimpl() {
         declare -A fault_vars=(
             [change_folder]="$change_folder_rel"
             [fault_md_exists]="$fault_md_exists"
-            [uimpl_reinvoke]="bash \"$softeng_sh\" action uimpl${original_args:+ $original_args}"
+            [uimpl_reinvoke]="bash \"$softeng_sh\" action uimpl${original_args}"
         )
         prompt_start_instructions "action"
         emit_prompt "$prompts_dir" "instr_uimpl_fault" fault_vars
