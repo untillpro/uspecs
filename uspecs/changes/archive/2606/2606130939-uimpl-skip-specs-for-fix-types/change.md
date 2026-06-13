@@ -37,25 +37,25 @@ Out of scope:
 
 References:
 
-- [uimpl action implementation](../../../bin/softeng.sh)
-- [uimpl feature spec](../../../uspecs/specs/prod/softeng/uimpl.feature)
-- [uimpl system tests](../../../tests/sys/softeng.sh-action-uimpl.bats)
-- [md_read_frontmatter_field helper](../../../bin/_lib/utils.sh)
-- [instr_uimpl prompt template](../../../bin/prompts/instr_uimpl.md)
+- [uimpl action implementation](../../../../../bin/softeng.sh)
+- [uimpl feature spec](../../../../../uspecs/specs/prod/softeng/uimpl.feature)
+- [uimpl system tests](../../../../../tests/sys/softeng.sh-action-uimpl.bats)
+- [md_read_frontmatter_field helper](../../../../../bin/_lib/utils.sh)
+- [instr_uimpl prompt template](../../../../../bin/prompts/instr_uimpl.md)
 
 ## Functional design
 
-- [x] update: [softeng/uimpl.feature](../../specs/prod/softeng/uimpl.feature)
+- [x] update: [softeng/uimpl.feature](../../../../specs/prod/softeng/uimpl.feature)
   - add: scenario establishing that when `change.md` frontmatter is `type: fix` and `## How` exists with no unchecked to-do items, `uimpl` skips the specs-tier cascade steps (Domain specifications, Functional design, Technical design) and proceeds to the next applicable cascade step (Provisioning and configuration or Construction)
 
 ## Construction
 
-- [x] update: [sys/softeng.sh-action-uimpl.bats](../../../tests/sys/softeng.sh-action-uimpl.bats)
+- [x] update: [sys/softeng.sh-action-uimpl.bats](../../../../../tests/sys/softeng.sh-action-uimpl.bats)
   - add: test asserting that a change folder with `type: fix` frontmatter and `## How` present (no plan sections) emits the `Provisioning and configuration` and `Construction` blocks but omits `Domain specifications`, `Functional design`, and `Technical design` blocks (mirror the pattern of `scn: No unchecked to-do items: no specs folder skips ...`)
   - add: test asserting that for `type: fix`, only `Construction` is emitted when `prov` already exists (specs-tier still skipped)
   - add: test asserting that an explicit non-fix `type:` (use `type: feat`) retains the full cascade — Domain specifications, Functional design, Technical design blocks are still emitted (regression guard for the type comparison)
   - test fixtures: write `type:` into `change.md` frontmatter directly (the existing `_make_change_folder` helper writes only `change_id:`); do not modify the helper
-- [x] update: [bin/softeng.sh](../../../bin/softeng.sh)
+- [x] update: [bin/softeng.sh](../../../../../bin/softeng.sh)
   - update: `cmd_action_uimpl` to read `type:` from change.md frontmatter via `md_read_frontmatter_field` after `change_folder_rel` is resolved
   - update: when `type == fix`, clear `domains_maybe`, `fd_maybe`, and `td_maybe` after the existing cascade-gate computation, leaving `prov_maybe` and `constr_maybe` intact
   - add: a brief comment near the clearing block referencing the `Fix-type change skips specs-tier cascade steps` scenario in `uimpl.feature`
