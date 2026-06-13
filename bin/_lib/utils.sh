@@ -393,6 +393,51 @@ md_read_frontmatter_field() {
     printf '%s\n' "$value"
 }
 
+# md_read_frontmatter_field_required <file> <field_name>
+# Like md_read_frontmatter_field but treats missing fields as a critical error
+# with a clear "required field" message. Use this when the field is mandatory
+# and its absence indicates broken input that must be fixed before proceeding.
+md_read_frontmatter_field_required() {
+    local file="$1"
+    local field_name="$2"
+    local value
+
+    value=$(md_read_frontmatter_field "$file" "$field_name" 2>&1) || {
+        error "change.md frontmatter is missing required '${field_name}:' field"
+    }
+
+    printf '%s\n' "$value"
+}
+
+# md_read_frontmatter_field_optional <file> <field_name>
+# Like md_read_frontmatter_field but returns empty string when the field is
+# absent instead of erroring. Use this for truly optional fields like scope,
+# breaking, issue_url. Returns empty when the file or field is missing.
+md_read_frontmatter_field_optional() {
+    local file="$1"
+    local field_name="$2"
+
+    # Return empty silently if file doesn't exist (optional field semantics).
+    [[ -f "$file" ]] || return 0
+
+    local value
+    value=$(awk -v field="$field_name" '
+        /^---$/ { block++; next }
+        block == 1 {
+            # Match "field_name: value"
+            if ($0 ~ "^" field ":") {
+                sub("^" field ":[[:space:]]*", "")
+                print
+                exit
+            }
+        }
+        block >= 2 { exit }
+    ' "$file")
+
+    # Return the value (empty if field not found, which is fine for optional).
+    printf '%s\n' "$value"
+}
+
 # md_read_title <file>
 # Extracts the text of the first top-level heading (# ...) from a markdown file.
 # Skips YAML frontmatter if present. Fails if the file is missing or has no heading.

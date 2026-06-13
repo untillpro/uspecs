@@ -933,7 +933,7 @@ cmd_action_uimpl() {
     local _fault_marker_re='^[[:space:]]*\?[[:space:]]+<--[[:space:]]+fault: not yet localized[[:space:]]*$'
     if [[ -f "$_change_md_path" ]]; then
         local _cm_type
-        _cm_type=$(md_read_frontmatter_field "$_change_md_path" "type" 2>/dev/null) || true
+        _cm_type=$(md_read_frontmatter_field_optional "$_change_md_path" "type")
         [[ "$_cm_type" == "fix" ]] && type_fix="1"
         local _cm_line _cm_in_what=0
         while IFS= read -r _cm_line; do
@@ -1540,16 +1540,13 @@ cmd_action_upr() {
     # in scripts/templates/actions/uchange.yaml and is surfaced to the user
     # by the AI Agent via the uchange dispatch instructions.
     local change_type change_scope change_breaking
-    change_type=$(md_read_frontmatter_field "$change_file" "type" 2>/dev/null) || true
-    if [[ -z "$change_type" ]]; then
-        error "change.md frontmatter is missing required 'type:' field. AI Agent: read the allowed Conventional Commits types from your 'uchange' dispatch instructions, present them to the user, then add 'type: <value>' to ${change_file} and re-run."
-    fi
-    change_scope=$(md_read_frontmatter_field "$change_file" "scope" 2>/dev/null) || true
+    change_type=$(md_read_frontmatter_field_required "$change_file" "type")
+    change_scope=$(md_read_frontmatter_field_optional "$change_file" "scope")
     change_scope=$(normalize_change_scope "$change_scope")
-    change_breaking=$(md_read_frontmatter_field "$change_file" "breaking" 2>/dev/null) || true
+    change_breaking=$(md_read_frontmatter_field_optional "$change_file" "breaking")
 
     local issue_url pr_title commit_message see_details_line
-    issue_url=$(md_read_frontmatter_field "$change_file" "issue_url" 2>/dev/null) || true
+    issue_url=$(md_read_frontmatter_field_optional "$change_file" "issue_url")
 
     see_details_line="See change.md for details"
 
