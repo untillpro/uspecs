@@ -1,21 +1,42 @@
 ---
 name: uspecs-sec-domains
-description: Use this skill when authoring or reviewing the `## Domain specifications` section in `change.md` or `impl.md`  files.
+description: Use this skill when authoring or reviewing the `## Domain specifications` section in `change.md` or `impl.md` files, including deciding whether Domain Design Specification todo items are needed.
 user-invocable: false
 ---
 
 ## Domain specifications section
 
-Section contains to-do items for modifying Domain Specifications under `uspecs/specs/`:
+Section contains to-do items for modifying Domain Design Specifications: Domain Specifications and Bounded Context Specifications.
 
-- Domain Specification: `uspecs/specs/{domain}/domain.md`
+[Domain Design Specification artifacts](../uspecs-concepts/shared/domain-artifacts.md)
 
-Use when:
+Use when the change affects domain/context actors, concepts, boundaries, relationships, Ubiquitous Language, model, lifecycle, or behavior.
 
-- Change request modifies an existing domain (actors, concepts, contexts)
-- Change request explicitly requires creating new domain specifications or deriving domain specifications from codebase
+Do not use when: the change only adds features, scenarios, or implementation details within an already-defined domain/context.
 
-Do not use when: the change only adds features, scenarios, or implementation details within an already-defined domain.
+## Assessing Domain Design Specification impact
+
+Decide whether Domain Design Specifications need todos from the change request and known or proposed specification names; do not load `uspecs-domains` only to make this impact check.
+
+Add or update a Domain Specification todo when the change affects:
+
+- domain scope or out-of-scope statements
+- domain-level external actors
+- subdomains, capabilities, or capability-to-context mapping
+- the bounded context list, context map, or domain-level relationship indexes
+- creation, rename, removal, or reassignment of a bounded context
+
+Add or update a Bounded Context Specification todo when the change affects:
+
+- a context boundary, purpose, ownership, or external actors
+- context relationships, service exposure, model alignment, or canonical relationship details
+- Ubiquitous Language within a context
+- model structure such as Entities, Value Objects, Aggregates, fields, or invariants
+- context-level lifecycle or model behavior such as Factories, Repositories, Services, Events, invariants, state transitions, or rules that change the context model
+
+Do not add a Domain Design Specification todo when the change only updates feature scenarios, implementation code, tests, provisioning, or technical design within an already-defined domain and context, with no change to actors, boundaries, relationships, language, model, lifecycle, or behavior.
+
+If the change names a likely domain/context impact but the exact modeling answer is unclear, add a targeted todo describing what must be reviewed or updated. Use `uspecs-domains` only when the current task also requires writing or reviewing the artifact content or resolving the modeling choice.
 
 ## Rules
 
@@ -29,6 +50,9 @@ Do not use when: the change only adds features, scenarios, or implementation det
 
 - [ ] create: [softeng/domain.md](../../specs/prod/softeng/domain.md)
   - Domain Specification for software engineering workflow: actors, core concepts, contexts
+
+- [ ] create: [planning/context.md](../../specs/prod/softeng/planning/context.md)
+  - Bounded Context Specification for planning workflow: ubiquitous language, relationships, tactical model, lifecycle, and behavior
 
 - [ ] update: [payments/domain.md](../../specs/prod/payments/domain.md)
   - add: "Refund" concept with lifecycle and authorization rules

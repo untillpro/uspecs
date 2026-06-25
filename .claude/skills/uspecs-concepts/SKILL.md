@@ -21,28 +21,14 @@ uspecs is a framework for AI-assisted software engineering. It provides tools an
 
 ## Domain-Driven Design (DDD) concepts
 
+For detailed DDD/domain/context/tactical design authoring and review rules and examples, use [uspecs-domains](../uspecs-domains/SKILL.md).
+
 - Domain: target subject area of a computer system
   - Example domains are `prod` and `devops`
-    - `prod`: The business logic and customer-facing capabilities of the product - what the product does for its users
-    - `devops`: development, testing, delivery, deployment, maintenance (monitoring, observability, etc.) aspects of the product
-- Object (Domain Object): one of
-  - Entity: has identity and lifecycle (e.g., User, Order, Article)
-  - Value Object: defined by attributes, no identity (e.g., Address)
-  - Service: encapsulates operations over multiple objects
-- Bounded Context (Context): a specific area within a domain with a specific set of actors, concepts, operations, and rules
-  - Primary indicators
-    - Low coupling to other contexts
-    - Autonomy of evolution (components evolve independently)
-    - Team/organizational responsibility
-    - Data autonomy
-  - Naming: noun (normally plural) or noun phrase
-    - Examples: `payments`, `menu`
-- Feature: cohesive set of scenarios within a context
-  - Single object: operations on the same object
-  - Cross-object: related operations across multiple objects (workflow)
-  - Can involve multiple actors
-  - Context contains features, feature belongs to exactly one context
-  - Context defines WHAT (entities/nouns), feature defines HOW (actions/verbs)
+- Subdomain: distinct part of the problem space within a Domain
+- Bounded Context (Context): model boundary in the solution space with its own Ubiquitous Language
+- Tactical Design Elements: model elements inside a Context, such as Entities, Value Objects, Aggregates, Services, Events, Repositories, and Factories
+- Feature: cohesive set of scenarios within a Context
 
 ## Change management concepts
 
@@ -61,7 +47,9 @@ Change Folder artifacts:
 
 ## Specification management concepts
 
-- Domain specifications
+- Domain Design Specifications
+  - Domain Specification
+  - Bounded Context Specification
 - Functional Design Specifications
 - Technical Design Specifications
 
@@ -69,7 +57,7 @@ Ref. appropriate skills for explanations of these concepts.
 
 ## uspecs folder structure
 
-- uspecs/specs/{domain}/{context}/ - specification files
+- uspecs/specs/{domain}/ - domain folder, e.g. `prod`, `devops`
 - uspecs/changes/ - active Change Folders
 - uspecs/changes/archive/ - archived Change Folders
 
@@ -88,4 +76,3 @@ List:
 - umergepr - merge an existing pull request
 - uarchive - archive a completed Change Folder
 - usync - align Working Change Folder plan and specs with source changes since merge-base (dispatched via softeng.sh action usync)
-
