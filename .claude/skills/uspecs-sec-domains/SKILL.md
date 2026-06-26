@@ -1,10 +1,10 @@
 ---
 name: uspecs-sec-domains
-description: Use this skill when authoring or reviewing the `## Domain specifications` section in `change.md` or `impl.md` files, including deciding whether Domain Design Specification todo items are needed.
+description: Use this skill when authoring or reviewing the `## Domain design` section in `change.md` or `impl.md` files, including deciding whether Domain Design Specification todo items are needed.
 user-invocable: false
 ---
 
-## Domain specifications section
+## Domain design section
 
 Section contains to-do items for modifying Domain Design Specifications: Domain Specifications and Bounded Context Specifications.
 
@@ -46,7 +46,7 @@ If the change names a likely domain/context impact but the exact modeling answer
 ## Example
 
 ```markdown
-## Domain specifications
+## Domain design
 
 - [ ] create: [softeng/domain.md](../../specs/prod/softeng/domain.md)
   - Domain Specification for software engineering workflow: actors, core concepts, contexts

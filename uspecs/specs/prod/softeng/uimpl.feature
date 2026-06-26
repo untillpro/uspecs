@@ -48,7 +48,7 @@ Feature: Implementation plan management
     Scenario Outline: How section creation when missing
       Given there are no unchecked to-do items in Implementation Plan File
       And `change.md` does not contain a `## How` section
-      And no planning section (`Domain specifications`, `Functional design`, `Provisioning and configuration`, `Technical design`, `Construction`) exists in Implementation Plan File
+      And no planning section (`Domain design`, `Functional design`, `Provisioning and configuration`, `Technical design`, `Construction`) exists in Implementation Plan File
       And the fault localization gate does not trigger (see Rule: Fault localization gate, which precedes How authoring)
       When Engineer invokes uimpl action <flag>
       Then AI Agent <outcome>
@@ -63,7 +63,7 @@ Feature: Implementation plan management
       And AI Agent executes only one (the first available) <action> depending on <condition>
       Examples:
         | condition                                                                  | action                                                                                                                                                                                                              |
-        | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files                                                                                                                              |
+        | `Domain design` section does not exist and it is needed                    | Create `Domain design` section with checkbox items referencing Domain Design Specification artifacts                                                                                                                |
         | `Functional design` section does not exist and it is needed                | Create `Functional design` section with checkbox items referencing functional specification files                                                                                                                    |
         | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                                               |
         | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                                       |
@@ -75,7 +75,7 @@ Feature: Implementation plan management
       Given `change.md` frontmatter is `type: fix`
       And `change.md` contains a `## How` section
       And there are no unchecked to-do items in Implementation Plan File
-      And the cascade would otherwise propose a `Domain specifications`, `Functional design`, or `Technical design` section
+      And the cascade would otherwise propose a `Domain design`, `Functional design`, or `Technical design` section
       When Engineer invokes uimpl action
       Then AI Agent skips those specs-tier sections
       And AI Agent proceeds to the next applicable cascade step (`Provisioning and configuration` or `Construction`)
@@ -105,7 +105,7 @@ Feature: Implementation plan management
         | section                          | flag             | action                                                      |
         | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
-        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Domain design                    |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Construction                     |                  | invokes `softeng self-review --type construction --stage A` |
         | any                              | --no-self-review | does not invoke self-review                                 |
@@ -118,7 +118,7 @@ Feature: Implementation plan management
       Then AI Agent <action>
       Examples:
         | section                          | flag             | action                                                    |
-        | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Domain design                    |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4` |

@@ -875,7 +875,7 @@ cmd_action_uimpl() {
         ((_line_num++)) || true
         local _lower="${_line,,}"
         case "$_line" in
-            "##"*"Domain specifications"*) domains_exists="1"; _active_section="domains"; _flush_and_close_area ;;
+            "##"*"Domain design"*)         domains_exists="1"; _active_section="domains"; _flush_and_close_area ;;
             "##"*"Functional design"*)     fd_exists="1";      _active_section="fd";      _flush_and_close_area ;;
             "##"*"Provisioning"*)          prov_exists="1";    _active_section="prov";    _flush_and_close_area ;;
             "##"*"Technical design"*)      td_exists="1";      _active_section="td";      _flush_and_close_area ;;

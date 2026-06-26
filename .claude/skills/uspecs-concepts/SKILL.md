@@ -71,7 +71,7 @@ Overview:
 List:
 
 - uchange - create a new Change Request with Change Folder
-- uimpl - add next implementation plan section to impl.md (iterative: domain specs -> functional design -> provisioning -> technical design -> construction)
+- uimpl - add next implementation plan section to impl.md (iterative: domain design -> functional design -> provisioning -> technical design -> construction)
 - upr - create a pull request (squash, force-push, open PR)
 - umergepr - merge an existing pull request
 - uarchive - archive a completed Change Folder

@@ -263,7 +263,7 @@ _uimpl_with_sections() {
         echo ''
         for sec in "$@"; do
             case "$sec" in
-                domains) echo '## Domain specifications' ;;
+                domains) echo '## Domain design' ;;
                 fd)    echo '## Functional design' ;;
                 prov)  echo '## Provisioning and configuration' ;;
                 td)    echo '## Technical design specifications' ;;
@@ -283,7 +283,7 @@ _uimpl_with_sections() {
 # ---------------------------------------------------------------------------
 
 @test "uimpl: scn: No unchecked to-do items: section priority and completion" {
-    # condition: Domain specifications section does not exist and it is needed
+    # condition: Domain design section does not exist and it is needed
     # condition: Functional design section does not exist and it is needed
     # condition: Technical design specifications section does not exist and it is needed
     # condition: Provisioning and configuration section does not exist and it is needed
@@ -301,16 +301,16 @@ _uimpl_with_sections() {
     # condition: all sections do not exist and are needed -> all 5 bullets present
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" == *"- Functional design section"*"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" == *"- Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
     [[ "$output" == *"- Technical design section"*"Required skill: uspecs-sec-td"* ]]
     [[ "$output" == *"- Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
-    # condition: Domain specifications exists -> domains absent, fd/prov/td/constr present
+    # condition: Domain design exists -> domains absent, fd/prov/td/constr present
     _uimpl_with_sections domains
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" == *"- Functional design section"*"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" == *"- Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
@@ -320,7 +320,7 @@ _uimpl_with_sections() {
     # condition: Domains + Functional design exist -> domains/fd absent, prov/td/constr present
     _uimpl_with_sections domains fd
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -331,7 +331,7 @@ _uimpl_with_sections() {
     # condition: Domains + FD + Provisioning exist -> domains/fd/prov absent, td/constr present
     _uimpl_with_sections domains fd prov
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -343,7 +343,7 @@ _uimpl_with_sections() {
     # condition: Domains + FD + Provisioning + TD exist -> only constr present
     _uimpl_with_sections domains fd prov td
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -357,7 +357,7 @@ _uimpl_with_sections() {
     _uimpl_with_sections domains fd prov td constr
     [ "$status" -eq 0 ]
     [[ "$output" == *"completed"* ]]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -365,7 +365,7 @@ _uimpl_with_sections() {
     [[ "$output" != *"Required skill: uspecs-sec-constr"* ]]
 }
 
-@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain specifications, Functional design and Technical design specifications" {
+@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain design, Functional design and Technical design specifications" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
@@ -378,7 +378,7 @@ _uimpl_with_sections() {
     # No sections, no specs -> domains/fd/td absent, only prov/constr present
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -390,7 +390,7 @@ _uimpl_with_sections() {
     # Prov exists, no specs -> only constr present
     _uimpl_with_sections prov
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -419,7 +419,7 @@ _uimpl_with_sections() {
     # type: fix, no plan sections -> specs-tier suppressed; prov + constr present
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-fd"* ]]
@@ -431,7 +431,7 @@ _uimpl_with_sections() {
     # type: fix, Provisioning already exists -> only Construction present
     _uimpl_with_sections prov
     [ "$status" -eq 0 ]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"- Functional design section"* ]]
     [[ "$output" != *"- Provisioning and configuration section"* ]]
     [[ "$output" != *"- Technical design section"* ]]
@@ -449,7 +449,7 @@ _uimpl_with_sections() {
     # type: feat, no plan sections -> all five cascade blocks present
     _uimpl_with_sections
     [ "$status" -eq 0 ]
-    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
     [[ "$output" == *"- Functional design section"*"Required skill: uspecs-sec-fd"* ]]
     [[ "$output" == *"- Provisioning and configuration section"*"Required skill: uspecs-sec-prov"* ]]
     [[ "$output" == *"- Technical design section"*"Required skill: uspecs-sec-td"* ]]
@@ -839,8 +839,8 @@ _uimpl_with_section_todo() {
     todos_block="${todos_block%%</instruction>*}"
     [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 
-    # Domain specifications section -> specs review with default budget
-    _uimpl_with_section_todo '## Domain specifications'
+    # Domain design section -> specs review with default budget
+    _uimpl_with_section_todo '## Domain design'
     [ "$status" -eq 0 ]
     todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
@@ -954,7 +954,7 @@ _uimpl_with_section_todo() {
     [[ "$output" != *"self-review --type specs --stage A"* ]]
     # No planning-sections cascade prompt.
     [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"Required skill: uspecs-sec-domains"* ]]
 }
 
@@ -969,9 +969,9 @@ _uimpl_with_section_todo() {
     [ "$status" -eq 0 ]
     # The new How branch is skipped...
     [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
-    # ...and the existing cascade runs (Domain specifications is first).
+    # ...and the existing cascade runs (Domain design is first).
     [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
 }
 
 @test "uimpl: How creation: existing ## How falls through to planning-sections cascade" {
@@ -986,10 +986,10 @@ _uimpl_with_section_todo() {
     uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
     [ "$status" -eq 0 ]
     [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
-    # Existing cascade prompt is emitted (Domain specifications is the first
+    # Existing cascade prompt is emitted (Domain design is the first
     # missing planning section).
     [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" == *"- Domain specifications section"*"Required skill: uspecs-sec-domains"* ]]
+    [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
 }
 
 @test "uimpl: How creation: impl.md present but change.md lacks ## How -> branch still targets change.md" {
@@ -1146,7 +1146,7 @@ _what_with_marker() {
     [[ "$output" != *'@artdef_change_how'* ]]
     # And AI Agent does not create any planning section
     [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"- Construction and Quick start sections"* ]]
 }
 
@@ -1235,7 +1235,7 @@ _what_with_marker() {
     [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
     # And AI Agent does not create any planning section
     [[ "$output" != *'<instruction id="instr_uimpl"'* ]]
-    [[ "$output" != *"- Domain specifications section"* ]]
+    [[ "$output" != *"- Domain design section"* ]]
     [[ "$output" != *"- Construction and Quick start sections"* ]]
 }
 

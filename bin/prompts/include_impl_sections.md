@@ -11,7 +11,7 @@ For each section below, in order:
 
 Sections:
 
-- Domain specifications section. Required skill: uspecs-sec-domains (?domains_maybe)
+- Domain design section. Required skill: uspecs-sec-domains (?domains_maybe)
 - Functional design section. Required skill: uspecs-sec-fd (?fd_maybe)
 - Provisioning and configuration section. Required skill: uspecs-sec-prov (?prov_maybe)
 - Technical design section. Required skill: uspecs-sec-td (?td_maybe)
