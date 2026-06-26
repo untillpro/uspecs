@@ -5,7 +5,7 @@
 - Answer concisely unless explicitly asked for more detail, prefer short examples over long explanations
 - Avoid redirecting stderr to /dev/null (`2>/dev/null`); it silences error messages while the exit code still propagates, making failures hard to diagnose. Suppress output only when the command is genuinely expected to fail, and always provide a clear error message on failure instead
 - Do not run tests unless explicitly requested
-- Use `tests/run-tests.py [test-folder-or-file] [<pattern>]` to run tests
+- Use `python3 tests/run-tests.py [test-folder-or-file] [<pattern>]` to run tests
 - Never commit or push changes unless explicitly requested
 - `.agents` is a symlink to `.claude`; ignore `.agents` when searching, indexing, or traversing folders
 

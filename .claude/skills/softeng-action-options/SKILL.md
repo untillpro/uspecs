@@ -15,5 +15,5 @@ When editing `bin/softeng.sh`:
 Local consistency check: `tests/sys/softeng.sh-meta-options.bats`
 
 ```bash
-tests/run-tests.py tests/sys softeng.sh-meta-options
+python3 tests/run-tests.py tests/sys softeng.sh-meta-options
 ```

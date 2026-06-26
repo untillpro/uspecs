@@ -3,18 +3,18 @@
 Parallel test runner for bats tests.
 
 Usage:
-    python tests/run-tests.py <path> [pattern] [--workers N] [--per-file] [--prof]
+    python3 tests/run-tests.py <path> [pattern] [--workers N] [--per-file] [--prof]
 
 <path> may be a folder (recursively scanned for *.bats) or a single .bats file.
 
 Examples:
-    python tests/run-tests.py tests/unit
-    python tests/run-tests.py tests/unit --workers 4
-    python tests/run-tests.py tests/unit --per-file
-    python tests/run-tests.py tests/unit "emit_prompt"
-    python tests/run-tests.py tests/unit "emit_prompt" --per-file
-    python tests/run-tests.py tests/unit --prof
-    python tests/run-tests.py tests/sys/softeng.sh-action-uchange.bats
+    python3 tests/run-tests.py tests/unit
+    python3 tests/run-tests.py tests/unit --workers 4
+    python3 tests/run-tests.py tests/unit --per-file
+    python3 tests/run-tests.py tests/unit "emit_prompt"
+    python3 tests/run-tests.py tests/unit "emit_prompt" --per-file
+    python3 tests/run-tests.py tests/unit --prof
+    python3 tests/run-tests.py tests/sys/softeng.sh-action-uchange.bats
 """
 
 import argparse
