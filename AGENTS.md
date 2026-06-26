@@ -7,8 +7,7 @@
 - Do not run tests unless explicitly requested
 - Use `tests/run-tests.py [test-folder-or-file] [<pattern>]` to run tests
 - Never commit or push changes unless explicitly requested
-
-<!-- uspecs:begin -->
+- `.agents` is a symlink to `.claude`; ignore `.agents` when searching, indexing, or traversing folders
 
 ## Execution instructions
 
@@ -22,5 +21,4 @@
   - run `bash bin/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
     - Do not pass {other-input} verbatim to the command
   - Available commands: upr, umergepr, uimpl, uarchive, usync, uversion
-
-<!-- uspecs:end -->
+  
