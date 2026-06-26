@@ -66,7 +66,7 @@ Feature: Implementation plan management
         | `Domain design` section does not exist and it is needed                    | Create `Domain design` section with checkbox items referencing Domain Design Specification artifacts                                                                                                                |
         | `Functional design` section does not exist and it is needed                | Create `Functional design` section with checkbox items referencing functional specification files                                                                                                                    |
         | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                                               |
-        | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                                       |
+        | `Technical design` section does not exist and it is needed                 | Create `Technical design` section with checkbox items referencing technical specification files                                                                                                                      |
         | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, and set `scope:` as a YAML flow list (when at least one scope applies) and `breaking: true` (when the change is breaking) in change.md frontmatter |
         | Nothing of the above                                                       | Display message "No action needed"                                                                                                                                                                                  |
       And AI Agent stops execution after performing the action
@@ -104,7 +104,7 @@ Feature: Implementation plan management
       Examples:
         | section                          | flag             | action                                                      |
         | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
-        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Technical design                 |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Domain design                    |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Construction                     |                  | invokes `softeng self-review --type construction --stage A` |
@@ -121,7 +121,7 @@ Feature: Implementation plan management
         | Domain design                    |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4` |
-        | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Technical design                 |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Construction                     |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | any                              | --no-self-review | does not invoke self-review                               |
 

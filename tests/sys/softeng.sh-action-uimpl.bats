@@ -266,7 +266,7 @@ _uimpl_with_sections() {
                 domains) echo '## Domain design' ;;
                 fd)    echo '## Functional design' ;;
                 prov)  echo '## Provisioning and configuration' ;;
-                td)    echo '## Technical design specifications' ;;
+                td)    echo '## Technical design' ;;
                 constr) echo '## Construction' ;;
             esac
             echo ''
@@ -285,7 +285,7 @@ _uimpl_with_sections() {
 @test "uimpl: scn: No unchecked to-do items: section priority and completion" {
     # condition: Domain design section does not exist and it is needed
     # condition: Functional design section does not exist and it is needed
-    # condition: Technical design specifications section does not exist and it is needed
+    # condition: Technical design section does not exist and it is needed
     # condition: Provisioning and configuration section does not exist and it is needed
     # condition: Construction section does not exist and it is needed
     # condition: Nothing of the above
@@ -365,7 +365,7 @@ _uimpl_with_sections() {
     [[ "$output" != *"Required skill: uspecs-sec-constr"* ]]
 }
 
-@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain design, Functional design and Technical design specifications" {
+@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain design, Functional design and Technical design" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
@@ -833,7 +833,7 @@ _uimpl_with_section_todo() {
     [[ "$todos_block" == *"self-review --type specs --stage A -b 4"* ]]
 
     # Technical design section -> specs review with default budget
-    _uimpl_with_section_todo '## Technical design specifications'
+    _uimpl_with_section_todo '## Technical design'
     [ "$status" -eq 0 ]
     todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"
