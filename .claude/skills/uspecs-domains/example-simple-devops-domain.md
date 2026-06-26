@@ -22,10 +22,10 @@ Out of scope:
 
 Move product changes from source to production operation.
 
-| Capability             | Bounded Context(s) |
-|------------------------|--------------------|
-| Build and verification | dev                |
-| Release operation      | ops                |
+| Capability             | Realized by |
+|------------------------|-------------|
+| Build and verification | dev         |
+| Release operation      | ops         |
 
 ## External actors
 

@@ -56,26 +56,43 @@ Arrows point upstream -> downstream. Edge style encodes the exposure pattern:
 
 #### auth -> checkout: shopper identity (ohs + cf)
 
+Upstream:
+
 - Canonical service contract detail: [auth](../auth/context.md)
-- `auth` provides `checkout` with a validated shopper identity: stable shopper id, authenticated session, and identity claims needed to place the order
-- `checkout` validates shopper identity/token (query)
-- Local conformity note: `checkout` adopts `auth`'s stable shopper id and authenticated session as-is; auth publishes no separate formal language for this model-alignment stance
+- Provides validated shopper identity: stable shopper id, authenticated session, and identity claims needed to place the order
+
+Downstream:
+
+- Validates shopper identity/token (query)
+- Local conformity note: adopts upstream stable shopper id and authenticated session as-is; no separate formal language is published for this model-alignment stance
 
 #### cart -> checkout: cart contents (c/s)
 
+Upstream:
+
 - Canonical service contract detail: [cart](../cart/context.md)
-- `cart` provides `checkout` with an immutable cart snapshot: cart id, shopper id, product references, quantities, and pricing inputs used to create the order
-- `checkout` reads the `cart` snapshot (query)
+- Provides an immutable `CartSnapshot`: cart id, shopper id, product references, quantities, and pricing inputs used to create the order
+
+Downstream:
+
+- Reads the `CartSnapshot` (query)
 
 #### Payment Gateway -> checkout: payment authorization (ohs + acl)
 
-- External provider reference: `Payment Gateway` public payment API documentation
+Upstream:
+
+- External provider reference: public payment API documentation
 - Contract: gateway public payment API
-- `checkout` authorizes/captures payment (command)
-- The gateway has no Context spec; `checkout` owns the local ACL translation notes for this relationship
-- `PaymentGatewayClient` translates the `Payment Gateway`'s proprietary authorization response into `checkout`'s `PaymentCaptured` event and `Order` status
+
+Downstream:
+
+- Authorizes/captures payment (command)
+- Owns the local ACL translation notes because the upstream has no Context spec
+- `PaymentGatewayClient` translates the proprietary authorization response into `PaymentCaptured` event and `Order` status
 
 #### checkout: order events channel (ohs + pl)
+
+Provider:
 
 - Channel: `checkout.order-events`
 - Events: `OrderPlaced`, `PaymentCaptured`
@@ -89,6 +106,8 @@ Consumers:
 
 #### checkout: order placement API (ohs + pl)
 
+Provider:
+
 - Contract: `POST /api/checkout/orders`
 - Message: place order (command)
 - Language: `OrderPlacement.v1`
@@ -101,6 +120,8 @@ Consumers:
 
 #### checkout: order placement UI (ohs + pl)
 
+Provider:
+
 - Interface: checkout web UI
 - Interaction: place order
 - Language: `OrderPlacement.v1`
@@ -112,6 +133,8 @@ Consumers:
   - Places an order from their own cart
 
 #### checkout: order status API (ohs + pl)
+
+Provider:
 
 - Contract: `GET /api/checkout/orders/{order_id}/status`
 - Model: `OrderStatus.v1`
@@ -126,6 +149,8 @@ Consumers:
   - Conforms to `OrderStatus.v1` when checking whether a shopper can review a purchased product
 
 #### checkout: order status UI (ohs + pl)
+
+Provider:
 
 - Interface: checkout web UI
 - Model: `OrderStatus.v1`
@@ -152,32 +177,27 @@ Arrows point upstream -> downstream. Edge style encodes the alignment pattern:
 
 #### checkout -> notifications: message lifecycle terms (pl)
 
+Upstream:
+
 - Language: `MessageLifecycleTerms.v1`
 - Compatibility: backward-compatible additive changes only
-- Separate from `checkout.order-events`; notifications uses this published terminology in message templates and customer-facing copy
+- Separate from `checkout.order-events`
 
-Consumers:
+Downstream:
 
-- 📦 notifications
-  - Uses checkout's message lifecycle terms in customer-facing message templates
-
----
-
-## Ubiquitous Language
-
-- **Checkout**
-  - The process that turns a cart into a placed, paid order
-
-- **Cart snapshot**
-  - Immutable copy of the cart's contents taken when checkout begins; the basis for the placed order
+- Uses published message lifecycle terms in customer-facing message templates
 
 ## Model specification
 
 ### Entities
 
-#### Order
+#### Order (aggregate)
 
-A placed purchase; the Aggregate Root.
+A placed purchase.
+
+Contains: `OrderLine`.
+Embeds: `Address`, `Money`.
+References: shopper identity from `auth`.
 
 Fields:
 
@@ -192,55 +212,22 @@ Fields:
 | `ship_city`      | `string`  | Shipping city                      |
 | `ship_country`   | `string`  | Shipping country                   |
 
-Embeds: `Money` as `total_amount` + `total_currency`; `Address` as `ship_*`.
+Invariants:
 
-#### OrderLine
+- `Order` has at least one `OrderLine`.
+- `Order.total_amount` equals the sum of its `OrderLine` amounts after pricing rules are applied.
+- Captured payment cannot be recorded unless payment authorization has succeeded.
 
-One line item within an Order.
+State transitions:
 
-Fields:
+```mermaid
+stateDiagram-v2
+  Placed --> PaymentAuthorized
+  PaymentAuthorized --> PaymentCaptured
+  PaymentAuthorized --> PaymentFailed
+```
 
-| Field         | Type      | Description                          |
-|---------------|-----------|--------------------------------------|
-| `line_id`     | `string`  | Stable identifier for the order line |
-| `product_sku` | `string`  | Product reference from catalog       |
-| `quantity`    | `integer` | Ordered quantity                     |
-| `unit_amount` | `decimal` | Monetary amount for one unit         |
-
-### Value objects
-
-#### Money
-
-Amount and currency; immutable, value-equal.
-
-Fields:
-
-| Field      | Type      | Description       |
-|------------|-----------|-------------------|
-| `amount`   | `decimal` | Decimal amount    |
-| `currency` | `string`  | ISO currency code |
-
-#### Address
-
-Shipping destination; immutable.
-
-Fields:
-
-| Field     | Type     | Description         |
-|-----------|----------|---------------------|
-| `line1`   | `string` | First address line  |
-| `city`    | `string` | Destination city    |
-| `country` | `string` | Destination country |
-
-### Aggregates
-
-#### Order (aggregate)
-
-Root: `Order`.
-
-Encloses its `OrderLines`; external references point only at `Order`, which enforces the invariants that an order has at least one line and that its total equals the sum of its lines.
-
-### ERD
+ERD:
 
 ```mermaid
 erDiagram
@@ -257,27 +244,66 @@ erDiagram
     Order ||--|{ OrderLine : contains
 ```
 
+##### OrderLine
+
+One line item within an Order.
+
+Owned by: `Order`.
+
+Fields:
+
+| Field         | Type      | Description                          |
+|---------------|-----------|--------------------------------------|
+| `line_id`     | `string`  | Stable identifier for the order line |
+| `product_sku` | `string`  | Product reference from catalog       |
+| `quantity`    | `integer` | Ordered quantity                     |
+| `unit_amount` | `decimal` | Monetary amount for one unit         |
+
+### Value Objects
+
+#### Address
+
+Shipping destination; immutable.
+
+Fields:
+
+| Field     | Type     | Description         |
+|-----------|----------|---------------------|
+| `line1`   | `string` | First address line  |
+| `city`    | `string` | Destination city    |
+| `country` | `string` | Destination country |
+
+#### CartSnapshot
+
+Immutable cart contents captured when checkout begins.
+
+Fields:
+
+| Field         | Type           | Description                             |
+|---------------|----------------|-----------------------------------------|
+| `cart_id`     | `string`       | Cart identifier from cart               |
+| `shopper_id`  | `string`       | Shopper identity associated with cart   |
+| `items`       | `list<string>` | Product and quantity inputs for checkout |
+
+#### Money
+
+Amount and currency; immutable, value-equal.
+
+Fields:
+
+| Field      | Type      | Description       |
+|------------|-----------|-------------------|
+| `amount`   | `decimal` | Decimal amount    |
+| `currency` | `string`  | ISO currency code |
+
 ## Lifecycle and behavior
-
-### Factories
-
-- `OrderFactory`
-  - Builds an Order from a cart snapshot, so the aggregate's invariants hold from creation
-
-### Repositories
-
-- `OrderRepository`
-  - Loads and saves Order aggregates by `order_id`
-
-### Services
-
-- `PricingService`
-  - Computes the order total, taxes, and discounts; spans `Order`, `OrderLines`, and external tax rules, so it belongs to no single entity
 
 ### Events
 
-- `OrderPlaced`
-  - Emitted when a shopper confirms an order
+#### OrderPlaced
 
-- `PaymentCaptured`
-  - Emitted when the `⚙️ Payment Gateway` captures payment
+Published on `checkout.order-events` when a shopper confirms an order.
+
+#### PaymentCaptured
+
+Published on `checkout.order-events` when the `⚙️ Payment Gateway` captures payment.

@@ -23,29 +23,29 @@ Out of scope:
 
 Move product changes from source control to verified, deployable artifacts.
 
-| Capability               | Bounded Context(s) |
-|--------------------------|--------------------|
-| Source change management | source             |
-| Continuous integration   | ci                 |
-| Artifact publishing      | artifacts          |
+| Capability               | Realized by |
+|--------------------------|-------------|
+| Source change management | source      |
+| Continuous integration   | ci          |
+| Artifact publishing      | artifacts   |
 
 ### Operations (Supporting)
 
 Run production systems, observe runtime health, and coordinate incident response.
 
-| Capability            | Bounded Context(s) |
-|-----------------------|--------------------|
-| Release deployment    | deployments        |
-| Runtime observability | observability      |
-| Incident response     | incidents          |
+| Capability            | Realized by   |
+|-----------------------|---------------|
+| Release deployment    | deployments   |
+| Runtime observability | observability |
+| Incident response     | incidents     |
 
 ### Access (Generic)
 
 Manage technical identities, deployment permissions, and operational access.
 
-| Capability               | Bounded Context(s) |
-|--------------------------|--------------------|
-| Deployment authorization | access             |
+| Capability               | Realized by |
+|--------------------------|-------------|
+| Deployment authorization | access      |
 
 ## External actors
 
