@@ -264,7 +264,7 @@ _uimpl_with_sections() {
         for sec in "$@"; do
             case "$sec" in
                 domains) echo '## Domain specifications' ;;
-                fd)    echo '## Functional design specifications' ;;
+                fd)    echo '## Functional design' ;;
                 prov)  echo '## Provisioning and configuration' ;;
                 td)    echo '## Technical design specifications' ;;
                 constr) echo '## Construction' ;;
@@ -284,7 +284,7 @@ _uimpl_with_sections() {
 
 @test "uimpl: scn: No unchecked to-do items: section priority and completion" {
     # condition: Domain specifications section does not exist and it is needed
-    # condition: Functional design specifications section does not exist and it is needed
+    # condition: Functional design section does not exist and it is needed
     # condition: Technical design specifications section does not exist and it is needed
     # condition: Provisioning and configuration section does not exist and it is needed
     # condition: Construction section does not exist and it is needed
@@ -317,7 +317,7 @@ _uimpl_with_sections() {
     [[ "$output" == *"- Technical design section"*"Required skill: uspecs-sec-td"* ]]
     [[ "$output" == *"- Construction and Quick start sections"*"Required skill: uspecs-sec-constr"* ]]
 
-    # condition: Domains + Functional design specifications exist -> domains/fd absent, prov/td/constr present
+    # condition: Domains + Functional design exist -> domains/fd absent, prov/td/constr present
     _uimpl_with_sections domains fd
     [ "$status" -eq 0 ]
     [[ "$output" != *"- Domain specifications section"* ]]
@@ -365,7 +365,7 @@ _uimpl_with_sections() {
     [[ "$output" != *"Required skill: uspecs-sec-constr"* ]]
 }
 
-@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain specifications, Functional design specifications and Technical design specifications" {
+@test "uimpl: scn: No unchecked to-do items: no specs folder skips Domain specifications, Functional design and Technical design specifications" {
     cd "$PROJECT_ROOT"
     git checkout -q -b feature-branch
     _make_change_folder "2601010000-my-change"
@@ -621,7 +621,7 @@ _uimpl_with_sections() {
     printf '%s\n' \
         '# Implementation plan: Test' \
         '' \
-        '## Functional design specifications' \
+        '## Functional design' \
         '' \
         '- [ ] update: [alpha.feature](../../alpha.feature)' \
         '  - add: alpha scenario' \
@@ -677,7 +677,7 @@ _uimpl_with_sections() {
     printf '%s\n' \
         '# Implementation plan: Test' \
         '' \
-        '## Functional design specifications' \
+        '## Functional design' \
         '' \
         '- [x] update: [done.feature](../../done.feature)' \
         '' \
@@ -826,7 +826,7 @@ _uimpl_with_section_todo() {
     _make_change_folder "2601010000-my-change"
 
     # Functional design section -> specs review with default budget
-    _uimpl_with_section_todo '## Functional design specifications'
+    _uimpl_with_section_todo '## Functional design'
     [ "$status" -eq 0 ]
     local todos_block="${output#*<instruction id=\"instr_uimpl_todos\"}"
     todos_block="${todos_block%%</instruction>*}"

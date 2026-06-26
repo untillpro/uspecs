@@ -64,7 +64,7 @@ Feature: Implementation plan management
       Examples:
         | condition                                                                  | action                                                                                                                                                                                                              |
         | `Domain specifications` section does not exist and it is needed            | Create `Domain specifications` section with checkbox items referencing domain.md files                                                                                                                              |
-        | `Functional design specifications` section does not exist and it is needed | Create `Functional design specifications` section with checkbox items referencing spec files                                                                                                                        |
+        | `Functional design` section does not exist and it is needed                | Create `Functional design` section with checkbox items referencing functional specification files                                                                                                                    |
         | `Provisioning and configuration` section does not exist and it is needed   | Create `Provisioning and configuration` section with installation/configuration steps                                                                                                                               |
         | `Technical design specifications` section does not exist and it is needed  | Create `Technical design specifications` section with checkbox items referencing design files                                                                                                                       |
         | `Construction` section does not exist and it is needed                     | Create `Construction` section, optionally `Quick start` section, and set `scope:` as a YAML flow list (when at least one scope applies) and `breaking: true` (when the change is breaking) in change.md frontmatter |
@@ -103,7 +103,7 @@ Feature: Implementation plan management
       Then AI Agent <action>
       Examples:
         | section                          | flag             | action                                                      |
-        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
+        | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4`   |
@@ -119,7 +119,7 @@ Feature: Implementation plan management
       Examples:
         | section                          | flag             | action                                                    |
         | Domain specifications            |                  | invokes `softeng self-review --type specs --stage A -b 4` |
-        | Functional design specifications |                  | invokes `softeng self-review --type specs --stage A -b 4` |
+        | Functional design                |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Provisioning and configuration   |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Technical design specifications  |                  | invokes `softeng self-review --type specs --stage A -b 4` |
         | Construction                     |                  | invokes `softeng self-review --type specs --stage A -b 4` |
