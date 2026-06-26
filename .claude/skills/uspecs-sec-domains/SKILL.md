@@ -10,7 +10,7 @@ Section contains to-do items for modifying Domain Design Specifications: Domain 
 
 [Domain Design Specification artifacts](../uspecs-concepts/shared/domain-artifacts.md)
 
-Use when the change affects domain/context actors, concepts, boundaries, relationships, Ubiquitous Language, model, lifecycle, or behavior.
+Use when the change affects domain/context actors, concepts, boundaries, relationships, vocabulary, model, lifecycle, or behavior.
 
 Do not use when: the change only adds features, scenarios, or implementation details within an already-defined domain/context.
 
@@ -23,6 +23,7 @@ Add or update a Domain Specification todo when the change affects:
 - domain scope or out-of-scope statements
 - domain-level external actors
 - subdomains, capabilities, or capability-to-context mapping
+- an existing domain-level vocabulary/glossary section, or an explicit request to add one
 - the bounded context list, context map, or domain-level relationship indexes
 - creation, rename, removal, or reassignment of a bounded context
 
@@ -30,9 +31,13 @@ Add or update a Bounded Context Specification todo when the change affects:
 
 - a context boundary, purpose, ownership, or external actors
 - context relationships, service exposure, model alignment, or canonical relationship details
-- Ubiquitous Language within a context
-- model structure such as Entities, Value Objects, Aggregates, fields, or invariants
-- context-level lifecycle or model behavior such as Factories, Repositories, Services, Events, invariants, state transitions, or rules that change the context model
+- context vocabulary, model term names, or an existing `## Ubiquitous Language` section
+- model structure such as Entities, owned Entity nesting, Aggregate Root markers, ownership lines, Value Objects, aggregate ERDs, fields, or invariants
+- context-level lifecycle or model behavior that changes the context model or a domain contract, such as contract-relevant Factories, Repositories, Services, cross-context Events, invariants, state transitions, or model rules
+
+Do not add a Domain Design Specification todo solely to create a vocabulary/glossary or `## Ubiquitous Language` section unless the change explicitly asks for one or the target specification already maintains that section.
+
+Do not add a Domain Design Specification todo solely to mirror feature workflows or scenario/application actions as Services or Events; those belong in Functional Design Specifications unless they also change the context model or a cross-context contract.
 
 Do not add a Domain Design Specification todo when the change only updates feature scenarios, implementation code, tests, provisioning, or technical design within an already-defined domain and context, with no change to actors, boundaries, relationships, language, model, lifecycle, or behavior.
 
@@ -52,7 +57,7 @@ If the change names a likely domain/context impact but the exact modeling answer
   - Domain Specification for software engineering workflow: actors, core concepts, contexts
 
 - [ ] create: [planning/context.md](../../specs/prod/softeng/planning/context.md)
-  - Bounded Context Specification for planning workflow: ubiquitous language, relationships, tactical model, lifecycle, and behavior
+  - Bounded Context Specification for planning workflow: vocabulary/model terms, relationships, tactical model, and contract-relevant lifecycle elements
 
 - [ ] update: [payments/domain.md](../../specs/prod/payments/domain.md)
   - add: "Refund" concept with lifecycle and authorization rules

@@ -22,28 +22,28 @@ Out of scope:
 
 Enable shoppers to browse the catalog and place paid orders.
 
-| Capability                  | Bounded Context(s) |
-|-----------------------------|--------------------|
-| Catalog browsing and search | catalog, search    |
-| Cart and checkout           | cart, checkout     |
-| Order placement and payment | checkout           |
-| Order notifications         | notifications      |
+| Capability                  | Realized by     |
+|-----------------------------|-----------------|
+| Catalog browsing and search | catalog, search |
+| Cart and checkout           | cart, checkout  |
+| Order placement and payment | checkout        |
+| Order notifications         | notifications   |
 
 ### Reviews (Supporting)
 
 Collect customer feedback on products.
 
-| Capability       | Bounded Context(s) |
-|------------------|--------------------|
-| Customer reviews | reviews            |
+| Capability       | Realized by |
+|------------------|-------------|
+| Customer reviews | reviews     |
 
 ### Auth (Generic)
 
 Identify and authenticate shoppers.
 
-| Capability          | Bounded Context(s) |
-|---------------------|--------------------|
-| User authentication | auth               |
+| Capability          | Realized by |
+|---------------------|-------------|
+| User authentication | auth        |
 
 ## External actors
 
