@@ -186,7 +186,7 @@ Fields:
 | Field            | Type                     | Description                                                         |
 |------------------|--------------------------|---------------------------------------------------------------------|
 | `path`           | `string`                 | Folder path under `uspecs/changes/` or archive                      |
-| `status`         | `string`                 | `WorkingChangeFolder`, `ActiveChangeFolder`, archived, or ambiguous |
+| `status`         | `string`                 | `WorkingChangeFolder`, `ActiveChangeFolder`, or `Archived`          |
 | `selection_role` | `string`                 | Workflow selection role such as `ImplementationFolder`              |
 | `change_request` | `ChangeRequest`          | `ChangeRequest` artifact                                            |
 | `issue_files`    | `list<IssueFile>`        | Fetched issue artifacts                                             |
@@ -242,7 +242,7 @@ erDiagram
     }
     ChangeFolder ||--|| ChangeRequest : contains
     ChangeFolder ||--o{ IssueFile : embeds
-    IssueFile }o--|| IssueReference : embeds
+    IssueFile ||--|| IssueReference : embeds
     ChangeFolder ||--|| ImplementationPlanFile : contains
     ImplementationPlanFile ||--o{ TodoItem : embeds
     ImplementationPlanFile ||--o{ ReviewItem : embeds

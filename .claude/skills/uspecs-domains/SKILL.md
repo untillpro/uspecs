@@ -83,7 +83,7 @@ Target subject area of a computer system (product).
     - Relationship graphs follow `Relationship graph rules`
     - Domain-level Context Maps and relationship indexes contain Bounded Contexts only; external actors stay in `External actors`
 
-### Subdomain 
+### Subdomain
 
 A distinct part of the problem space within a Domain.
 

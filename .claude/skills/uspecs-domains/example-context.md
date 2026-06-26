@@ -81,7 +81,7 @@ Downstream:
 
 Upstream:
 
-- External provider reference: `⚙️ Payment Gateway` public payment API documentation
+- External provider reference: public payment API documentation
 - Contract: gateway public payment API
 
 Downstream:
