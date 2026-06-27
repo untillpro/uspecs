@@ -147,7 +147,7 @@ A model boundary in the solution space, with a specific set of actors, concepts,
     - ERDs show structural fields only; full field semantics live in object subsections
       - Structural fields: identifiers, references, lifecycle state, relationship-bearing fields, aggregate-boundary fields, and invariant-bearing fields
   - `## Lifecycle and behavior` section is optional; do not create it by default
-    - Add it only when Factories, Repositories, Services, or Events are part of a domain contract, such as a cross-Context Relationship, exposed integration contract, Published Language, or explicitly named domain contract
+    - Add it only for Factories, Repositories, Services, or Events referenced in a relationship Detail subsection (`### Service exposure` / `### Model alignment`)
     - Do not use it to restate scenario/application actions, feature workflows, or Gherkin steps
 
 ### Relationship graph rules
