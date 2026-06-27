@@ -229,6 +229,21 @@ _add_how_to_change_md() {
     git -C "$PROJECT_ROOT" commit -q -m "add How to $folder_name"
 }
 
+_rewrite_file_with_crlf() {
+    local path="$1"
+    local tmp="${path}.crlf"
+
+    {
+        local line
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            line=${line%$'\r'}
+            printf '%s\r\n' "$line"
+        done < "$path"
+    } > "$tmp"
+
+    mv "$tmp" "$path"
+}
+
 # ---------------------------------------------------------------------------
 # Helper: inject `type: <value>` into change.md YAML frontmatter, commit.
 # Inserts before the closing `---` of the frontmatter block.
@@ -988,6 +1003,23 @@ _uimpl_with_section_todo() {
     [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
     # Existing cascade prompt is emitted (Domain design is the first
     # missing planning section).
+    [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
+    [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
+}
+
+@test "uimpl: How creation: existing ## How in CRLF change.md falls through to planning-sections cascade" {
+    cd "$PROJECT_ROOT"
+    git checkout -q -b feature-branch
+    _make_change_folder "2601010000-my-change"
+    mkdir -p "$PROJECT_ROOT/uspecs/specs/prod"
+
+    _add_how_to_change_md "2601010000-my-change"
+    local change_path="$PROJECT_ROOT/uspecs/changes/2601010000-my-change/change.md"
+    _rewrite_file_with_crlf "$change_path"
+
+    uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'<instruction id="instr_uimpl_how"'* ]]
     [[ "$output" == *'<instruction id="instr_uimpl"'* ]]
     [[ "$output" == *"- Domain design section"*"Required skill: uspecs-sec-domains"* ]]
 }

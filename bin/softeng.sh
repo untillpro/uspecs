@@ -872,6 +872,7 @@ cmd_action_uimpl() {
     }
 
     while IFS= read -r _line; do
+        _line=${_line%$'\r'}
         ((_line_num++)) || true
         local _lower="${_line,,}"
         case "$_line" in
@@ -939,6 +940,7 @@ cmd_action_uimpl() {
         [[ "$_cm_type" == "fix" ]] && type_fix="1"
         local _cm_line _cm_in_what=0
         while IFS= read -r _cm_line; do
+            _cm_line=${_cm_line%$'\r'}
             case "$_cm_line" in
                 "## How"|"## How "*)   how_exists="1"; _cm_in_what=0 ;;
                 "## What"|"## What "*) _cm_in_what=1 ;;
