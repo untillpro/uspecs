@@ -47,19 +47,20 @@ If the change names a likely domain/context impact but the exact modeling answer
 
 [to-do format](../uspecs-concepts/shared/todo-format.md)
 - For `create` action use a single subitem with specification type and brief domain purpose
+- The domain is the first segment under `uspecs/specs/`; `domain.md` lives at `uspecs/specs/{domain}/domain.md` and contexts at `uspecs/specs/{domain}/{context}/context.md` - never add a grouping segment above the domain
 
 ## Example
 
 ```markdown
 ## Domain design
 
-- [ ] create: [softeng/domain.md](../../specs/prod/softeng/domain.md)
-  - Domain Specification for software engineering workflow: actors, core concepts, contexts
+- [ ] create: [prod/domain.md](../../specs/prod/domain.md)
+  - Domain Specification for the prod business domain: external actors, subdomains/capabilities, context list and map
 
-- [ ] create: [planning/context.md](../../specs/prod/softeng/planning/context.md)
-  - Bounded Context Specification for planning workflow: vocabulary/model terms, relationships, tactical model, and contract-relevant lifecycle elements
+- [ ] create: [prod/planning/context.md](../../specs/prod/planning/context.md)
+  - Bounded Context Specification for planning: vocabulary/model terms, relationships, tactical model, and contract-relevant lifecycle elements
 
-- [ ] update: [payments/domain.md](../../specs/prod/payments/domain.md)
+- [ ] update: [prod/payments/context.md](../../specs/prod/payments/context.md)
   - add: "Refund" concept with lifecycle and authorization rules
-  - update: "Checkout" context to reference the new Refund concept
+  - update: "Checkout" reference to the new Refund concept
 ```
