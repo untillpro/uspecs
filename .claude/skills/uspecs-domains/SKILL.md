@@ -20,17 +20,18 @@ Use the `Bounded Context (Context)`, relationship, Tactical Design Elements, and
 
 When creating a new Domain Design Specification, follow the style used in this skill's example Domain and Bounded Context specifications unless the task or project instructions specify a different style.
 
-When patching an existing Domain Design Specification, preserve the existing artifact's style unless the task explicitly asks to normalize or restyle it. Preserve the artifact's current choices such as:
+When patching an existing Domain Design Specification, preserve its section, diagram, relationship-notation, and context-marker style unless the task asks to restyle it.
 
-- actor and system markers, e.g. `👤 Engineer`, `⚙️ AI Agent`, or plain names
-- context markers in diagrams or prose, e.g. `🎯 softeng`, boxed nodes, or plain names
-- section names, ordering, and relationship notation
-- Mermaid node labels and diagram label style
-- terminology casing and display names
+## Element naming and references
 
-Do not add markers such as emojis to an existing spec that does not use them; do not remove markers from an existing spec that does use them.
+Covers external actors and named Tactical Design Elements.
 
-When reviewing changed Domain Design Specifications, compare patched specs with their previous artifact content for accidental style drift, including actor markers, context markers, diagram notation, section shape, and display names.
+- Names are single-token PascalCase; existing acronym capitalization is preserved, e.g. `AIAgent`, `SRE`, `CatalogManager`
+- An element may carry an optional decorator, fixed at its declaration: `👤` for roles, `⚙️` for systems; tactical elements have no decorator by default
+- The bare form `{decorator} {name}` (no backticks) is used at the declaration and in structural listings: `External actors` entries, relationship Consumer/Provider party lists, and diagram or relationship-graph labels (Mermaid and ASCII render no backticks), e.g. 👤 Engineer, ⚙️ AIAgent, ChangeFolder
+- The backticked form `{decorator} {name}` is used for an inline reference in running prose or a table cell, e.g. `👤 Engineer`, `⚙️ AIAgent`, `ChangeFolder`; when no decorator was declared the reference is `{name}` in backticks
+- Drop a preceding article before an inline reference in prose, e.g. write "reports to `👤 Engineer`" rather than "reports to the Engineer"
+- Mirror each element's declared decorator; do not add or remove a decorator unless the task asks to restyle the spec
 
 ## Domain-Driven Design (DDD) concepts
 
@@ -56,10 +57,11 @@ Target subject area of a computer system (product).
     - Each subdomain subsection contains a capability table with columns `Capability` and `Realized by`
       - `Realized by` contains Bounded Context links or names that realize the capability
   - External actors
-    - Roles are actor categories defined by the domain's Bounded Contexts, e.g. RBAC roles such as `Shopper` or `Support Agent`
+    - Roles are actor categories defined by the domain's Bounded Contexts, e.g. RBAC roles such as `Shopper` or `SupportAgent`
     - Systems are external non-role actors outside the Bounded Context boundary, such as software services, devices, platforms, or infrastructure
     - Roles and systems may be authorized through RBAC, scopes, claims, service accounts, mTLS identities, or other access-control mechanisms
     - Generic consumers such as `API consumers` are avoided when a role or system boundary is known
+    - Actor naming, the `👤`/`⚙️` decorators, and the declaration-vs-reference style follow `## Element naming and references`
   - Domain-level vocabulary or glossary
     - Do not create a domain-level vocabulary or glossary section by default
     - When an existing Domain spec already has one, maintain it and add broad domain-level framing terms when relevant
@@ -120,7 +122,7 @@ A model boundary in the solution space, with a specific set of actors, concepts,
     - Do not create a separate `## Ubiquitous Language` section by default
     - When an existing Context spec already has a `## Ubiquitous Language` section, maintain it and preserve the artifact's section style
     - Do not duplicate terms already represented by tactical model elements in `## Ubiquitous Language`
-    - Use PascalCase model names for named tactical elements, e.g. `ChangeFolder`, `ReviewItem`, `PluginInstallation`
+    - Tactical-element naming and the declaration-vs-reference style follow `## Element naming and references`, e.g. `ChangeFolder`, `ReviewItem`, `PluginInstallation`
     - Use the same model names in scenarios and specifications when referring to named domain concepts; avoid parallel spellings such as `Review Item` and `ReviewItem`
     - Plain prose may use normal English, but a named domain noun should resolve to one Entity, Value Object, Aggregate, Factory, Repository, Service, Event, or an attribute of an existing model element
     - Add or keep vocabulary notes for boundary-specific terms that are intentionally not represented by the model; prefer adding the missing model element when the term has identity, structure, behavior, lifecycle, or invariants

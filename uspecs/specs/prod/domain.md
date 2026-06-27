@@ -6,7 +6,7 @@ AI-assisted software engineering framework for human-AI collaboration on softwar
 
 Scope:
 
-- Help an Engineer use an AI Agent to create, clarify, plan, implement, review, synchronize, archive, and deliver software change requests.
+- Help `👤 Engineer` use `⚙️ AIAgent` to create, clarify, plan, implement, review, synchronize, archive, and deliver software change requests.
 - Maintain source-aligned specifications for product domains, functional behavior, technical design, provisioning, and construction work.
 - Support greenfield and brownfield projects with lightweight workflow actions and generated agent instructions.
 - Install, update, and report on uspecs framework plugin versions across supported AI agent hosts.
@@ -49,21 +49,21 @@ Establish and refresh a working uspecs installation inside a supported AI agent 
 Roles:
 
 - 👤 Engineer
-  - Software engineer who asks an AI Agent to perform uspecs workflows and reviews resulting artifacts.
+  - Software engineer who asks `⚙️ AIAgent` to perform uspecs workflows and reviews resulting artifacts.
 
 Systems:
 
-- ⚙️ AI Agent
+- ⚙️ AIAgent
   - Agent host participant that follows uspecs instructions, runs shell commands, edits artifacts, and reports results.
-- ⚙️ Agent Host
+- ⚙️ AgentHost
   - Claude Code, Augment Code, Codex, or another environment that installs and runs uspecs plugins.
-- ⚙️ Plugin Marketplace
+- ⚙️ PluginMarketplace
   - Distribution source for stable and development uspecs plugin builds.
-- ⚙️ Git Repository
+- ⚙️ GitRepository
   - Source control system containing project source files, specifications, branches, and diffs.
-- ⚙️ Pull Request Host
+- ⚙️ PullRequestHost
   - External service addressed through pull request tooling for PR creation, update, merge, and browser opening.
-- ⚙️ Issue Tracker
+- ⚙️ IssueTracker
   - External source of issue URLs and issue bodies used by change-request workflows.
 - ⚙️ Browser
   - External application opened for pull request inspection and manual handling.

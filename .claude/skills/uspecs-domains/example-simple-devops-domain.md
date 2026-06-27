@@ -38,7 +38,7 @@ Roles:
 
 Systems:
 
-- Cloud Provider
+- CloudProvider
   - Hosts runtime infrastructure
 
 ---
@@ -88,8 +88,8 @@ Arrows point upstream -> downstream. Edge style encodes the alignment pattern:
 
 ### Model alignment index
 
-| Upstream | Downstream | Model/language    | Alignment          |
-|----------|------------|-------------------|--------------------|
+| Upstream | Downstream | Model/language      | Alignment          |
+|----------|------------|---------------------|--------------------|
 | ops      | dev        | incident categories | Published Language |
 
 ---

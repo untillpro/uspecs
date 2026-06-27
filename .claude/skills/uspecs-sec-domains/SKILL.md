@@ -21,7 +21,7 @@ Decide whether Domain Design Specifications need todos from the change request a
 Add or update a Domain Specification todo when the change affects:
 
 - domain scope or out-of-scope statements
-- domain-level external actors
+- domain-level external actors, including actor-name casing, decorators, or the declaration-vs-reference (backtick) style
 - subdomains, capabilities, or capability-to-context mapping
 - an existing domain-level vocabulary/glossary section, or an explicit request to add one
 - the bounded context list, context map, or domain-level relationship indexes
@@ -29,7 +29,7 @@ Add or update a Domain Specification todo when the change affects:
 
 Add or update a Bounded Context Specification todo when the change affects:
 
-- a context boundary, purpose, ownership, or external actors
+- a context boundary, purpose, ownership, or external actors, including actor-name casing, decorators, or the declaration-vs-reference (backtick) style
 - context relationships, service exposure, model alignment, or canonical relationship details
 - context vocabulary, model term names, or an existing `## Ubiquitous Language` section
 - model structure such as Entities, owned Entity nesting, Aggregate Root markers, ownership lines, Value Objects, aggregate ERDs, fields, or invariants

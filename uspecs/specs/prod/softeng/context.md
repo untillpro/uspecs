@@ -7,7 +7,7 @@ Human-AI collaborative software engineering workflows driven by uspecs actions, 
 Scope:
 
 - Create and maintain `ChangeFolder`, `ChangeRequest`, `IssueFile`, implementation-plan sections, and todo state.
-- Drive AI Agent workflows for clarification, specification updates, construction assistance, synchronization, self-review, archival, PR creation, PR merge handling, and version reporting.
+- Drive `⚙️ AIAgent` workflows for clarification, specification updates, construction assistance, synchronization, self-review, archival, PR creation, PR merge handling, and version reporting.
 - Emit workflow instructions through `softeng.sh` actions and top-level commands.
 - Validate working tree, branch, and `ChangeFolder` preconditions for workflows that require them.
 
@@ -27,13 +27,13 @@ Roles:
 
 Systems:
 
-- ⚙️ AI Agent
-  - Executes emitted instructions, edits artifacts, runs shell commands, and reports outcomes to the Engineer.
-- ⚙️ Git Repository
+- ⚙️ AIAgent
+  - Executes emitted instructions, edits artifacts, runs shell commands, and reports outcomes to `👤 Engineer`.
+- ⚙️ GitRepository
   - Provides branches, merge bases, diffs, working tree status, and tracked source files.
-- ⚙️ Pull Request Host
+- ⚙️ PullRequestHost
   - Provides PR lookup, creation, update, merge, and browser-opening behavior through PR tooling.
-- ⚙️ Issue Tracker
+- ⚙️ IssueTracker
   - Provides issue URLs and, when fetchable, issue body content for `ChangeRequest` creation.
 - ⚙️ Browser
   - Opens PR pages or other external pages when workflows direct it.
@@ -47,10 +47,10 @@ graph TD
   softeng(["📦 softeng"])
   conf["📦 conf"]
   Engineer["👤 Engineer"]
-  AIAgent["⚙️ AI Agent"]
-  GitRepository["⚙️ Git Repository"]
-  PullRequestHost["⚙️ Pull Request Host"]
-  IssueTracker["⚙️ Issue Tracker"]
+  AIAgent["⚙️ AIAgent"]
+  GitRepository["⚙️ GitRepository"]
+  PullRequestHost["⚙️ PullRequestHost"]
+  IssueTracker["⚙️ IssueTracker"]
   Browser["⚙️ Browser"]
   conf --->|"working uspecs"| softeng
   GitRepository --->|"repository state"| softeng
@@ -76,7 +76,7 @@ Downstream:
 - Depends on the installed plugin being runnable from the project root.
 - Local conformity note: uses working uspecs and version terms as published.
 
-#### Git Repository -> softeng: repository state (ohs + cf)
+#### GitRepository -> softeng: repository state (ohs + cf)
 
 Upstream:
 
@@ -87,7 +87,7 @@ Downstream:
 - Reads working tree status, current branch, upstream tracking, merge base, branch diffs, and changed files.
 - Local conformity note: adopts Git branch and diff terms directly for validation and synchronization workflows.
 
-#### Issue Tracker -> softeng: issue content (ohs + cf)
+#### IssueTracker -> softeng: issue content (ohs + cf)
 
 Upstream:
 
@@ -98,7 +98,7 @@ Downstream:
 - Extracts issue identity for branch naming, commit messages, and fetched issue files.
 - Local conformity note: conforms to available issue URL structure and stores a local markdown issue file when the source is fetchable.
 
-#### Pull Request Host -> softeng: PR operations (ohs + cf)
+#### PullRequestHost -> softeng: PR operations (ohs + cf)
 
 Upstream:
 
@@ -119,7 +119,7 @@ Provider:
 
 Consumers:
 
-- ⚙️ AI Agent
+- ⚙️ AIAgent
   - Follows instructions emitted by `softeng.sh`, updates artifacts, runs commands, and reports results.
 
 #### softeng: workflow results (ohs + pl)
@@ -144,7 +144,7 @@ Provider:
 Consumers:
 
 - ⚙️ Browser
-  - Opens PR pages when workflows direct the Engineer to inspect or handle a PR.
+  - Opens PR pages when workflows direct `👤 Engineer` to inspect or handle a PR.
 
 ### Model alignment
 
@@ -183,20 +183,20 @@ Embeds: `IssueFile`, `IssueReference`, `ReviewItem`, `TodoItem`.
 
 Fields:
 
-| Field            | Type                     | Description                                                         |
-|------------------|--------------------------|---------------------------------------------------------------------|
-| `path`           | `string`                 | Folder path under `uspecs/changes/` or archive                      |
-| `status`         | `string`                 | `WorkingChangeFolder`, `ActiveChangeFolder`, or `Archived`          |
-| `selection_role` | `string`                 | Workflow selection role such as `ImplementationFolder`              |
-| `change_request` | `ChangeRequest`          | `ChangeRequest` artifact                                            |
-| `issue_files`    | `list<IssueFile>`        | Fetched issue artifacts                                             |
-| `plan_file`      | `ImplementationPlanFile` | File currently used for planning and todo execution                 |
+| Field            | Type                     | Description                                                |
+|------------------|--------------------------|------------------------------------------------------------|
+| `path`           | `string`                 | Folder path under `uspecs/changes/` or archive             |
+| `status`         | `string`                 | `WorkingChangeFolder`, `ActiveChangeFolder`, or `Archived` |
+| `selection_role` | `string`                 | Workflow selection role such as `ImplementationFolder`     |
+| `change_request` | `ChangeRequest`          | `ChangeRequest` artifact                                   |
+| `issue_files`    | `list<IssueFile>`        | Fetched issue artifacts                                    |
+| `plan_file`      | `ImplementationPlanFile` | File currently used for planning and todo execution        |
 
 Invariants:
 
 - Archived `ChangeFolder` values cannot be selected as `WorkingChangeFolder`.
 - Actions that require a current change operate on exactly one `WorkingChangeFolder`.
-- A `ReviewItem` remains unchecked until the Engineer has reviewed its subject.
+- A `ReviewItem` remains unchecked until `👤 Engineer` has reviewed its subject.
 - A `TodoItem` is checked only after its bounded instruction has been completed.
 
 State transitions:
@@ -275,18 +275,18 @@ Embeds: `ReviewItem`, `TodoItem`.
 
 Fields:
 
-| Field      | Type               | Description                           |
-|------------|--------------------|---------------------------------------|
-| `path`     | `string`           | `impl.md` or `change.md`              |
-| `sections` | `list<string>`     | Planning sections present in the file |
-| `todos`    | `list<TodoItem>`   | Todo items available for execution    |
-| `reviews`  | `list<ReviewItem>` | Todo items awaiting Engineer review   |
+| Field      | Type               | Description                              |
+|------------|--------------------|------------------------------------------|
+| `path`     | `string`           | `impl.md` or `change.md`                 |
+| `sections` | `list<string>`     | Planning sections present in the file    |
+| `todos`    | `list<TodoItem>`   | Todo items available for execution       |
+| `reviews`  | `list<ReviewItem>` | Todo items awaiting `👤 Engineer` review |
 
 #### PullRequest (aggregate)
 
 Pull request associated with the current branch.
 
-References: current branch from `Git Repository`.
+References: current branch from `⚙️ GitRepository`.
 
 Fields:
 
@@ -298,7 +298,7 @@ Fields:
 
 Invariants:
 
-- `PullRequest.state` reflects the current branch's PR state from the Pull Request Host.
+- `PullRequest.state` reflects the current branch's PR state from `⚙️ PullRequestHost`.
 - `MERGED` is terminal for merge handling.
 - `CLOSED` requires recovery or user action before merge handling can continue.
 
@@ -375,7 +375,7 @@ Fields:
 
 #### ReviewItem
 
-Todo item whose unchecked state intentionally stops implementation until the Engineer reviews the plan.
+Todo item whose unchecked state intentionally stops implementation until `👤 Engineer` reviews the plan.
 
 Used by: `ImplementationPlanFile`.
 

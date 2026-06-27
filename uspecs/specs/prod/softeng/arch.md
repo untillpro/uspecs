@@ -2,9 +2,9 @@
 
 ## Overview
 
-Most softeng actions follow a single uniform pattern. The `Engineer` triggers an action with a `u-keyword`, the `AI Agent` runs `softeng.sh` to get workflow instructions, reads/creates/updates artifact files, and runs shell commands. The result is reported back to the Engineer.
+Most softeng actions follow a single uniform pattern. `👤 Engineer` triggers an action with a `u-keyword`, `⚙️ AIAgent` runs `softeng.sh` to get workflow instructions, reads/creates/updates artifact files, and runs shell commands. The result is reported back to `👤 Engineer`.
 
-`uclarify` is the exception: it has no `softeng.sh` dispatch. The AI Agent reads the action body directly from `scripts/templates/actions/uclarify.md` (in installed plugins, the rendered command/skill) and executes its instructions.
+`uclarify` is the exception: it has no `softeng.sh` dispatch. `⚙️ AIAgent` reads the action body directly from `scripts/templates/actions/uclarify.md` (in installed plugins, the rendered command/skill) and executes its instructions.
 
 ## Key flows
 
@@ -14,10 +14,10 @@ All softeng actions follow the same pattern:
 
 ```mermaid
 sequenceDiagram
-    actor engineer as 👤Engineer
-    participant ai_agent as ⚙️AI Agent
-    participant softeng as ⚙️softeng.sh
-    participant artifacts as 📁Artifacts
+    actor engineer as 👤 Engineer
+    participant ai_agent as ⚙️ AIAgent
+    participant softeng as ⚙️ softeng.sh
+    participant artifacts as 📁 Artifacts
 
     engineer->>ai_agent: u-keyword [instructions, parameters]
     activate ai_agent
@@ -30,10 +30,10 @@ sequenceDiagram
 
 ### Self-review flow
 
-`self-review` is a top-level softeng command (not an action). It is auto-invoked by the AI Agent at the end of a `uimpl` cycle that completed at least one to-do item, unless `--no-self-review` was passed to `uimpl`. Each stage prompt instructs the Agent to perform a scoped review, fix findings inline, and invoke the next stage. The chain ends with a results report to the Engineer.
+`self-review` is a top-level softeng command (not an action). It is auto-invoked by `⚙️ AIAgent` at the end of a `uimpl` cycle that completed at least one to-do item, unless `--no-self-review` was passed to `uimpl`. Each stage prompt instructs `⚙️ AIAgent` to perform a scoped review, fix findings inline, and invoke the next stage. The chain ends with a results report to `👤 Engineer`.
 
 ```text
-Engineer
+👤 Engineer
   |
   v
 uimpl  (processes todos)
@@ -49,7 +49,7 @@ Construction todos completed?
   |                       review + fix inline
   |                         |
   |                         v
-  |                       report -> Engineer
+  |                       report -> 👤 Engineer
   |
   +--(yes)--> self-review --type construction --stage A
                 |
@@ -63,7 +63,7 @@ Construction todos completed?
               review + fix inline
                 |
                 v
-              report -> Engineer
+              report -> 👤 Engineer
 ```
 
 Key artifacts:

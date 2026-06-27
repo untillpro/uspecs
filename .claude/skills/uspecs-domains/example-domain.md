@@ -51,14 +51,14 @@ Roles:
 
 - 👤 Shopper
   - Browses the catalog, builds a cart, and places orders
-- 👤 Catalog Manager
+- 👤 CatalogManager
   - Maintains product listings and pricing
 
 Systems:
 
-- ⚙️ Payment Gateway
+- ⚙️ PaymentGateway
   - External system that authorizes and captures payments
-- ⚙️ Partner Storefront
+- ⚙️ PartnerStorefront
   - External sales channel that places and tracks shopper orders through checkout APIs
 
 ---

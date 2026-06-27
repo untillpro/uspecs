@@ -27,11 +27,11 @@ Roles:
 
 Systems:
 
-- ⚙️ Agent Host
+- ⚙️ AgentHost
   - Host environment and CLI that installs, updates, and runs the plugin.
-- ⚙️ Plugin Marketplace
+- ⚙️ PluginMarketplace
   - Repository that publishes stable and development uspecs plugin builds.
-- ⚙️ AI Agent
+- ⚙️ AIAgent
   - Runs the installed plugin's workflow commands after configuration is complete.
 
 ## Relationships
@@ -43,9 +43,9 @@ graph TD
   conf(["📦 conf"])
   softeng["📦 softeng"]
   Engineer["👤 Engineer"]
-  AgentHost["⚙️ Agent Host"]
-  PluginMarketplace["⚙️ Plugin Marketplace"]
-  AIAgent["⚙️ AI Agent"]
+  AgentHost["⚙️ AgentHost"]
+  PluginMarketplace["⚙️ PluginMarketplace"]
+  AIAgent["⚙️ AIAgent"]
   PluginMarketplace --->|"plugin builds"| conf
   AgentHost --->|"plugin CLI"| conf
   conf --->|"install guidance"| Engineer
@@ -57,7 +57,7 @@ Arrows point upstream -> downstream. Edge style encodes the exposure pattern:
 
 - `--->` solid: Open Host Service (ohs) - public, general-purpose contract for many consumers
 
-#### Agent Host -> conf: plugin CLI (ohs + cf)
+#### AgentHost -> conf: plugin CLI (ohs + cf)
 
 Upstream:
 
@@ -68,7 +68,7 @@ Downstream:
 
 - Conforms to host-specific plugin marketplace, install, add, update, and upgrade commands.
 
-#### Plugin Marketplace -> conf: plugin builds (ohs + cf)
+#### PluginMarketplace -> conf: plugin builds (ohs + cf)
 
 Upstream:
 
@@ -101,7 +101,7 @@ Provider:
 
 Consumers:
 
-- ⚙️ AI Agent
+- ⚙️ AIAgent
   - Runs uspecs workflow commands from the project root after installation.
 - 📦 softeng
   - Depends on working uspecs when dispatching software engineering actions and self-review commands.
@@ -138,24 +138,24 @@ Downstream:
 
 Installed uspecs plugin state for one agent host.
 
-Embeds: `AgentHost`, `MarketplaceStream`, `Version`.
+Embeds: `HostProfile`, `MarketplaceStream`, `Version`.
 
 Fields:
 
-| Field          | Type                 | Description                                                  |
-|----------------|----------------------|--------------------------------------------------------------|
-| `host`         | `AgentHost`          | Host where the plugin is installed                           |
-| `stream`       | `MarketplaceStream`  | Stable or development stream                                 |
-| `marketplace`  | `string`             | Marketplace repository name                                  |
-| `plugin`       | `string`             | Plugin identifier used by the host CLI                       |
-| `version`      | `Version`            | Installed plugin version when known                          |
-| `availability` | `string`             | Whether a newer version is available, up to date, or unknown |
+| Field          | Type                | Description                                                  |
+|----------------|---------------------|--------------------------------------------------------------|
+| `host`         | `HostProfile`       | Host where the plugin is installed                           |
+| `stream`       | `MarketplaceStream` | Stable or development stream                                 |
+| `marketplace`  | `string`            | Marketplace repository name                                  |
+| `plugin`       | `string`            | Plugin identifier used by the host CLI                       |
+| `version`      | `Version`           | Installed plugin version when known                          |
+| `availability` | `string`            | Whether a newer version is available, up to date, or unknown |
 
 Invariants:
 
 - `PluginInstallation.host` determines the supported host CLI vocabulary.
 - `PluginInstallation.stream` determines the marketplace and plugin identifier pair.
-- A working uspecs installation has one selected `AgentHost` and one selected `MarketplaceStream`.
+- A working uspecs installation has one selected `HostProfile` and one selected `MarketplaceStream`.
 
 ERD:
 
@@ -170,7 +170,7 @@ erDiagram
         string version_type
         string availability
     }
-    AgentHost {
+    HostProfile {
         string name
         string cli
     }
@@ -183,14 +183,14 @@ erDiagram
         string value
         string type
     }
-    PluginInstallation ||--|| AgentHost : embeds
+    PluginInstallation ||--|| HostProfile : embeds
     PluginInstallation ||--|| MarketplaceStream : embeds
     PluginInstallation ||--o| Version : embeds
 ```
 
 ### Value Objects
 
-#### AgentHost
+#### HostProfile
 
 Supported AI agent host and its plugin CLI vocabulary.
 
@@ -221,7 +221,7 @@ Installed or latest available uspecs version.
 
 Fields:
 
-| Field   | Type     | Description                    |
-|---------|----------|--------------------------------|
-| `value` | `string` | Version string                 |
+| Field   | Type     | Description                                |
+|---------|----------|--------------------------------------------|
+| `value` | `string` | Version string                             |
 | `type`  | `string` | Stable build, Development build, or Source |

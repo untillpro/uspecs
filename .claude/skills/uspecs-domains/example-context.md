@@ -7,7 +7,7 @@ Checkout - turn a shopper's cart into a placed, paid order.
 Scope:
 
 - Converts a shopper's cart into a placed, paid order
-- Coordinates payment authorization and capture with the external Payment Gateway
+- Coordinates payment authorization and capture with the external `⚙️ PaymentGateway`
 
 Out of scope:
 
@@ -21,8 +21,8 @@ Roles:
 
 Systems:
 
-- ⚙️ Payment Gateway
-- ⚙️ Partner Storefront
+- ⚙️ PaymentGateway
+- ⚙️ PartnerStorefront
 
 ## Relationships
 
@@ -36,8 +36,8 @@ graph TD
   notifications["📦 notifications"]
   reviews["📦 reviews"]
   Shopper["👤 Shopper"]
-  PartnerStorefront["⚙️ Partner Storefront"]
-  PaymentGateway["⚙️ Payment Gateway"]
+  PartnerStorefront["⚙️ PartnerStorefront"]
+  PaymentGateway["⚙️ PaymentGateway"]
   cart -..->|"cart contents"| checkout
   auth --->|"shopper identity"| checkout
   PaymentGateway --->|"payment authorization"| checkout
@@ -77,7 +77,7 @@ Downstream:
 
 - Reads the `CartSnapshot` (query)
 
-#### Payment Gateway -> checkout: payment authorization (ohs + acl)
+#### PaymentGateway -> checkout: payment authorization (ohs + acl)
 
 Upstream:
 
@@ -115,7 +115,7 @@ Provider:
 
 Consumers:
 
-- ⚙️ Partner Storefront
+- ⚙️ PartnerStorefront
   - Place orders through the same public contract
 
 #### checkout: order placement UI (ohs + pl)
@@ -125,7 +125,7 @@ Provider:
 - Interface: checkout web UI
 - Interaction: place order
 - Language: `OrderPlacement.v1`
-- Authorization: `Shopper` role
+- Authorization: `👤 Shopper` role
 
 Consumers:
 
@@ -143,7 +143,7 @@ Provider:
 
 Consumers:
 
-- ⚙️ Partner Storefront
+- ⚙️ PartnerStorefront
   - Conform to `OrderStatus.v1` when displaying or synchronizing order state
 - 📦 reviews
   - Conforms to `OrderStatus.v1` when checking whether a shopper can review a purchased product
@@ -155,7 +155,7 @@ Provider:
 - Interface: checkout web UI
 - Model: `OrderStatus.v1`
 - Compatibility: backward-compatible additive changes only
-- Authorization: `Shopper` role
+- Authorization: `👤 Shopper` role
 
 Consumers:
 
@@ -279,11 +279,11 @@ Immutable cart contents captured when checkout begins.
 
 Fields:
 
-| Field         | Type           | Description                             |
-|---------------|----------------|-----------------------------------------|
-| `cart_id`     | `string`       | Cart identifier from cart               |
-| `shopper_id`  | `string`       | Shopper identity associated with cart   |
-| `items`       | `list<string>` | Product and quantity inputs for checkout |
+| Field        | Type           | Description                              |
+|--------------|----------------|------------------------------------------|
+| `cart_id`    | `string`       | Cart identifier from cart                |
+| `shopper_id` | `string`       | Shopper identity associated with cart    |
+| `items`      | `list<string>` | Product and quantity inputs for checkout |
 
 #### Money
 
@@ -306,4 +306,4 @@ Published on `checkout.order-events` when a shopper confirms an order.
 
 #### PaymentCaptured
 
-Published on `checkout.order-events` when the `⚙️ Payment Gateway` captures payment.
+Published on `checkout.order-events` when `⚙️ PaymentGateway` captures payment.

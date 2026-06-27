@@ -53,18 +53,18 @@ Roles:
 
 - 👤 Developer
   - Commits changes and reviews build/test feedback
-- 👤 Release Manager
+- 👤 ReleaseManager
   - Approves production releases and coordinates rollout timing
 - 👤 SRE
   - Monitors runtime health and responds to incidents
 
 Systems:
 
-- ⚙️ Git Provider
+- ⚙️ GitProvider
   - External system that hosts repositories and emits source-change events
-- ⚙️ Cloud Provider
+- ⚙️ CloudProvider
   - External platform that hosts runtime infrastructure
-- ⚙️ Pager Service
+- ⚙️ PagerService
   - External system that sends incident notifications
 
 ---
@@ -119,15 +119,15 @@ Arrows point upstream -> downstream. Edge style encodes the exposure pattern:
 
 ### Service exposure index
 
-| Upstream      | Downstream    | Contract                    | Exposure          | Alignment          |
-|---------------|---------------|-----------------------------|-------------------|--------------------|
-| access        | deployments   | deployment authorization    | Customer-Supplier | Conformist         |
-| artifacts     | deployments   | artifact metadata API       | Open Host Service | Published Language |
-| ci            | artifacts     | artifact publishing API     | Open Host Service | Published Language |
-| ci            | deployments   | build results               | Open Host Service | Published Language |
-| deployments   | observability | deployment events           | Open Host Service | Published Language |
-| observability | incidents     | alert events                | Open Host Service | Published Language |
-| source        | ci            | change events               | Open Host Service | Published Language |
+| Upstream      | Downstream    | Contract                 | Exposure          | Alignment          |
+|---------------|---------------|--------------------------|-------------------|--------------------|
+| access        | deployments   | deployment authorization | Customer-Supplier | Conformist         |
+| artifacts     | deployments   | artifact metadata API    | Open Host Service | Published Language |
+| ci            | artifacts     | artifact publishing API  | Open Host Service | Published Language |
+| ci            | deployments   | build results            | Open Host Service | Published Language |
+| deployments   | observability | deployment events        | Open Host Service | Published Language |
+| observability | incidents     | alert events             | Open Host Service | Published Language |
+| source        | ci            | change events            | Open Host Service | Published Language |
 
 ### Model alignment
 

@@ -8,12 +8,14 @@ Tools, scripts, and configuration files to assist with development, testing, dep
 
 Roles:
 
-- 👤Developer
+- 👤 Developer
   - Can modify the codebase. Corresponds to the "Writer" role in GitHub.
+- 👤 Maintainer
+  - Can manage releases. Corresponds to the "Maintainer" role in GitHub.
 
 Systems:
 
-- ⚙️GitHub
+- ⚙️ GitHub
   - A platform that allows users to store, manage, and share code, and to automate related workflows
 
 ## Concepts
@@ -40,12 +42,12 @@ Development, testing, and release automation.
 
 Relationships:
 
-- 🎯dev -> |service| 👤Developer
+- 🎯 dev -> |service| 👤 Developer
   - Development tooling and workflows
   - Test tooling and workflows
-- 🎯dev -> |service| 👤Maintainer
+- 🎯 dev -> |service| 👤 Maintainer
   - Release management tooling and workflows
-- ⚙️GitHub -> 🎯dev
+- ⚙️ GitHub -> 🎯 dev
   - Repository hosting
   - CI/CD automation
 
