@@ -157,6 +157,9 @@ A model boundary in the solution space, with a specific set of actors, concepts,
 - `Service exposure`
   - Runtime or exchange contract exposed by an upstream/provider and consumed by downstream actors or Contexts
   - Examples include UIs, request/response APIs, commands, queries, event/message channels, feeds, exports/imports, files, streams, and external system interfaces
+  - Provider determination: the upstream/provider is the side that owns and exposes the contract (endpoint, API, channel, interface, file, or feed); the downstream/consumer is the side that calls, reads, subscribes to, or pushes into that contract
+    - This is independent of connection initiation and data/request direction: a consumer that pushes data into a provider's endpoint is still downstream (e.g. a client pushing to an ingest API, or a partner calling a placement API)
+    - Common patterns: (a) consumer calls provider's API → provider upstream; (b) consumer pushes into provider's endpoint → provider still upstream (owns the endpoint)
   - May include external roles and systems
   - May carry model alignment; that alignment stays with the service exposure relationship
   - Edge styles: `--->` for Open Host Service; `-..->` for Customer-Supplier
@@ -171,10 +174,11 @@ A model boundary in the solution space, with a specific set of actors, concepts,
   - `Published Language (pl)`: upstream publishes a documented, versioned language/model
   - `Conformist (cf)`: downstream adopts the upstream model as-is, without the upstream publishing a separate formal language for this relationship
   - `Anti-Corruption Layer (acl)`: downstream translates the upstream model into its own model
-- Arrows point upstream -> downstream
-- Edge labels are short noun phrases, at most three words, identifying the carried concept or contract
+- Arrows point upstream -> downstream (provider -> consumer). Arrow direction does not encode runtime data, request, or call flow
+- Edge labels name the carried contract/concept as a noun phrase (e.g. `order placement API`, `payment authorization`), never a flow verb (e.g. `push samples`, `writes to`). At most three words
 - Edge labels do not include pattern suffixes
 - Edge styles encode relationship patterns
+- Runtime data/request flow is not modeled here; capture it in a Technical Design Specification (see the `uspecs-td` skill), not in Service exposure or Model alignment graphs
 
 ### Relationship documentation
 
