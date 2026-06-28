@@ -45,7 +45,9 @@ Identify and authenticate shoppers.
 |---------------------|-------------|
 | User authentication | auth        |
 
-## External actors
+## Shared external actors
+
+Actors shared across multiple bounded contexts; context-specific actors are documented in their respective context specifications.
 
 Roles:
 

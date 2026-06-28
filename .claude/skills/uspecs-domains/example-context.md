@@ -18,11 +18,16 @@ Out of scope:
 Roles:
 
 - 👤 Shopper
+  - Places orders and views order status through checkout interfaces
 
 Systems:
 
+- ⚙️ FraudDetectionService
+  - Reviews orders for fraud indicators before payment authorization
 - ⚙️ PaymentGateway
+  - Authorizes and captures payments for orders
 - ⚙️ PartnerStorefront
+  - Places and tracks orders through checkout APIs on behalf of shoppers
 
 ## Relationships
 
@@ -38,8 +43,10 @@ graph TD
   Shopper["👤 Shopper"]
   PartnerStorefront["⚙️ PartnerStorefront"]
   PaymentGateway["⚙️ PaymentGateway"]
+  FraudDetectionService["⚙️ FraudDetectionService"]
   cart -..->|"cart contents"| checkout
   auth --->|"shopper identity"| checkout
+  FraudDetectionService --->|"fraud check"| checkout
   PaymentGateway --->|"payment authorization"| checkout
   checkout --->|"order placement UI"| Shopper
   checkout --->|"order placement API"| PartnerStorefront
@@ -76,6 +83,19 @@ Upstream:
 Downstream:
 
 - Reads the `CartSnapshot` (query)
+
+#### FraudDetectionService -> checkout: fraud check (ohs + acl)
+
+Upstream:
+
+- External provider reference: fraud detection service API documentation
+- Contract: fraud risk assessment API
+
+Downstream:
+
+- Submits order details for fraud risk assessment (command)
+- Translates fraud risk scores into local order validation rules
+- Owns the local ACL translation notes because the upstream has no Context spec
 
 #### PaymentGateway -> checkout: payment authorization (ohs + acl)
 

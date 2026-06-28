@@ -56,11 +56,15 @@ Target subject area of a computer system (product).
     - Each subdomain subsection contains a short purpose statement
     - Each subdomain subsection contains a capability table with columns `Capability` and `Realized by`
       - `Realized by` contains Bounded Context links or names that realize the capability
-  - External actors
+  - Shared external actors
+    - Section heading: `## Shared external actors`
+    - Explanatory sentence: "Actors shared across multiple bounded contexts; context-specific actors are documented in their respective context specifications."
+    - List only actors shared between multiple contexts in this domain
     - Roles are actor categories defined by the domain's Bounded Contexts, e.g. RBAC roles such as `Shopper` or `SupportAgent`
     - Systems are external non-role actors outside the Bounded Context boundary, such as software services, devices, platforms, or infrastructure
     - Roles and systems may be authorized through RBAC, scopes, claims, service accounts, mTLS identities, or other access-control mechanisms
     - Generic consumers such as `API consumers` are avoided when a role or system boundary is known
+    - Each actor carries a domain-wide role description (abstract/general)
     - Actor naming, the `👤`/`⚙️` decorators, and the declaration-vs-reference style follow `## Element naming and references`
   - Domain-level vocabulary or glossary
     - Do not create a domain-level vocabulary or glossary section by default
@@ -115,6 +119,10 @@ A model boundary in the solution space, with a specific set of actors, concepts,
     - Scope
     - Out of scope
   - External actors
+    - List all actors (roles and systems) this context interacts with
+    - Each actor carries a context-specific role description
+    - Context-specific descriptions explain what the actor does within this context's boundary
+    - Actor naming, the `👤`/`⚙️` decorators, and the declaration-vs-reference style follow `## Element naming and references`
   - `## Relationships` section
     - Relationship graphs follow `Relationship graph rules`
     - Relationship entries follow `Relationship documentation`
