@@ -74,7 +74,7 @@ _DISPATCH_REL_BIN: str = (
     "set cwd to project root and run `bash {SKILL_FOLDER}/../../bin/softeng.sh action {{action}} [options]` "
 )
 
-_DISPATCH_DIRECT: str = "run `bash softeng.sh action {{action}} [options]`"
+_DISPATCH_DIRECT: str = "run `softeng.sh action {{action}} [options]`"
 
 AGENT_CONFIGS: dict[AgentName, AgentConfig] = {
     "claude": AgentConfig(
