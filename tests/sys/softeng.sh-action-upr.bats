@@ -801,8 +801,9 @@ _assert_pr_body_format() {
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"type"* ]]
     [[ "${stderr:-}" == *"frontmatter"* ]]
-    # The error must not enumerate allowed types inline; the canonical
-    # list lives in scripts/templates/actions/uchange.yaml only.
+    # The error must not enumerate allowed types inline; the canonical list is
+    # ChangeRequest.type in uspecs/specs/prod/softeng/context.md, mirrored in
+    # scripts/templates/actions/uchange.yaml.
     [[ "${stderr:-}" != *"feat"*"fix"* ]]
 
     # No PR was created in this error case

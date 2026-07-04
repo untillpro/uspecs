@@ -273,7 +273,19 @@ Fields:
 Model rules:
 
 - `uchange` creates frontmatter with `change_id` and `type`; it adds `issue_url` when an issue URL is provided.
-- `type` is constrained to the values in [uchange.yaml](../../../../scripts/templates/actions/uchange.yaml)
+- `type` -- allowed Change request types (extended Conventional Commits v1.0.0 set):
+  - `feat` -- new user-visible capability
+  - `fix` -- bug fix in existing behaviour
+  - `build` -- build system, packaging, or external dependency changes
+  - `chore` -- routine maintenance with no functional impact (e.g. bumping internal versions, renaming files)
+  - `ci` -- continuous integration configuration or scripts
+  - `docs` -- documentation only
+  - `perf` -- performance improvement without behaviour change
+  - `refactor` -- internal restructuring without behaviour change
+  - `revert` -- reverting a previous commit
+  - `style` -- formatting, whitespace, lint fixes with no semantic change
+  - `test` -- adding or correcting tests only
+
 - When `uspecs/specs/*/domain.md` files exist, `uchange` instructions require `⚙️ AIAgent` to scan them and set `domains` to a YAML flow list of affected domain directory names.
 - `domains` values come from the `{domain}` directory segment in `uspecs/specs/{domain}/domain.md`; display names, paths, file names, and extensions are not valid domain values.
 - When the change input is ambiguous, `⚙️ AIAgent` infers affected domains from the discovered domain directory names without asking `👤 Engineer` to choose during change creation.

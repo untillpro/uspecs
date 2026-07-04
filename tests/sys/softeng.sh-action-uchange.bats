@@ -158,6 +158,18 @@ _assert_split_change_artdefs_present() {
     [[ "$output" != *"git checkout -b"* ]]
 }
 
+# Print a file's allowed-type list: the lines under the "Change request types"
+# label, up to the first blank line, with leading indentation stripped so the
+# copies in context.md and uchange.yaml compare equal despite different nesting
+# depth.
+_type_enum_lines() {
+    awk '
+        /Change request types/ { grab=1; next }
+        grab && /^[[:space:]]*$/ { exit }
+        grab { sub(/^[[:space:]]*/, ""); print }
+    ' "$1"
+}
+
 # Change requst types are in action text, so we test the action source
 @test "uchange: scn: Allowed change request types" {
     # When AI Agent reads uchange action instructions
@@ -165,12 +177,20 @@ _assert_split_change_artdefs_present() {
     prompt="$(cat "$REPO_ROOT/scripts/templates/actions/uchange.yaml")"
 
     # Then AI Agent is instructed to choose the frontmatter `type` from allowed ChangeRequest.type values
-    [[ "$prompt" == *"Allowed values:"* ]]
     [[ "$prompt" == *"\`feat\`"* ]]
     [[ "$prompt" == *"\`fix\`"* ]]
     [[ "$prompt" == *"\`docs\`"* ]]
     [[ "$prompt" == *"\`refactor\`"* ]]
     [[ "$prompt" == *"\`test\`"* ]]
+
+    # And that list stays identical to the ChangeRequest.type enumeration in
+    # context.md -- the source of truth -- in tokens, descriptions, and order.
+    # Guards the two hand-maintained copies against drift.
+    local yaml_types context_types
+    yaml_types="$(_type_enum_lines "$REPO_ROOT/scripts/templates/actions/uchange.yaml" || true)"
+    context_types="$(_type_enum_lines "$REPO_ROOT/uspecs/specs/prod/softeng/context.md" || true)"
+    [ -n "$context_types" ]
+    [ "$yaml_types" = "$context_types" ]
 }
 
 @test "uchange: scn: Domain frontmatter emission" {
