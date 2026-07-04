@@ -18,6 +18,8 @@ Rules:
 - No exhaustive lists of file or symbol changes
 - Tailor the `## What` items to the `type:` frontmatter value:
   - `feat`: behavior claims only; no file paths, no symbol names; name the affected domain/context in prose so reviewers can judge blast radius
+  - `rsch`: decision-oriented research claims; name the options, technologies, or approaches explored and the evidence or criteria produced for a future decision
+  - `inv`: diagnosis claims only; name the existing problem or incident, the root-cause conclusion or remaining uncertainty, and state that no fix is committed yet
   - `refactor`, `perf`, `style`: explicit "no behavior change" claim, and name the externally observable behavior that must be preserved (API surface, output, performance contract, etc.)
   - `docs`: what the reader gains and which artifact category is touched
   - `build`, `ci`, `chore`: what capability or guarantee changes for contributors, not which files

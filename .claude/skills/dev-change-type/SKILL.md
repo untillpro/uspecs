@@ -88,8 +88,8 @@ Delete the value from the `ChangeRequest.type` enumeration in `context.md` (sour
 Do not run tests unless requested; when you do:
 
 ```bash
-python3 tests/run-tests.py tests/sys softeng.sh-action-uchange
-python3 tests/run-tests.py tests/sys softeng.sh-action-uimpl   # only if uimpl branching changed
+python3 tests/run-tests.py tests/sys/softeng.sh-action-uchange.bats
+python3 tests/run-tests.py tests/sys/softeng.sh-action-uimpl.bats   # only if uimpl branching changed
 ```
 
 Confirm the implementation matches the spec: the `raw_text` block in `uchange.yaml` (what the agent is instructed to choose from) must list exactly the types `ChangeRequest.type` allows.

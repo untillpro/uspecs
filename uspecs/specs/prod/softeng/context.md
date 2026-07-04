@@ -285,6 +285,9 @@ Model rules:
   - `revert` -- reverting a previous commit
   - `style` -- formatting, whitespace, lint fixes with no semantic change
   - `test` -- adding or correcting tests only
+  - Extended types
+  - `rsch` -- research: forward-looking spike to explore options, technologies, or approaches that inform a future decision
+  - `inv` -- investigation: diagnose an existing problem or incident, including root-cause analysis, with no fix committed yet
 
 - When `uspecs/specs/*/domain.md` files exist, `uchange` instructions require `⚙️ AIAgent` to scan them and set `domains` to a YAML flow list of affected domain directory names.
 - `domains` values come from the `{domain}` directory segment in `uspecs/specs/{domain}/domain.md`; display names, paths, file names, and extensions are not valid domain values.
