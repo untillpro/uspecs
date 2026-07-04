@@ -168,6 +168,22 @@ _assert_subject_and_trailers() {
     fi
 }
 
+# Helper: extract the YAML frontmatter fence from the captured PR body.
+_pr_body_yaml_frontmatter() {
+    local gh_body
+    gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
+    printf '%s\n' "$gh_body" | awk '
+        /^```yaml$/ { in_yaml=1; next }
+        /^```$/ && in_yaml { exit }
+        in_yaml { print }
+    '
+}
+
+_assert_pr_body_frontmatter_contains() {
+    local needle="$1"
+    [[ "$(_pr_body_yaml_frontmatter)" == *"$needle"* ]]
+}
+
 # Helper: assert PR body format invariants.
 # Usage: _assert_pr_body_format [body_shape]
 # Invariants always asserted:
@@ -184,6 +200,7 @@ _assert_pr_body_format() {
     local gh_body
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     [[ "$gh_body" == *'```yaml'*'change_id:'*'```'* ]]
+    [[ "$(_pr_body_yaml_frontmatter)" == *"change_id:"* ]]
     [[ "$gh_body" != *"---"* ]]
     [[ "$gh_body" != *"Content omitted. See change.md for full details."* ]]
     # Defang invariant from upr.feature "Construct PR body": relative file
@@ -549,7 +566,7 @@ _assert_pr_body_format() {
     gh_body=$(cat "$BATS_TEST_TMPDIR/gh.body")
     # ## Context section is rendered in the PR body
     [[ "$gh_body" == *"## Context"*"Context narrative."* ]]
-    [[ "$gh_body" == *'See `[issue.md](issue.md)`'* ]]
+    [[ "$gh_body" == *"See \`[issue.md](issue.md)\`"* ]]
     [[ "$gh_body" == *"## Functional design"*"SENTINEL_FILTERED_OUT"* ]]
 
     _assert_pr_body_format "context"
@@ -846,7 +863,7 @@ _assert_pr_body_format() {
     # link_target = ../../../bin/softeng.sh
     # link_context = regular paragraph
     # rendered_link = `[text](/bin/softeng.sh)` (defanged: prefix stripped, `/` prepended, wrapped in backticks)
-    [[ "$gh_body" == *'`[softeng entrypoint](/bin/softeng.sh)`'* ]]
+    [[ "$gh_body" == *"\`[softeng entrypoint](/bin/softeng.sh)\`"* ]]
     [[ "$gh_body" != *'[softeng entrypoint](../../../bin/softeng.sh)'* ]]
 
     # | link_target                   | link_context           | rendered_link                                                                              |
@@ -855,7 +872,7 @@ _assert_pr_body_format() {
     # link_target = decisions.md
     # link_context = regular paragraph
     # rendered_link = `[text](decisions.md)` (same-folder file link is wrapped in backticks)
-    [[ "$gh_body" == *'`[current clarification decisions](decisions.md)`'* ]]
+    [[ "$gh_body" == *"\`[current clarification decisions](decisions.md)\`"* ]]
     [[ "$gh_body" != *' [current clarification decisions](decisions.md)'* ]]
 
     # | link_target                   | link_context           | rendered_link                                                                              |

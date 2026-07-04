@@ -5,7 +5,9 @@ Feature: Create change request
     Given Engineer is on <branch>
     When Engineer invokes uchange action with --type <type>
     Then base change request is created with Why and What sections
+    And Frontmatter has change_id field set to the Change Folder name
     And Frontmatter has type field set to <type>
+    And Frontmatter does not have issue_url field
     And Git branch <branch_outcome>
     And uimpl action is not invoked automatically
     Examples:
@@ -26,12 +28,16 @@ Feature: Create change request
     Then base change request is created
     And specs folder is created if it does not exist
 
-  Rule: Domain frontmatter
+  Rule: Change frontmatter
+
+    Scenario: Allowed change request types
+      When AI Agent reads uchange action instructions
+      Then AI Agent is instructed to choose the change request frontmatter `type` field from the allowed `ChangeRequest.type` values
 
     Scenario Outline: Domain frontmatter emission
       Given project domain specifications <exist>
       When AI Agent reads uchange action instructions
-      Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to a YAML flow list of affected domains
+      Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field in change.md to a YAML flow list of affected domains
       And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
       Examples:
         | exist        | instructed     |

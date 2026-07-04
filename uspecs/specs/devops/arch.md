@@ -1,20 +1,14 @@
 # Domain architecture: devops
 
+## Actions and skills
+
+- Actions like `uchange`, `upr` are defined in AGENTS.md
+
 ## Development conventions
-
-### Line endings 
-
-// TODO deprecated, we do not use this method anymore
-
-All files in `bin/` directory use LF (Unix-style) line endings.
-
-Rationale: Files downloaded from GitHub use LF line endings, making updates easier and avoiding unnecessary line ending conversions.
-
-Implementation: Enforced via `.gitattributes` file in `bin/` directory.
 
 ### Shared skill content
 
-Content shared across knowledge skills is authored once under `.claude/skills/uspecs-concepts/shared/` and referenced from consuming skills with sibling-relative links of the form `../uspecs-concepts/shared/<name>.md`.
+cross knowledge skills is authored once under `.claude/skills/uspecs-concepts/shared/` and referenced from consuming skills with sibling-relative links of the form `../uspecs-concepts/shared/<name>.md`.
 
 Rationale: A single source of truth avoids the drift that arises when the same rules or path lists are copied into multiple skills.
 
