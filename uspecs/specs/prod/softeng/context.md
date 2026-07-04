@@ -220,7 +220,10 @@ erDiagram
     ChangeRequest {
         string change_id PK
         string type
+        string domains
+        string scope
         boolean breaking
+        string issue_url
     }
     IssueReference {
         string url
@@ -254,17 +257,27 @@ erDiagram
 `ChangeRequest` artifact recorded in `change.md`.
 
 Owned by: `ChangeFolder`.
+Structured metadata is serialized as YAML frontmatter at the top of `change.md`; prose sections after the main heading record motivation, scope, and planning detail.
 
 Fields:
 
-| Field       | Type           | Description                                                             |
-|-------------|----------------|-------------------------------------------------------------------------|
-| `change_id` | `string`       | Stable folder-backed change identifier                                  |
-| `type`      | `string`       | Conventional Commits type used for PR title and commit subject          |
-| `domains`   | `list<string>` | Affected domain specification directories                               |
-| `scope`     | `list<string>` | Context scopes used for commit and PR subjects when applicable          |
-| `breaking`  | `boolean`      | Whether the change removes or incompatibly changes an existing contract |
-| `issue_url` | `string`       | Optional external issue URL                                             |
+| Field       | Type           | Description                                                                       |
+|-------------|----------------|-----------------------------------------------------------------------------------|
+| `change_id` | `string`       | Stable folder-backed change identifier recorded in frontmatter                    |
+| `type`      | `string`       | Conventional Commits type recorded in frontmatter for PR and commit subjects      |
+| `domains`   | `list<string>` | Affected domain specification directories recorded in frontmatter                 |
+| `scope`     | `list<string>` | Context scopes recorded in frontmatter for commit and PR subjects when applicable |
+| `breaking`  | `boolean`      | Frontmatter flag for removing or incompatibly changing an existing contract       |
+| `issue_url` | `string`       | Optional external issue URL recorded in frontmatter                               |
+
+Model rules:
+
+- `uchange` creates frontmatter with `change_id` and `type`; it adds `issue_url` when an issue URL is provided.
+- `type` is constrained to the values in [uchange.yaml](../../../../scripts/templates/actions/uchange.yaml)
+- When `uspecs/specs/*/domain.md` files exist, `uchange` instructions require `⚙️ AIAgent` to scan them and set `domains` to a YAML flow list of affected domain directory names.
+- `domains` values come from the `{domain}` directory segment in `uspecs/specs/{domain}/domain.md`; display names, paths, file names, and extensions are not valid domain values.
+- When the change input is ambiguous, `⚙️ AIAgent` infers affected domains from the discovered domain directory names without asking `👤 Engineer` to choose during change creation.
+- When no domain specification files exist, `domains` is omitted from frontmatter.
 
 ##### ImplementationPlanFile
 
@@ -286,21 +299,30 @@ Fields:
 
 Pull request associated with the current branch.
 
-References: current branch from `⚙️ GitRepository`.
+References: current branch from `⚙️ GitRepository`, `ChangeRequest`.
 
 Fields:
 
-| Field    | Type     | Description                                 |
-|----------|----------|---------------------------------------------|
-| `url`    | `string` | Pull request URL                            |
-| `state`  | `string` | OPEN, CLOSED, MERGED, or another host state |
-| `branch` | `string` | Current branch associated with the PR       |
+| Field    | Type       | Description                                                   |
+|----------|------------|---------------------------------------------------------------|
+| `url`    | `string`   | Pull request URL                                              |
+| `state`  | `string`   | OPEN, CLOSED, MERGED, or another host state                   |
+| `branch` | `string`   | Current branch associated with the PR                         |
+| `title`  | `string`   | PR title derived from `ChangeRequest` frontmatter and heading |
+| `body`   | `markdown` | PR body derived from `change.md` content                      |
 
 Invariants:
 
 - `PullRequest.state` reflects the current branch's PR state from `⚙️ PullRequestHost`.
 - `MERGED` is terminal for merge handling.
 - `CLOSED` requires recovery or user action before merge handling can continue.
+
+Model rules:
+
+- `upr` requires `ChangeRequest.type` before preparing PR artifacts.
+- `upr` derives the PR title and squashed commit subject from `ChangeRequest.type`, optional `scope`, optional `breaking`, optional `issue_url`, and the `change.md` heading.
+- `upr` composes the PR body from `change.md`; YAML frontmatter is wrapped in a `yaml` fenced code block so PR reviewers can inspect the structured change metadata.
+- `upr` includes body content starting at the first top-level section after the main heading, subject to PR body truncation and relative-link defanging rules.
 
 ### Value Objects
 

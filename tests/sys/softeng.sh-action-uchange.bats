@@ -15,13 +15,38 @@ _assert_uchange_base_output() {
     [[ "$output" =~ uspecs/changes/[0-9]{10}- ]]
 }
 
-# Helper: assert that the AGENT_INSTRUCTIONS payload carries a populated
-# change_frontmatter artifact whose body contains the given substring.
-_assert_frontmatter_contains() {
-    local needle="$1"
+# Helper: extract the change_frontmatter artifact body from AGENT_INSTRUCTIONS.
+_change_frontmatter_artifact() {
+    printf '%s\n' "$output" | awk '
+        /<artifact id="change_frontmatter"/ { in_artifact=1; next }
+        /<\/artifact>/ && in_artifact { exit }
+        in_artifact { print }
+    '
+}
+
+_assert_frontmatter_artifact_present() {
     [[ "$output" == *'<artifact id="change_frontmatter"'* ]]
     [[ "$output" == *"</artifact>"* ]]
-    [[ "$output" == *"$needle"* ]]
+}
+
+_assert_frontmatter_contains() {
+    local needle="$1"
+    _assert_frontmatter_artifact_present
+    [[ "$(_change_frontmatter_artifact)" == *"$needle"* ]]
+}
+
+_assert_frontmatter_not_contains() {
+    local needle="$1"
+    _assert_frontmatter_artifact_present
+    [[ "$(_change_frontmatter_artifact)" != *"$needle"* ]]
+}
+
+# Helper: assert change_id is timestamped and ends with the expected kebab name.
+_assert_frontmatter_change_id_for() {
+    local kebab_name="$1"
+    local frontmatter
+    frontmatter="$(_change_frontmatter_artifact)"
+    [[ "$frontmatter" =~ change_id:[[:space:]][0-9]{10}-${kebab_name} ]]
 }
 
 # Helper: assert the split change request artdefs are rendered and the old
@@ -67,7 +92,9 @@ _assert_split_change_artdefs_present() {
 
     # And Frontmatter has type field set to <type>
     # change_frontmatter artifact carries the supplied --type value
+    _assert_frontmatter_change_id_for "my-change"
     _assert_frontmatter_contains "type: feat"
+    _assert_frontmatter_not_contains "issue_url:"
 
     # And Git branch <branch_outcome>
     # Branch directive emitted (default branch + no opt)
@@ -102,7 +129,9 @@ _assert_split_change_artdefs_present() {
 
     # And Frontmatter has type field set to <type>
     # change_frontmatter artifact carries the supplied --type value
+    _assert_frontmatter_change_id_for "my-change"
     _assert_frontmatter_contains "type: fix"
+    _assert_frontmatter_not_contains "issue_url:"
 
     # And Git branch <branch_outcome>
     # No branch directive
@@ -129,6 +158,21 @@ _assert_split_change_artdefs_present() {
     [[ "$output" != *"git checkout -b"* ]]
 }
 
+# Change requst types are in action text, so we test the action source
+@test "uchange: scn: Allowed change request types" {
+    # When AI Agent reads uchange action instructions
+    local prompt
+    prompt="$(cat "$REPO_ROOT/scripts/templates/actions/uchange.yaml")"
+
+    # Then AI Agent is instructed to choose the frontmatter `type` from allowed ChangeRequest.type values
+    [[ "$prompt" == *"Allowed values:"* ]]
+    [[ "$prompt" == *"\`feat\`"* ]]
+    [[ "$prompt" == *"\`fix\`"* ]]
+    [[ "$prompt" == *"\`docs\`"* ]]
+    [[ "$prompt" == *"\`refactor\`"* ]]
+    [[ "$prompt" == *"\`test\`"* ]]
+}
+
 @test "uchange: scn: Domain frontmatter emission" {
     # | exist | instructed |
     # | exist | instructed |
@@ -145,6 +189,7 @@ _assert_split_change_artdefs_present() {
 
     # Then AI Agent is <instructed> to scan uspecs/specs/*/domain.md and set "domains" frontmatter field to the list of affected domains
     [[ "$output" == *'<artdef id="artdef_change_domains"'* ]]
+    [[ "$output" == *"set \`domains\` in \`change.md\` frontmatter"* ]]
     [[ "$output" == *'YAML flow list'* ]]
 
     # And AI Agent is <instructed> to do best-effort inference of affected domains from the matched directory names when the change input is ambiguous about affected domains
@@ -465,6 +510,7 @@ _assert_split_change_artdefs_present() {
     [[ "${stderr:-}" == *"mutually exclusive"* ]]
 }
 
+# shellcheck disable=SC2030 # Bats run intentionally sets $status inside each @test subshell.
 @test "uchange: unknown flag rejected" {
     cd "$PROJECT_ROOT"
 
@@ -480,6 +526,7 @@ _assert_split_change_artdefs_present() {
 _assert_option_rejected() {
     local option="$1"
     # Then error is displayed indicating <option> is an unknown argument
+    # shellcheck disable=SC2031 # Bats run exposes $status to assertion helpers in the same test.
     [ "$status" -ne 0 ]
     [[ "${stderr:-}" == *"Unknown argument: $option"* ]]
     # And change request is not created

@@ -2,4 +2,6 @@
 *.bats text eol=lf
 *.bash text eol=lf
 *.bats text eol=lf 
+
+# Linguist only affects GitHub's own UI (language bar, diff highlighting, file view highlighting). It's not used by git, editors, CI, or build tooling, so it's purely cosmetic/informational at the platform level.
 *.vsql linguist-language=SQL

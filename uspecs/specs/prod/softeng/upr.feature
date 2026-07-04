@@ -40,7 +40,7 @@ Feature: Create pull request from current branch
     Background:
       Given a PR is being created
 
-    Scenario Outline: Construct PR title and commit message
+    Scenario Outline: Construct PR title and commit message from frontmatter
       Given change.md frontmatter has type <type>, scope <scope>, breaking <breaking>
       And <issue_condition>
       Then PR title is <subject>
