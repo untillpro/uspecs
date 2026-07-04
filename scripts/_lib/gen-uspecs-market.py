@@ -670,6 +670,9 @@ def main() -> None:
 
     # Copy bin/
     shutil.copytree(source / "bin", plugin_dir / "bin")
+    softeng_entrypoint: Path = plugin_dir / "bin" / "softeng.sh"
+    if os.name != "nt":
+        softeng_entrypoint.chmod(softeng_entrypoint.stat().st_mode | 0o111)
 
     # Substitute generated uversion constants in the copied _lib/meta.sh.
     meta_path: Path = plugin_dir / "bin" / "_lib" / "meta.sh"

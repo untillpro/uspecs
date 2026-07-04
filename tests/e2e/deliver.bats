@@ -44,6 +44,7 @@ _softeng_constant() {
     [ "$(_marketplace_field "['plugins'][0]['source']")" = "./uspecs-dev" ]
     [ "$(_plugin_field "['author']['name']" uspecs-dev)" = "unTill Software Development Group B.V." ]
     [[ "$(_plugin_field "['description']" uspecs-dev)" == *"development build"* ]]
+    [ -x "$MKT_REPO/uspecs-dev/bin/softeng.sh" ]
     # uclarify is bundled as a command with body sourced from actions/uclarify.md (file: field)
     [ -f "$MKT_REPO/uspecs-dev/commands/uclarify.md" ]
     [[ "$(cat "$MKT_REPO/uspecs-dev/commands/uclarify.md")" == *"# Clarifications"* ]]
