@@ -57,6 +57,19 @@ Systems:
 
 ...
 
+## Sequence diagrams
+
+### {Sequence name}
+
+```mermaid
+sequenceDiagram
+    participant Actor as @RoleName
+    participant Component as [ComponentName]
+    Actor->>Component: {scenario heading or cross-scenario event}
+```
+
+...
+
 ## Cross-cutting concerns
 
 ### {Concern, e.g. Testing, Observability...}
@@ -73,8 +86,8 @@ Systems:
 
 ### General
 
-- Every participant name appearing in any diagram must resolve to exactly one entry in either External actors or Components; non-participant tokens in scenario diagrams (parameters, derived values, conditions) are unconstrained
-- Top-level sections (`## External actors`, `## Cross-cutting concerns`) may be omitted when empty
+- Every participant name appearing in any diagram must resolve to exactly one entry in either External actors or Components; non-participant tokens in scenario and sequence diagrams (messages, parameters, derived values, conditions) are unconstrained
+- Top-level sections (`## External actors`, `## Sequence diagrams`, `## Cross-cutting concerns`) may be omitted when empty or not applicable
 
 ### Title
 
@@ -108,13 +121,46 @@ Systems:
 
 ### Scenario entries
 
-- Each scenario entry contains one diagram:
+Each scenario entry contains one ASCII flow diagram:
+
+Diagram example:
 
 ```text
-{ASCII flow diagram -- tree/outline, ladder/lifeline, or step list}
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]: AppName, alias, Language
+      -> [(registry.LoginIdx)]: GetLoginHash(alias); primary-login miss
+      -> [(registry.LoginAlias)]: (AppName, Alias=alias); active alias hit
+          - canonicalLogin = LoginAlias.Login
+          - SourceAppWSID = LoginAlias.SourceAppWSID
+          - CanonicalPseudoWSID = pseudoWSID(canonicalLogin)
+      -> [/q.sys.GetCDoc/]: read canonical [(registry.Login)] at SourceAppWSID; ProfileWSID = Login.WSID
+      -> [/q.sys.InitiateEmailVerification/]: at loginApp/ProfileWSID; alias, TargetWSID=ProfileWSID, ForRegistry=true
+          - code emailed to the alias inbox; VerificationToken Value = alias
+      -> out: InitiateResetPasswordByEmailResult
+          - VerificationToken, ProfileWSID
+          - CanonicalPseudoWSID
+
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: AppName, VerificationToken, code, ProfileWSID
+      -> [/q.sys.IssueVerifiedValueToken/]: at loginApp/ProfileWSID; confirm code; VerifiedValueToken Value = alias
+      -> [(registry.LoginAlias)]: (AppName, Alias=alias); active alias hit
+      -> re-issue VerifiedValueToken under sys/registry with Value = canonicalLogin
+      -> out: VerifiedValueToken (Value = canonicalLogin)
+
+  -> [/c.registry.ResetPasswordByEmail/]: at CanonicalPseudoWSID; VerifiedValueToken, NewPwd (UNLOGGED), AppName
+      -> [(registry.Login)]: login = token.Value (= canonicalLogin); write PwdHash
+      -> out: 200 OK
 ```
 
-- Use Mermaid `sequenceDiagram` only for complex scenarios with many participants, branches/loops, or long interactions
+### Sequence diagrams
+
+- A spec MAY include `## Sequence diagrams` after `## Scenarios` and before `## Cross-cutting concerns`
+- Include sequence diagrams only when relationships between scenarios are important to understand and are not clear from the individual scenario entries
+- Use sequence diagrams to show lifecycle ordering, prerequisites, branching/convergence, shared state transitions, async completion, or other cross-scenario dependencies
+- Each `## Sequence diagrams` subsection contains one fenced `mermaid` code block with a `sequenceDiagram` and MAY include brief narrative only when needed to name or constrain the relationship being shown
+- Mermaid participant aliases MAY be used when uspecs participant notation cannot be used directly as a Mermaid identifier; the displayed participant label MUST use the same notation and name as the resolved External actor or Component entry
+- Sequence diagrams MUST use the same participant notation and name-resolution rules as scenario diagrams
+- Sequence diagrams MAY reference scenario headings by exact name; referenced scenario names MUST match the headings in `## Scenarios`
+- Do not use sequence diagrams to repeat the component-level flow already shown inside scenario entries
 
 ### Components section
 
