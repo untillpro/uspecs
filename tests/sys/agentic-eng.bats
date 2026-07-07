@@ -103,6 +103,8 @@ _assert_namespace_for_stream() {
     run_agentic --stream dev --agent-tool claude "$AGENTIC_INPUT"
     # Then the loop stops
     [[ "$stderr" == *"nochange"* ]]
+    # And a noop first pass stops immediately without a second agent invocation
+    [ "$(grep -c 'uspecs-dev:uimpl' "$AGENT_MOCK_LOG")" -eq 1 ]
     # And no pull request is created
     [ ! -f "$AGENT_MOCK_UPR_LOG" ]
     # And the script exits with a non-zero status and a diagnostic message

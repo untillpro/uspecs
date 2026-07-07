@@ -250,7 +250,7 @@ vlog status "branch: $after_branch"
 # --- 2. Refinement loop ------------------------------------------------------
 start_ts="$(date +%s)"
 iter=0
-prev_hash=""
+prev_hash="$(hash_change_folder "$CF")"
 stop_reason="itercap"
 
 while :; do
