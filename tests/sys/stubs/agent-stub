@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Mock agentic tool (auggie/claude) for tests/sys/agentic-eng.bats.
+#
+# Installed on PATH under both `auggie` and `claude` (thin wrappers that exec
+# this script). Behaviour is driven by AGENT_MOCK_* environment variables set by
+# the test; the stub accepts /uspecs, /uspecs-dev, and /uspecs-rc prompts and
+# keys off the action it is handed:
+#   */uchange* -> create the branch and Change Folder (unless suppressed)
+#   */upr*     -> record that a pull request was requested
+#   *          -> a loop iteration; mutate the Change Folder per AGENT_MOCK_ADVANCE
+set -euo pipefail
+
+prompt="$*"
+printf '%s\n' "$prompt" >> "$AGENT_MOCK_LOG"
+
+case "$prompt" in
+    *uchange*)
+        if [ "${AGENT_MOCK_NO_CF:-0}" != "1" ]; then
+            mkdir -p "$AGENT_MOCK_CF"
+            printf '%s\n' \
+                '---' 'change_id: mock' '---' \
+                '# Change request: mock' '' \
+                '## What' '' '- does a thing' \
+                > "$AGENT_MOCK_CF/change.md"
+        fi
+        if [ "${AGENT_MOCK_NO_BRANCH:-0}" != "1" ]; then
+            git checkout -q -b "$AGENT_MOCK_BRANCH"
+        fi
+        ;;
+    *upr*)
+        printf 'upr\n' >> "$AGENT_MOCK_UPR_LOG"
+        ;;
+    *)
+        n=$(( $(cat "$AGENT_MOCK_COUNT" 2>/dev/null || printf 0) + 1 ))
+        printf '%s' "$n" > "$AGENT_MOCK_COUNT"
+        case "${AGENT_MOCK_ADVANCE:-noop}" in
+            complete)
+                printf '%s\n' '' '## Construction' '' \
+                    '- [x] create: scripts/agentic-eng.sh' \
+                    >> "$AGENT_MOCK_CF/change.md"
+                ;;
+            grow)
+                printf 'iteration %s\n' "$n" >> "$AGENT_MOCK_CF/change.md"
+                ;;
+            noop) : ;;
+        esac
+        ;;
+esac

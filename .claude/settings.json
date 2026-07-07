@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bats tests*)",
+      "Bash(chmod*)",
+      "Bash(shellcheck*)",
+      "Bash(shellcheck scripts/agentic-eng.sh tests/sys/stubs/agent-stub tests/sys/stubs/auggie tests/sys/stubs/claude)"
+    ]
+  }
+}
