@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Test stub: claude -> shared agent mock. See agent-stub for behaviour.
+exec "$(dirname "$0")/agent-stub" "$@"
