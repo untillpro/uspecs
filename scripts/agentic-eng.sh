@@ -185,12 +185,17 @@ run_agent() {
 
 # list_change_folders: active (non-archive) Change Folders, one per line, sorted.
 list_change_folders() {
-  find uspecs/changes -mindepth 1 -maxdepth 1 -type d ! -name archive 2>/dev/null | sort
+  [ -d uspecs/changes ] || return 0
+  find uspecs/changes -mindepth 1 -maxdepth 1 -type d ! -name archive | sort
 }
 
 # hash_change_folder <dir>: content hash of a Change Folder (paths + contents).
 hash_change_folder() {
-  find "$1" -type f -exec sha256sum {} + 2>/dev/null | sha256sum | cut -d' ' -f1
+  find "$1" -type f -print0 \
+    | sort -z \
+    | while IFS= read -r -d '' file; do sha256sum "$file"; done \
+    | sha256sum \
+    | cut -d' ' -f1
 }
 
 # construction_complete <change-folder>: succeed when a plan file holds a
@@ -211,14 +216,16 @@ construction_complete() {
   return 1
 }
 
+# --- Preflight ---------------------------------------------------------------
+before_branch="$(git rev-parse --abbrev-ref HEAD)" || die 1 "must be run from a git worktree"
+
 # --- 1. Create the change ----------------------------------------------------
-before_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 before_folders="$(list_change_folders)"
 vlog status "creating change from input"
 
 run_agent "${USPECS_NS}:uchange $INPUT"
 
-after_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+after_branch="$(git rev-parse --abbrev-ref HEAD)"
 after_folders="$(list_change_folders)"
 
 new_folders="$(comm -13 <(printf '%s\n' "$before_folders") <(printf '%s\n' "$after_folders"))"

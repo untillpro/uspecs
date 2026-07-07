@@ -15,11 +15,19 @@ load 'helpers'
 
 AGENTIC_INPUT="implement agentic engineering from AIR-4444"
 
-# _setup_agent_stub: put the mock agent tools (auggie/claude) on PATH and reset
-# the AGENT_MOCK_* state. The stubs live in tests/sys/stubs (already on PATH via
-# the default gh-stub setup); their behaviour is controlled through AGENT_MOCK_*
-# variables the test exports before invoking the script.
+# _setup_agent_stub [--git]: put the mock agent tools (auggie/claude) on PATH
+# and reset the AGENT_MOCK_* state. With --git, also set up a git repository.
+# The stubs live in tests/sys/stubs (already on PATH via the default gh-stub
+# setup); their behaviour is controlled through AGENT_MOCK_* variables the test
+# exports before invoking the script.
 _setup_agent_stub() {
+    if [ "${1:-}" = "--git" ]; then
+        _setup_git_repo
+    elif [ $# -gt 0 ]; then
+        echo "unknown _setup_agent_stub option: $1" >&2
+        return 2
+    fi
+
     chmod +x "$STUBS_DIR/agent-stub" "$STUBS_DIR/auggie" "$STUBS_DIR/claude"
     case ":$PATH:" in
         *":$STUBS_DIR:"*) ;;
@@ -42,8 +50,7 @@ run_agentic() {
 
 _assert_namespace_for_stream() {
     local stream="$1" namespace="$2" log
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     run_agentic --pr --stream "$stream" --agent-tool auggie "$AGENTIC_INPUT"
     log="$(cat "$AGENT_MOCK_LOG")"
@@ -59,8 +66,7 @@ _assert_namespace_for_stream() {
 
 @test "agentic-eng: scn: Loop reaches a completed Construction section: auggie with --pr" {
     # Given Engineer runs the agentic engineering script with --pr, input, "--stream dev", and "--agent-tool auggie"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # And the change request and its branch are created
     # When an iteration leaves the Change Folder with a Construction section whose checklist items are all checked "[x]"
     export AGENT_MOCK_ADVANCE=complete
@@ -75,8 +81,7 @@ _assert_namespace_for_stream() {
 
 @test "agentic-eng: scn: Loop reaches a completed Construction section without --pr" {
     # Given Engineer runs the agentic engineering script without "--pr"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     # When an iteration leaves the Change Folder completed
     run_agentic --stream dev --agent-tool auggie "$AGENTIC_INPUT"
@@ -91,8 +96,7 @@ _assert_namespace_for_stream() {
     # | stop_condition                                                |
     # | an iteration leaves the Change Folder unchanged               |
     # Given Engineer runs the agentic engineering script with input, "--stream dev", and "--agent-tool claude"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # When <stop_condition>
     # stop_condition = an iteration leaves the Change Folder unchanged
     export AGENT_MOCK_ADVANCE=noop
@@ -110,14 +114,15 @@ _assert_namespace_for_stream() {
     # | stop_condition                                                |
     # | the loop reaches 40 minutes or 40 iterations, whichever first |
     # Given Engineer runs the agentic engineering script with input, "--stream dev", and "--agent-tool claude"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # When <stop_condition>
     # stop_condition = the loop reaches 40 minutes or 40 iterations, whichever first
     export AGENT_MOCK_ADVANCE=grow AGENTIC_ENG_MAX_ITERS=3
     run_agentic --stream dev --agent-tool claude "$AGENTIC_INPUT"
     # Then the loop stops
     [[ "$stderr" == *"itercap"* ]]
+    # And each loop pass advances the Change Folder with the selected agentic tool
+    [ "$(grep -c 'uspecs-dev:uimpl' "$AGENT_MOCK_LOG")" -eq 3 ]
     # And no pull request is created
     [ ! -f "$AGENT_MOCK_UPR_LOG" ]
     # And the script exits with a non-zero status and a diagnostic message
@@ -128,8 +133,7 @@ _assert_namespace_for_stream() {
     # | stop_condition                                                |
     # | the loop reaches 40 minutes or 40 iterations, whichever first |
     # Given Engineer runs the agentic engineering script with input, "--stream dev", and "--agent-tool claude"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # When <stop_condition>
     # stop_condition = the loop reaches 40 minutes or 40 iterations, whichever first
     export AGENT_MOCK_ADVANCE=grow AGENTIC_ENG_MAX_SECONDS=0
@@ -143,31 +147,12 @@ _assert_namespace_for_stream() {
 }
 
 # ---------------------------------------------------------------------------
-# Rule: Loop iteration
-# ---------------------------------------------------------------------------
-
-@test "agentic-eng: scn: An iteration invokes the selected agentic tool once" {
-    # Given Engineer runs the agentic engineering script with "--stream dev" and "--agent-tool claude"
-    _setup_git_repo
-    _setup_agent_stub
-    export AGENT_MOCK_ADVANCE=grow AGENTIC_ENG_MAX_ITERS=2
-    # When the loop runs an iteration
-    run_agentic --stream dev --agent-tool claude "$AGENTIC_INPUT"
-    # Then the script invokes "claude" once to advance the change through the uspecs workflow
-    # And the stop conditions are re-evaluated after the iteration
-    # -- two iterations under the cap => exactly two advance invocations
-    [ "$(grep -c 'uspecs-dev:uimpl' "$AGENT_MOCK_LOG")" -eq 2 ]
-    [ "$status" -ne 0 ]
-}
-
-# ---------------------------------------------------------------------------
 # Rule: Verbose mode
 # ---------------------------------------------------------------------------
 
 @test "agentic-eng: scn: Verbose flag reports execution trace" {
     # Given Engineer runs the agentic engineering script with "-v"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     # When the script delegates commands and evaluates loop state
     run_agentic -v --pr --stream dev --agent-tool auggie "$AGENTIC_INPUT"
@@ -185,8 +170,7 @@ _assert_namespace_for_stream() {
 # ---------------------------------------------------------------------------
 
 @test "agentic-eng: scn: Change creation delegates to uchange" {
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     # When the agentic engineering script creates the change request from input
     run_agentic --pr --stream dev --agent-tool auggie "$AGENTIC_INPUT"
@@ -198,8 +182,7 @@ _assert_namespace_for_stream() {
 }
 
 @test "agentic-eng: scn: Input can be read from stdin" {
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     # When the agentic engineering script reads input from stdin
     run --separate-stderr bash "$REPO_ROOT/scripts/agentic-eng.sh" \
@@ -210,8 +193,7 @@ _assert_namespace_for_stream() {
 }
 
 @test "agentic-eng: scn: Pull request creation delegates to upr" {
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     export AGENT_MOCK_ADVANCE=complete
     # When the agentic engineering script opens the pull request
     run_agentic --pr --stream dev --agent-tool auggie "$AGENTIC_INPUT"
@@ -241,8 +223,7 @@ _assert_namespace_for_stream() {
     # | missing            |
     # | the working branch |
     # Given Engineer runs the agentic engineering script with input, "--stream dev", and "--agent-tool auggie"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # When change request creation completes and <missing> is not created
     # missing = the working branch
     export AGENT_MOCK_NO_BRANCH=1
@@ -260,8 +241,7 @@ _assert_namespace_for_stream() {
     # | missing           |
     # | the Change Folder |
     # Given Engineer runs the agentic engineering script with input, "--stream dev", and "--agent-tool auggie"
-    _setup_git_repo
-    _setup_agent_stub
+    _setup_agent_stub --git
     # When change request creation completes and <missing> is not created
     # missing = the Change Folder
     export AGENT_MOCK_NO_CF=1

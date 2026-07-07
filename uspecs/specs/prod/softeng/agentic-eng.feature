@@ -25,20 +25,13 @@ Feature: Agentic engineering orchestration
       When <stop_condition>
       And the Change Folder has no Construction section with all checklist items checked "[x]"
       Then the loop stops
+      And each loop pass advances the Change Folder with the selected agentic tool
       And no pull request is created
       And the script exits with a non-zero status and a diagnostic message
       Examples:
         | stop_condition                                                |
         | an iteration leaves the Change Folder unchanged               |
         | the loop reaches 40 minutes or 40 iterations, whichever first |
-
-  Rule: Loop iteration
-
-    Scenario: An iteration invokes the selected agentic tool once
-      Given Engineer runs the agentic engineering script with "--stream dev" and "--agent-tool claude"
-      When the loop runs an iteration
-      Then the script invokes "claude" once to advance the change through the uspecs workflow
-      And the stop conditions are re-evaluated after the iteration
 
   Rule: Verbose mode
 
