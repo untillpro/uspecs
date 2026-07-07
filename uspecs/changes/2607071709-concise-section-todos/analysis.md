@@ -75,13 +75,13 @@ Especially for "create"
 
 ## Findings
 
-1. **Construction conflict:** [.tmp/worklog.md](C:/workspaces/work/uspecs/.tmp/worklog.md:41) says all new `create` items should use one short generic description, but Construction currently requires multiple create subitems: Purpose, key functions/classes/components, and tests ([SKILL.md](C:/workspaces/work/uspecs/.claude/skills/uspecs-sec-constr/SKILL.md:17)).  
+1. **Construction conflict:** Rules say all new `create` items should use one short generic description, but Construction currently requires multiple create subitems: Purpose, key functions/classes/components, and tests [SKILL.md](../../../.claude/skills/uspecs-sec-constr/SKILL.md#L17)  
    Recommendation: make the shared rule override the old Construction pattern, or phrase it as “create items should usually use one short subitem; add more only when the target is not sufficiently constrained by referenced specs.”
 
-2. **Provisioning fit is weak:** “reference the following specs or files” does not naturally fit Provisioning, where the useful reference may be a CLI command, vendor docs, package name, config file, or current OS rule ([SKILL.md](C:/workspaces/work/uspecs/.claude/skills/uspecs-sec-prov/SKILL.md:17)).  
+2. **Provisioning fit is weak:** “reference the following specs or files” does not naturally fit Provisioning, where the useful reference may be a CLI command, vendor docs, package name, config file, or current OS rule ([SKILL.md](../../../.claude/skills/uspecs-sec-prov/SKILL.md#L17)).  
    Recommendation: say “source specs, examples, commands, docs, or artifacts” instead of only “specs or files.”
 
-3. **Threshold is workable, but should apply to item detail, not section structure:** [.tmp/worklog.md](C:/workspaces/work/uspecs/.tmp/worklog.md:44) is good for detecting bloated subitems. It should not prevent Construction from grouping with `###` when items span 3+ dependency categories ([SKILL.md](C:/workspaces/work/uspecs/.claude/skills/uspecs-sec-constr/SKILL.md:25)).
+3. **Threshold is workable, but should apply to item detail, not section structure:**. Rules are good for detecting bloated subitems. It should not prevent Construction from grouping with `###` when items span 3+ dependency categories ([SKILL.md](../../../.claude/skills/uspecs-sec-constr/SKILL.md#L25)).
 
 Suggested Shared Wording:
 
