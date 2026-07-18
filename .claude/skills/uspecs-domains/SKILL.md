@@ -86,8 +86,24 @@ Target subject area of a computer system (product).
     - Relationship index tables
       - Rows sorted by `Upstream`
       - Full pattern names, e.g. `Open Host Service`, `Published Language`, `Conformist`, `Anti-Corruption Layer`
+    - Special contexts in Domain-level relationship views
+      - Classify foundational Contexts independently in `Service exposure` and `Model alignment`; classify unmapped Contexts only in `Service exposure`
+      - Classify once from the complete, unsuppressed set of Context-to-Context relationships in the view; do not reclassify after suppressing relationships
+      - A foundational Context has outgoing relationships to at least five distinct downstream Contexts in the view
+        - Count only upstream-to-downstream relationships
+        - Count each downstream Context once, regardless of the number of contracts or relationships with it
+      - An unmapped Context has no incoming or outgoing Service exposure relationship
+      - Omit every relationship involving a Special Context from the corresponding Domain-level diagram and relationship index
+      - Keep every Domain Context in the Service exposure diagram so Contexts without Service exposure relationships can link to `unmapped`
+      - In Model alignment, omit Contexts with no relationships; retain a participating ordinary Context when suppressing its relationships to a foundational Context leaves it isolated
+      - Link the synthetic `foundational` node to each foundational Context with an undirected, solid, unlabeled link written as `foundational --- {Context}` in Mermaid
+      - In Service exposure only, link the synthetic `unmapped` node to each unmapped Context with an undirected, solid, unlabeled link written as `unmapped --- {Context}` in Mermaid
+      - Give both synthetic special nodes a transparent background and dashed border, e.g. `fill:transparent,stroke-dasharray: 5 5`, and render both labels without square brackets; omit a synthetic node when no Context has that classification in the view
+      - Explain beneath a diagram containing a special node that classification links are not service-exposure or model-alignment relationships
+      - Do not add classification links to relationship indexes
+      - Preserve the complete relationship graphs and canonical relationship details in each Bounded Context specification
     - Relationship graphs follow `Relationship graph rules`
-    - Domain-level Context Maps and relationship indexes contain Bounded Contexts only; external actors stay in `External actors`
+    - Domain-level Context Maps and relationship indexes contain Bounded Contexts only; external actors stay in `External actors`; synthetic `foundational` nodes and the Service exposure-only `unmapped` node are the only non-Context nodes allowed in Domain-level relationship diagrams
 
 ### Subdomain
 

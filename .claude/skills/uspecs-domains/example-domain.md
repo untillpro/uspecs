@@ -86,7 +86,7 @@ Systems:
   - Customer feedback on products
 
 - [auth](auth/context.md)
-  - Shopper identity and authentication
+  - Shopper identity and authentication shared by catalog, cart, checkout, reviews, and notifications
 
 ### Service exposure
 
@@ -97,14 +97,19 @@ graph TD
   checkout["📦 checkout"]
   notifications["📦 notifications"]
   reviews["📦 reviews"]
+  search["📦 search"]
   auth["📦 auth"]
+  foundational["foundational"]
+  unmapped["unmapped"]
   catalog --->|"product data"| cart
   cart -..->|"cart contents"| checkout
   catalog --->|"product reference"| reviews
-  auth --->|"shopper identity"| checkout
-  auth --->|"shopper identity"| cart
   checkout --->|"order status API"| reviews
   checkout --->|"order events"| notifications
+  foundational --- auth
+  unmapped --- search
+  classDef specialNode fill:transparent,stroke-dasharray: 5 5
+  class foundational,unmapped specialNode
 ```
 
 Arrows point upstream -> downstream. Edge style encodes the exposure pattern:
@@ -112,12 +117,12 @@ Arrows point upstream -> downstream. Edge style encodes the exposure pattern:
 - `--->` solid: Open Host Service
 - `-..->` dotted: Customer-Supplier
 
+The undirected solid links from the transparent, dashed-border classifier nodes classify `auth` as `foundational` and `search` as `unmapped`. Neither is a service-exposure relationship. The five shopper-identity relationships remain in the Bounded Context specifications.
+
 ### Service exposure index
 
 | Upstream | Downstream    | Contract              | Exposure          | Alignment          |
 |----------|---------------|-----------------------|-------------------|--------------------|
-| auth     | checkout      | shopper identity API  | Open Host Service | Conformist         |
-| auth     | cart          | shopper identity API  | Open Host Service | Conformist         |
 | catalog  | cart          | product data API      | Open Host Service | Published Language |
 | catalog  | reviews       | product reference API | Open Host Service | Conformist         |
 | cart     | checkout      | cart contents query   | Customer-Supplier | -                  |

@@ -51,6 +51,31 @@ Rationale:
 - Published Language belongs on the model-alignment axis because it is the shared language being carried, not the interface shape by itself.
 - Conformist and Anti-Corruption Layer are downstream model-handling stances, so they belong on the model-alignment axis rather than the service-exposure axis.
 
+### Foundational and unmapped Contexts in Domain-level relationship views
+
+Domain-level Service exposure and Model alignment views compact foundational Contexts that provide to at least five distinct downstream Contexts. Service exposure additionally groups unmapped Contexts that have no relationship in that view; Model alignment omits Contexts without model or language relationships.
+
+Decision:
+
+- Classify foundational Contexts independently in each relationship view, and classify unmapped Contexts only in Service exposure, from the complete, unsuppressed Context-to-Context relationship set.
+- Count only outgoing upstream-to-downstream relationships for foundational classification, and count each downstream Context once regardless of how many contracts connect the pair.
+- Suppress relationships involving a Special Context from the corresponding Domain-level diagram and index. Link transparent, dashed-border classifier nodes to their Contexts with solid, undirected, unlabeled `foundational --- Context` and `unmapped --- Context` links; `unmapped` appears in Service exposure only. Render both classifier labels without square brackets.
+- Classify once before suppression and do not cascade: an ordinary Context stays ordinary if its only visible relationships were suppressed because another Context is foundational.
+- Keep all canonical relationship graphs and details in the Bounded Context specifications.
+
+Rationale:
+
+- Domain views are navigation summaries. Repeating a broadly reused provider's edges obscures the rest of the map, while omitting Contexts without Service exposure hides potentially important integration boundaries.
+- Five distinct downstream consumers is deliberately conservative because compaction removes relationship rows from the Domain index; smaller relationship sets remain readable without losing overview detail.
+- Outgoing relationships identify a broadly reused provider. Incoming relationships can instead indicate an orchestrator or aggregator and do not make that Context foundational.
+- Counting distinct downstream Contexts prevents several contracts with one consumer from inflating the classification.
+- Service exposure is the complete integration inventory: every Bounded Context must be accounted for because the view answers how Contexts exchange runtime or integration contracts.
+- Showing `unmapped` in Service exposure makes the absence of any exchange contract explicit, distinguishing an intentionally isolated Context from an accidentally omitted or undocumented integration.
+- Model alignment is intentionally selective: it records only standalone model or language dependencies, and many valid Contexts have none.
+- A Context without a standalone Model alignment relationship may still carry alignment through a Service exposure relationship, so calling it unmapped would be misleading; grouping all such Contexts would also obscure the explicit alignments the sparse view exists to show.
+- Single-pass classification avoids suppression cascades that would incorrectly turn consumers of a foundational Context into unmapped Contexts.
+- Keeping full details in Context specifications preserves traceability while the Domain specification stays concise.
+
 ### Domain-level Glossary optional
 
 Domain Specifications do not create a `## Glossary` section by default.
