@@ -183,6 +183,12 @@ A model boundary in the solution space, with a specific set of actors, concepts,
   - `Conformist (cf)`: downstream adopts the upstream model as-is, without the upstream publishing a separate formal language for this relationship
   - `Anti-Corruption Layer (acl)`: downstream translates the upstream model into its own model
 - Arrows point upstream -> downstream (provider -> consumer). Arrow direction does not encode runtime data, request, or call flow
+- Treat opposite-direction edges between the same Context pair as a modeling warning and audit them before finalizing the relationship views:
+  - Identify the owner/provider of each contract and its actual consumer
+  - Distinguish a workflow or orchestrator that consumes both providers from direct provider-to-provider consumption; shared participation in a workflow does not create a relationship between the providers
+  - Remove any edge not supported by a direct contract dependency
+  - If both directions remain supported, document them as two independent directed relationships and surface the reciprocal coupling; never merge them into one bidirectional relationship
+- Each graph edge represents one directed relationship. Never use bidirectional notation such as `<->`
 - Edge labels name the carried contract/concept as a noun phrase (e.g. `order placement API`, `payment authorization`), never a flow verb (e.g. `push samples`, `writes to`). At most three words
 - Edge labels do not include pattern suffixes
 - Edge styles encode relationship patterns
@@ -198,9 +204,11 @@ A model boundary in the solution space, with a specific set of actors, concepts,
   - Detail subsections for relationships documented in that section
     - Entry order in a Context: incoming relationships first, sorted by upstream name; outgoing/provider relationships second, sorted by downstream name or by provided contract name for one-to-many contracts
 - Detail subsections
+  - Each detail documents one provider-owned contract in one direction and stays consistent with its graph edges and relationship-index rows; never combine reciprocal contracts in one detail
   - Headings
     - `#### {upstream} -> {downstream}: {carried concept} ({pattern})`
     - `#### {provider}: {provided interface, language, or model} ({pattern})` for one-to-many provided contracts
+    - Use only these directed heading forms; never use `<->`
     - Pattern suffix
       - Service only: one service exposure pattern in a relationship detail heading under `### Service exposure`, e.g. `(ohs)`, `(c/s)`
       - Service plus model alignment: a composed suffix in a single relationship detail heading under `### Service exposure`, e.g. `(ohs + pl)`, `(ohs + cf)`, `(ohs + acl)`, or the same model suffixes with `c/s`
@@ -217,6 +225,7 @@ A model boundary in the solution space, with a specific set of actors, concepts,
     - For one-to-many provider contracts, use role blocks:
       - `Provider:` for the exposed service, interface, channel, language, or contract
       - `Consumers:` for each role, system, or Context consuming the contract
+    - Use singular `Upstream:` or `Provider:` because one detail has one contract owner; never use `Providers:`
     - For external providers with no Context spec, put provider documentation under `Upstream:` and local adaptation or translation notes under `Downstream:`
   - Canonical cross-context details live with the artifact being made canonical:
     - Exposed service or integration contract details live in the upstream/provider Context
