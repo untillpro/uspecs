@@ -1738,7 +1738,7 @@ cmd_action_umergepr() {
 
     echo "Branch: $current_branch -> $pr_remote/$default_branch"
 
-    # Check upstream
+    # Preserve the existing upstream-presence validation for every PR outcome.
     if ! git rev-parse --abbrev-ref "@{upstream}" >/dev/null 2>&1; then
         error "Current branch '$current_branch' has no upstream"
     fi
@@ -1777,16 +1777,29 @@ cmd_action_umergepr() {
         # PR was merged outside the action -- full cleanup
         quiet gh pr view --web || true
 
+        declare -A upstream_info
+        git_current_branch_upstream_info upstream_info
+        local upstream_exists=true
+        if ! git_remote_branch_exists "${upstream_info[remote]}" "${upstream_info[remote_branch]}"; then
+            upstream_exists=false
+            echo "Configured upstream ${upstream_info[name]} no longer exists; cleaning up local branch state only..."
+        fi
+
+        # When the upstream still exists, preserve local-only commits.
+        if [[ "$upstream_exists" == "true" ]]; then
+            git_validate_current_branch_pushed
+        fi
+
         local branch_head
         branch_head=$(git rev-parse HEAD)
 
         # Delete local branch and upstream tracking ref (errors ignored)
         quiet git checkout "$default_branch" || true
         git branch -D "$current_branch" >/dev/null 2>&1 || true
-        git branch -dr "origin/$current_branch" >/dev/null 2>&1 || true
+        git branch -dr "${upstream_info[name]}" >/dev/null 2>&1 || true
 
-        # Delete origin branch if it still exists
-        if git_remote_branch_exists origin "$current_branch"; then
+        # A missing configured upstream requires local cleanup only.
+        if [[ "$upstream_exists" == "true" ]] && git_remote_branch_exists origin "$current_branch"; then
             echo "Deleting branch $current_branch from origin..."
             quiet git push origin --delete "$current_branch" || echo "Warning: failed to delete $current_branch from origin"
         fi
@@ -1818,6 +1831,9 @@ cmd_action_umergepr() {
     fi
 
     # PR is in OPEN state
+    # Do not archive, update, or merge while pre-existing commits are unpushed.
+    git_validate_current_branch_pushed
+
     # Archive WCF if active
     local wcf_path="$project_dir/$changes_folder_rel/$wcf_name"
     local archived_path=""
@@ -1830,13 +1846,18 @@ cmd_action_umergepr() {
             quiet git add -A
             quiet git commit -m "Archive $wcf_name"
             echo "Pushing archive commit..."
-            quiet git push || true
+            if ! quiet git push; then
+                error "Failed to push archive commit. Resolve the push failure and run umergepr again"
+            fi
         fi
     fi
 
     # Sync PR branch with latest base branch (handles "base branch was modified" error)
+    git_validate_current_branch_pushed
     echo "Updating PR branch with latest base..."
     quiet gh pr update-branch || echo "Warning: gh pr update-branch failed (may not be needed)"
+
+    git_validate_current_branch_pushed
 
     # Record branch HEAD before merge deletes it
     local branch_head

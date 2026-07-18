@@ -94,6 +94,58 @@ git_validate_clean_repo() {
     fi
 }
 
+# git_current_branch_upstream_info <map_nameref>
+# Resolves the current branch's configured upstream.
+# Keys populated: name, remote, remote_ref, remote_branch, tracking_ref
+git_current_branch_upstream_info() {
+    local -n _git_upstream_info="$1"
+    local current_branch upstream upstream_remote upstream_remote_ref upstream_tracking_ref
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    if ! upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null); then
+        error "Current branch '$current_branch' has no upstream"
+    fi
+    upstream_tracking_ref=$(git rev-parse --symbolic-full-name '@{upstream}')
+    if ! upstream_remote=$(git config --get "branch.$current_branch.remote"); then
+        error "Cannot resolve remote for configured upstream '$upstream'"
+    fi
+    if ! upstream_remote_ref=$(git config --get "branch.$current_branch.merge"); then
+        error "Cannot resolve remote ref for configured upstream '$upstream'"
+    fi
+
+    _git_upstream_info["name"]="$upstream"
+    _git_upstream_info["remote"]="$upstream_remote"
+    _git_upstream_info["remote_ref"]="$upstream_remote_ref"
+    _git_upstream_info["remote_branch"]="${upstream_remote_ref#refs/heads/}"
+    _git_upstream_info["tracking_ref"]="$upstream_tracking_ref"
+}
+
+# git_validate_current_branch_pushed
+# Verifies that the configured upstream branch exists remotely, fetches that
+# exact ref, and fails when local HEAD contains commits not present there.
+git_validate_current_branch_pushed() {
+    local current_branch unpushed_commits
+    current_branch=$(git symbolic-ref --short HEAD)
+    declare -A upstream_info
+    git_current_branch_upstream_info upstream_info
+
+    if ! git_remote_branch_exists "${upstream_info[remote]}" "${upstream_info[remote_branch]}"; then
+        error "Configured upstream branch '${upstream_info[name]}' does not exist. Recreate it manually with 'git push ${upstream_info[remote]} HEAD:${upstream_info[remote_branch]}' before running umergepr again"
+    fi
+
+    echo "Fetching configured upstream ${upstream_info[name]}..."
+    if ! quiet git fetch "${upstream_info[remote]}" "+${upstream_info[remote_ref]}:${upstream_info[tracking_ref]}"; then
+        error "Failed to fetch configured upstream '${upstream_info[name]}'"
+    fi
+
+    if ! unpushed_commits=$(git rev-list '@{upstream}..HEAD'); then
+        error "Failed to compare local HEAD with configured upstream '${upstream_info[name]}'"
+    fi
+    if [[ -n "$unpushed_commits" ]]; then
+        error "Current branch '$current_branch' has commits that are not present in configured upstream '${upstream_info[name]}'. Push them manually with 'git push' before running umergepr again"
+    fi
+}
+
 check_prerequisites() {
     # Check if git repository exists
     if ! is_git_repo "$PWD"; then
@@ -292,4 +344,3 @@ git_diff() {
     git fetch "$pr_remote" "$default_branch" >/dev/null 2>&1 || true
     git diff "$pr_remote/$default_branch" HEAD -- "$diff_path"
 }
-
