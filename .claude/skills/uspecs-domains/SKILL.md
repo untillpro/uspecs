@@ -131,7 +131,7 @@ A model boundary in the solution space, with a specific set of actors, concepts,
 - Title: `# Bounded Context: {slug}`, e.g. `# Bounded Context: checkout`
 - Solution space, both strategic (boundary) and tactical (the model and canonical vocabulary that realize it)
 - Describes
-  - Executive summary
+  - Overview
     - Scope
     - Out of scope
   - External actors

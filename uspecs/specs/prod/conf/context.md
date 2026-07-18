@@ -1,6 +1,6 @@
 # Bounded Context: conf
 
-## Executive summary
+## Overview
 
 Configuration and lifecycle management for making uspecs available in an AI agent host.
 

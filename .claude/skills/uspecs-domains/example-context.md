@@ -1,6 +1,6 @@
 # Bounded Context: checkout
 
-## Executive summary
+## Overview
 
 Checkout - turn a shopper's cart into a placed, paid order.
 
