@@ -961,8 +961,21 @@ _uimpl_with_section_todo() {
     # no `## How`, no planning section, no unchecked to-dos.
     uspecs action uimpl --change-folder "uspecs/changes/2601010000-my-change"
     [ "$status" -eq 0 ]
+    [[ "$output" == *'<artdef id="artdef_change_how"'* ]]
     [[ "$output" == *'<instruction id="instr_uimpl_how"'* ]]
     [[ "$output" == *'@artdef_change_how'* ]]
+    # The emitted artifact definition constrains How to new high-level choices,
+    # requires explicit Decisions and Assumptions lists, and keeps detailed
+    # implementation work in Construction.
+    [[ "$output" == *"Do not restate statements already present in \`change.md\` or its referenced documents"* ]]
+    [[ "$output" == *"use \`- None\` when research finds no new implementation decisions"* ]]
+    [[ "$output" == *"symbols, exact test cases, command sequences, and ordered implementation steps; those belong in \`## Construction\`"* ]]
+    [[ "$output" == *'Assumptions: always include the list'* ]]
+    [[ "$output" == *"use \`- None\` when there are none"* ]]
+    [[ "$output" == *'Out of scope: include only new boundaries'* ]]
+    [[ "$output" == *'omit the section when there are none'* ]]
+    [[ "$output" == *'References: include only sources that directly support a new decision or assumption'* ]]
+    [[ "$output" == *'section is omitted when there are no such sources'* ]]
     # Targets change.md (How lives on the change request, not impl.md).
     [[ "$output" == *'uspecs/changes/2601010000-my-change/change.md'* ]]
     # No chained self-review (How produces no plan bullets to review).

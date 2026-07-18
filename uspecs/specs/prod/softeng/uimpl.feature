@@ -57,6 +57,17 @@ Feature: Implementation plan management
         | without flags | appends `## How` to `change.md` per `artdef_change_how.md` and stops execution                                           |
         | with `--plan` | does not create `## How` and proceeds with the existing planning sections cascade described in the next Scenario Outline |
 
+    Scenario: How section content
+      Given AI Agent appends `## How` to `change.md` per `artdef_change_how.md`
+      When AI Agent authors the section
+      Then `Decisions:` contains only new high-level choices not already established by `change.md` or its referenced documents
+      And per-file edits, symbols, exact test cases, command sequences, and ordered implementation steps are deferred to `## Construction`
+      And `Decisions:` contains `- None` when there are no new implementation decisions
+      And `Assumptions:` contains only unverified premises necessary for the high-level implementation strategy
+      And `Assumptions:` contains `- None` when there are no such premises
+      And `Out of scope:` contains only new scope boundaries and is omitted when there are none
+      And `References:` contains only sources that directly support a new decision or assumption and is omitted when there are none
+
     Scenario Outline: No unchecked to-do items
       Given there are no unchecked to-do items in Implementation Plan File
       When Engineer invokes uimpl action
