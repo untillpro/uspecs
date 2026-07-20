@@ -8,6 +8,12 @@ Feature: Clarify uncertainties in specifications
     And AI Agent presents a numbered list of solution options with Pros, Cons, and Confidence
     And AI Agent waits for Engineer to pick a number, type a free-form answer, or choose Skip/Cancel
 
+  Scenario: Continue automatically after integration
+    Given AI Agent has presented an uncertainty and another uncertainty remains
+    When Engineer chooses a solution
+    Then AI Agent integrates the decision
+    And AI Agent immediately presents the next most critical uncertainty
+
   Scenario: Auto clarification
     Given Engineer has an open specification or artifact file
     When Engineer invokes uclarify action with --auto

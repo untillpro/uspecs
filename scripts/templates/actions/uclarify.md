@@ -39,7 +39,7 @@ When the condition does not hold (no `change.md` in scope, or the target is unre
 
 - Do not write to `decisions.md`
 - Inform the user: "Decision integrated. Not recorded: no Change Folder in scope."
-- Integration into the target spec/artifact and the review prompt (Interactive mode) are unchanged
+- Integration into the target spec/artifact is unchanged
 
 The heading uses the specific issue type (`Uncertainty`, `Inconsistency`, `Ambiguity`, or `Vagueness`), not the umbrella term.
 
@@ -104,12 +104,8 @@ Steps:
     - Do not ask follow-up questions about the same issue before integration
   - If the choice is Skip, find the next most critical issue and present options for it
   - If the choice is Cancel, stop -- do not make any changes
-- After integration (numbered solution or free-form answer only -- not after Skip or Cancel), present a review prompt with three control choices:
-  - "Continue" -- proceed to the next issue
-  - "Discuss" -- user provides feedback; revise the spec/artifact integration in place, overwrite the `decisions.md` entry for this issue, then re-show the review prompt
-  - "Cancel" -- stop the clarification process; previously integrated decisions remain
-  - Free-form input on the review prompt is treated as Discuss with that input as feedback
-- Repeat the process until the user chooses Cancel
+- After integration, immediately present the next most critical issue, or stop if no issues remain
+- Repeat the process until no issues remain or the user chooses Cancel
 
 Example options prompt (uncertainty):
 
@@ -151,18 +147,6 @@ Example options prompt (inconsistency):
 4. Cancel
 
 Pick a number or type your own answer.
-```
-
-Example review prompt:
-
-```text
-Decision integrated: pnpm
-
-1. Continue -- proceed to the next issue
-2. Discuss -- provide feedback to revise this decision
-3. Cancel -- stop clarification process
-
-Pick a number or type your feedback (treated as Discuss).
 ```
 
 ## Auto mode
