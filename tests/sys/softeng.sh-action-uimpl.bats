@@ -161,6 +161,7 @@ _uimpl_with_review_form() {
     uspecs action uimpl
     [ "$status" -eq 0 ]
     [[ "$output" == *"Complete to-do items"* ]]
+    [[ "$output" != *"subagents"* ]]
 
     # scn: Only Review Item unchecked: "- [ ] Review" -> review pending
     # Then AI Agent displays a message "Review item is pending"
