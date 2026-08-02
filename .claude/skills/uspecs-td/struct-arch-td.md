@@ -88,6 +88,7 @@ sequenceDiagram
 
 - Every participant name appearing in any diagram must resolve to exactly one entry in either External actors or Components; non-participant tokens in scenario and sequence diagrams (messages, parameters, derived values, conditions) are unconstrained
 - Top-level sections (`## External actors`, `## Sequence diagrams`, `## Cross-cutting concerns`) may be omitted when empty or not applicable
+- Prefer diagrams and scenarios as the source of flow facts; prose should add only contracts, constraints, rationale, context fields, or exceptions that are not already clear from them
 
 ### Title
 

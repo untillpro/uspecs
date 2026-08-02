@@ -30,6 +30,107 @@ sequenceDiagram
     ai_agent-->>engineer: report result
 ```
 
+### Instruction emission pipeline
+
+Dispatched softeng actions use one shared instruction-emission pipeline. The command handler opens a structured `<LOG>`, performs deterministic shell work, queues optional artifacts, then calls `prompt_start_instructions <mode>` to close the log and stream agent-facing instructions directly to stdout.
+
+```text
+Engineer
+  |
+  v
+u-keyword [options] [input]
+  |
+  v
+AIAgent reads dispatch instructions
+  |
+  +-- derives command options
+  +-- normalizes external references and inputs
+  +-- runs the corresponding softeng action
+  |
+  v
+softeng.sh action <name> {derived options}
+  |
+  v
+action handler
+  |
+  +-- opens <LOG> (prompt_start_log)
+  +-- validates preconditions and options (action-specific checks, git validators, error)
+  +-- performs deterministic shell-side work (shell commands, git helpers, quiet)
+  +-- computes prompt context variables (context_* helpers, declare -A *_vars)
+  +-- optionally queues opaque artifacts (emit_artifact)
+  |
+  v
+prompt_start_instructions <mode>
+  |
+  +-- closes </LOG>
+  +-- opens <AGENT_INSTRUCTIONS>
+  +-- writes mode preamble directly to stdout
+  |
+  v
+emit_prompt streams prompt payload
+  |
+  +-- reads bin/prompts/{root}.md after ## data
+  +-- filters direct (?condition) and (?!condition) lines
+  +-- replaces `@include_*` references with include bodies
+  +-- scans `@artdef_*` references before variable substitution
+  +-- recursively renders artdefs depth-first, deduplicated
+  +-- filters include-expanded conditional lines
+  +-- substitutes `${context_var}` values
+  +-- writes queued artifacts, artdefs, then root instruction directly to stdout
+  |
+  +-- process exits with status 0
+  |     |
+  |     v
+  |   exit handler closes </AGENT_INSTRUCTIONS>
+  |   AIAgent follows emitted instructions or reports results
+  |
+  +-- process exits non-zero before prompt_start_instructions
+  |     |
+  |     v
+  |   exit handler closes </LOG>
+  |   exit handler emits recovery <AGENT_INSTRUCTIONS>
+  |   AIAgent reports failure from the log and stderr
+  |   AIAgent offers numbered recovery options with Cancel last
+  |   AIAgent stops until Engineer chooses an option
+  |
+  +-- process exits non-zero after prompt_start_instructions
+        |
+        v
+      exit handler only closes </AGENT_INSTRUCTIONS>
+      AIAgent treats the non-zero exit status as authoritative failure
+      AIAgent uses stderr and any streamed log/instruction context only for diagnosis
+```
+
+`prompt_start_instructions <mode>` accepts exactly two mode values:
+
+- `results`: the script has completed the deterministic part of the workflow and the emitted payload is a user-facing reporting contract. `AIAgent` ignores the preceding `<LOG>` for user-facing content, follows the result prompt, and reports or asks the `Engineer` exactly as instructed. `results` mode does not ask `AIAgent` to interpret artifacts as work to apply.
+- `action`: the script has prepared the next workflow step and the emitted payload is an agent work contract. `AIAgent` consumes emitted `<artifact>` payloads and `<artdef>` definitions, then performs the requested reads, writes, commands, or follow-up action invocations before reporting completion or blockers to `Engineer`.
+
+Missing mode values fail through `error`. Unknown mode values currently fail after `<AGENT_INSTRUCTIONS>` is opened; the exit handler then only closes the instruction tag.
+
+This separates deterministic script responsibilities from agent responsibilities. Shell code owns validation, repository inspection, command execution, prompt context preparation, and instruction rendering. Prompt files own the agent-facing workflow contract. `AIAgent` owns interpretation of successfully emitted instructions, artifact authoring, and user reporting after the hand-off. After `prompt_start_instructions` opens `<AGENT_INSTRUCTIONS>`, stdout is instruction payload; handlers must avoid emitting diagnostic or deterministic-progress output there.
+
+Action scripts fail fast under `set -Eeuo pipefail`. Expected validation failures call `error`, print `Error: ...` to stderr, and exit with status `1`. Unexpected command failures propagate through the same exit path unless the handler explicitly captures and handles the status. Commands that should be quiet on success use `quiet`: stdout and stderr are captured, suppressed on success, replayed on failure, and the original exit status is preserved. Cleanup and rollback use the shared `atexit` queue/stack; handlers run on every exit and preserve the command's original exit status.
+
+The current implementation streams instructions; it does not buffer them atomically. Therefore a non-zero exit after `<AGENT_INSTRUCTIONS>` has opened can leave a partial instruction payload on stdout. In that case the non-zero exit status is authoritative: `AIAgent` must not continue partial instructions and should use stderr plus the streamed context only to explain the failure.
+
+Key artifacts:
+
+- [scripts/templates/actions/*.yaml](../../../../scripts/templates/actions)
+  - dispatch-time instructions for deriving action options before `softeng.sh` runs
+- [bin/softeng.sh](../../../../bin/softeng.sh)
+  - action handlers perform deterministic shell-side work, prepare context variables, queue artifacts, and select root prompts
+- [bin/_lib/utils.sh](../../../../bin/_lib/utils.sh)
+  - `error` prints a user-readable error to stderr and exits with status `1`
+  - `quiet` suppresses successful command noise while preserving and replaying failure output
+  - `atexit_add`, `atexit_push`, and `atexit_pop` provide shared cleanup and rollback hooks
+  - `prompt_start_log` opens `<LOG>`
+  - `prompt_start_instructions` closes `<LOG>`, opens `<AGENT_INSTRUCTIONS>`, and writes the selected mode preamble
+  - `emit_artifact` queues opaque payloads for the next prompt flush
+  - `emit_prompt` writes directly to stdout, filters conditional lines, substitutes context variables, collects referenced `@artdef_*` dependencies, and flushes `<artifact>`, `<artdef>`, and `<instruction>` blocks
+- [bin/prompts](../../../../bin/prompts/)
+  - root instructions, reusable includes, and artifact definitions consumed by the renderer
+
 ### Self-review flow
 
 `self-review` is a top-level softeng command (not an action). It is auto-invoked by `⚙️ AIAgent` at the end of a `uimpl` cycle that completed at least one to-do item, unless `--no-self-review` was passed to `uimpl`. Each stage prompt instructs `⚙️ AIAgent` to perform a scoped review, fix findings inline, and invoke the next stage. The chain ends with a results report to `👤 Engineer`.

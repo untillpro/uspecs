@@ -1,5 +1,9 @@
 # Agents instructions
 
+## Skills
+
+Use skills from .claude/skills folder.
+
 ## General guidelines
 
 - Answer concisely unless explicitly asked for more detail, prefer short examples over long explanations
@@ -21,4 +25,3 @@
   - run `bash bin/softeng.sh action {action} {options}` and follow the instructions in the output how to process {other-input}
     - Do not pass {other-input} verbatim to the command
   - Available commands: upr, umergepr, uimpl, uarchive, usync, uversion
-  
