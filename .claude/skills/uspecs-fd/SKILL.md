@@ -19,6 +19,8 @@ Artifacts:
 - Use data tables in steps for inline structured data
 - Write Scenarios as concrete examples of rules, not generic descriptions
   - Use named domain objects and representative literal values, e.g. `User Login "jsmith"` and Login Alias `"j.smith"`
+  - Include a concrete value only when its identity or exact value matters to subsequent behavior: it is reused, varied, or asserted in a later step
+  - When a concrete value is unused by subsequent behavior, omit it or describe the precondition generically
   - Use generic wording only when the exact value is irrelevant to the behavior
   - Avoid vague outcomes such as "is accepted"; assert externally observable state instead
   - Use placeholders only in Scenario Outlines with an Examples table
